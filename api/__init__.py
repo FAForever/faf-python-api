@@ -10,7 +10,7 @@ if sys.version_info.major != 3:
 
 # Init Flask
 from flask import Flask
-app = Flask("FAForever Python Web API")
+app = Flask('api')
 
 def make_response_json(result):
     "Overrides the original make_response to emit json for python types"
