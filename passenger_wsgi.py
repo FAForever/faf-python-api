@@ -12,15 +12,7 @@ if sys.version_info.major != 3:
 
 from api import app, api_init
 
-# Load Database config
-DATABASE = dict(
-    engine=  "playhouse.pool.PooledMySQLDatabase",
-    name=    "bob",
-    user=    "the",
-    passwd=  "dinosaur",
-    max_connections= 32, stale_timeout=600)
-
-app.config.from_object(__name__)
+app.config.from_object('config')
 
 api_init()
 
