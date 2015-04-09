@@ -4,6 +4,12 @@ Deals with basic data passing from db
 
 from api import *
 
+def dsum(a,b):
+    "Sum two dicts"
+    d = a
+    d.update(b)
+    return a
+
 # ======== Version Resources =========
 
 @app.route('/version/repo/<int:id>')
@@ -53,6 +59,11 @@ def map_get(id, resource):
 
         return result
 
+    if resource == 'versions':
+        return [
+            x.ver.dict() for x in MapVersion.select().where(MapVersion.map == id)
+        ]
+
     if resource == 'notes':
         return [
             note.dict() for note in MapNote.select().where(MapNote.map == id)
@@ -76,12 +87,6 @@ def map_get(id, resource):
         return ret
 
 # ============= Mod Resources ==============
-
-def dsum(a,b):
-    "Sum two dicts"
-    d = a
-    d.update(b)
-    return a
 
 @app.route('/mod/<int:id>',defaults=dict(resource='info'))
 @app.route('/mod/<int:id>/<resource>')
