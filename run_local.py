@@ -1,14 +1,6 @@
 """
-Phusion Passenger WSGI entrypoint
+Run the server locally
 """
-
-import sys
-
-if sys.version_info.major != 3:
-    raise RuntimeError(
-        "FAForever API requires python 3.\n"
-        "Refer to passenger documentation on how to accomplish that.\n"
-        "Good luck.")
 
 from api import app, api_init
 
@@ -24,4 +16,6 @@ app.config.from_object(__name__)
 
 api_init()
 
-application = app
+# By default, run debug mode
+app.debug = True
+app.run(port=8080)
