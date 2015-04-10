@@ -8,9 +8,13 @@ if sys.version_info.major != 3:
     raise RuntimeError(
         "FAForever API requires python 3.\n")
 
-# Init Flask
-from flask import Flask
+from flask import Flask, session
+from flask_oauthlib.provider import OAuth2Provider
+
+# ======== Init Flask ==========
+
 app = Flask('api')
+oauth = OAuth2Provider(app)
 
 def make_response_json(result):
     "Overrides the original make_response to emit json for python types"
@@ -28,7 +32,8 @@ def make_response_json(result):
 
 app.make_response = make_response_json
 
-# Init Database
+# ======== Init Database =======
+
 from db.faf_orm import *
 from playhouse.flask_utils import FlaskDB
 
@@ -39,5 +44,10 @@ def api_init():
     flask_db.init_app(app)
     faf_orm_init_db(flask_db.database)
 
-# Import (initialize) routes
+# ======== Import (initialize) oauth2 handlers =====
+import api.oauth
+
+
+# ======== Import (initialize) routes =========
 import api.data
+import api.auth
