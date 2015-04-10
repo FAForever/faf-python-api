@@ -10,6 +10,31 @@ def dsum(a,b):
     d.update(b)
     return a
 
+# ======== User Resources =========
+
+@app.route('/user/<int:id>',defaults=dict(resource='info'))
+@app.route('/user/<int:id>/<resource>')
+def user_get(id, resource):
+    user = User.get(User.id == id)
+
+    if resource == 'info':
+        avatar = user.avatars.select().where(UserAvatar.selected == True)[0].avatar
+
+        rating = user.ladder1v1[0]
+
+        res = dict(
+            id=user.id,
+            name=user.login,
+            clan='TODO',
+            country='TODO',
+            avatar=dict(name='',tooltip=avatar.tooltip,url=avatar.url),
+
+            league=dict(league='todo', division='todo'),
+            rating=dict(mean=rating.mean, deviation=rating.deviation)
+        )
+
+        return res
+
 # ======== Version Resources =========
 
 @app.route('/version/repo/<int:id>')
