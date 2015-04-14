@@ -16,6 +16,7 @@ from flask_oauthlib.provider import OAuth2Provider
 app = Flask('api')
 oauth = OAuth2Provider(app)
 
+_make_response = app.make_response
 def make_response_json(result):
     "Overrides the original make_response to emit json for python types"
     from flask import Response, json
@@ -28,7 +29,7 @@ def make_response_json(result):
 
         return resp
     else:
-        return result
+        return _make_response(result)
 
 app.make_response = make_response_json
 
@@ -51,3 +52,4 @@ import api.oauth
 # ======== Import (initialize) routes =========
 import api.data
 import api.auth
+import api.games
