@@ -12,13 +12,15 @@ def dsum(a,b):
 
 # ======== User Resources =========
 
-@app.route('/user/<int:id>',defaults=dict(resource='info'))
+@app.route('/user/<int:id>')
 @app.route('/user/<int:id>/<resource>')
-def user_get(id, resource):
-    user = User.get(User.id == id)
+def user_get(id, resource='info'):
+    try:
+        user = User.get(User.id == id)
+    except DoesNotExist:
+        return 'No such user id=%d' % id, 404
 
     if resource == 'info':
-        avatar = user.avatars.select().where(UserAvatar.selected == True)[0].avatar
 
         rating = user.ladder1v1[0]
 
@@ -27,13 +29,29 @@ def user_get(id, resource):
             name=user.login,
             clan='TODO',
             country='TODO',
-            avatar=dict(name='',tooltip=avatar.tooltip,url=avatar.url),
 
             league=dict(league='todo', division='todo'),
             rating=dict(mean=rating.mean, deviation=rating.deviation)
         )
 
+        try:
+            avatar = user.avatars.select().where(UserAvatar.selected == True)[0].avatar
+
+            res['avatar'] = dict(name='',tooltip=avatar.tooltip,url=avatar.url)
+        except: # If avatar does not exist
+            res['avatar'] = dict(name='',tooltip='',url='')
+
         return res
+
+@app.route('/user/byname/<username>')
+@app.route('/user/byname/<username>/<resource>')
+def user_byname_get(username, resource='info'):
+    try:
+        user = User.get(User.login == username)
+    except DoesNotExist:
+        return 'No such user name=%s' % username, 404
+
+    return user_get(user.id, resource)
 
 # ======== Version Resources =========
 
