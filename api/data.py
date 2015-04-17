@@ -4,6 +4,11 @@ Deals with basic data passing from db
 
 from api import *
 
+import geoip2.database
+
+geolite2 = geoip2.database.Reader(
+    '/usr/lib/python3.4/site-packages/_geoip_geolite2/GeoLite2-City.mmdb')
+
 def dsum(a,b):
     "Sum two dicts"
     d = a
@@ -27,12 +32,24 @@ def user_get(id, resource='info'):
         res = dict(
             id=user.id,
             name=user.login,
-            clan='TODO',
-            country='TODO',
+            clan='',
+            country='',
 
-            league=dict(league='todo', division='todo'),
+            league=dict(league=1, division='todo'),
             rating=dict(mean=rating.mean, deviation=rating.deviation)
         )
+
+        if user.ip:
+            ip_info = geolite2.city(user.ip)
+            if ip_info and ip_info.country:
+                res['country'] = ip_info.country.iso_code
+
+        try:
+            clan = ClanMember.get(ClanMember.player == user).clan
+
+            res['clan'] = clan.tag
+        except:
+            pass
 
         try:
             avatar = user.avatars.select().where(UserAvatar.selected == True)[0].avatar
@@ -75,12 +92,17 @@ def version_mod_get(id):
 
 @app.route('/version/default/<mod_name>')
 def version_default_get(mod_name):
-    ver = DefaultVersion.get(DefaultVersion.mod == mod_name).dict()
+    versions = DefaultVersion.select().where(DefaultVersion.mod == mod_name)
 
-    ver['ver_engine'] = RepoVersion.get(RepoVersion.id == ver['ver_engine']).dict()
-    ver['ver_main_mod'] = RepoVersion.get(RepoVersion.id == ver['ver_main_mod']).dict()
+    result = []
 
-    return ver
+    for ver in [x.dict() for x in versions]:
+        ver['ver_engine'] = RepoVersion.get(RepoVersion.id == ver['ver_engine']).dict()
+        ver['ver_main_mod'] = RepoVersion.get(RepoVersion.id == ver['ver_main_mod']).dict()
+
+        result.append(ver)
+
+    return result
 
 # ============ Map Resources ==============
 
