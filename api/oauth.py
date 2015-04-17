@@ -55,8 +55,8 @@ def load_token(access_token=None, refresh_token=None):
 
 @oauth.tokensetter
 def save_token(token, request, *args, **kwargs):
-    # make sure that every client has only one token connected to a user
     with db.transaction():
+        # make sure that every client has only one token connected to a user
         OAuthToken.delete().where(
             OAuthToken.client == request.client,
             OAuthToken.user == request.user
@@ -65,7 +65,7 @@ def save_token(token, request, *args, **kwargs):
         expires_in = token.pop('expires_in')
         expires = datetime.utcnow() + timedelta(seconds=expires_in)
 
-        return OAuthToken.create(
+        token_db = OAuthToken.create(
             access_token=token['access_token'],
             refresh_token=token['refresh_token'],
             token_type=token['token_type'],
@@ -74,3 +74,10 @@ def save_token(token, request, *args, **kwargs):
             client=request.client,
             user=request.user
         )
+
+    # Inject extra fields to the token sent to the Client.
+    token['client_id'] = request.client.client_id
+    token['user_id'] = request.user.id
+
+    return token_db
+
