@@ -4,10 +4,13 @@ Deals with basic data passing from db
 
 from api import *
 
+from os.path import join as pjoin, dirname
+import _geoip_geolite2
 import geoip2.database
 
+# Theeee H4444x!
 geolite2 = geoip2.database.Reader(
-    '/usr/lib/python3.4/site-packages/_geoip_geolite2/GeoLite2-City.mmdb')
+    pjoin(dirname(_geoip_geolite2.__file__), _geoip_geolite2.database_name))
 
 def dsum(a,b):
     "Sum two dicts"
