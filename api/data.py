@@ -4,6 +4,8 @@ Deals with basic data passing from db
 
 from api import *
 
+from flask import request
+
 from os.path import join as pjoin, dirname
 import _geoip_geolite2
 import geoip2.database
@@ -18,60 +20,207 @@ def dsum(a,b):
     d.update(b)
     return a
 
-# ======== User Resources =========
+class Resource:
+    "Represents a URL reachable resource."
 
-@app.route('/user/<int:id>')
-@app.route('/user/<int:id>/<resource>')
-def user_get(id, resource='info'):
-    try:
-        user = User.get(User.id == id)
-    except DoesNotExist:
-        return 'No such user id=%d' % id, 404
+    # Subclasses should declare their own name.
+    name = '_base'
 
-    if resource == 'info':
+    # Subclasses should declare their peewee model.
+    model = None
 
-        rating = user.ladder1v1[0]
+    @staticmethod
+    def get(id, detail='info'):
+        """
+        Override to return a dictionary/list/tuple
+        that will be passed as the response.
 
-        res = dict(
-            id=user.id,
-            name=user.login,
-            clan='',
-            country='',
+        :param id: integer id
+        :param detail: str specific detail, arbitrary, passed in http request,
+                          defaults to 'info'
+        :return:
+        """
+        pass
 
-            league=dict(league=1, division='todo'),
-            rating=dict(mean=rating.mean, deviation=rating.deviation)
+    @staticmethod
+    def search(query):
+        """
+        Override to return a peewee where clause.
+
+        Such as 'Match([ResModel.name], query) & ResModel.is_ok'
+        :param query: search query
+        :return: peewee where clause
+        """
+        return 'Resource is unsearchable.', 400
+
+class UserRes(Resource):
+    name = 'user'
+    model = User
+
+    @staticmethod
+    def get(id, detail='info'):
+        try:
+            user = User.get(User.id == id)
+        except DoesNotExist:
+            return 'No such user id=%d' % id, 404
+
+        if detail == 'info':
+
+            rating = user.ladder1v1[0]
+
+            res = dict(
+                id=user.id,
+                name=user.login,
+                clan='',
+                country='',
+
+                league=dict(league=1, division='todo'),
+                rating=dict(mean=rating.mean, deviation=rating.deviation)
+            )
+
+            if user.ip:
+                ip_info = geolite2.city(user.ip)
+                if ip_info and ip_info.country:
+                    res['country'] = ip_info.country.iso_code
+
+            try:
+                clan = ClanMember.get(ClanMember.player == user).clan
+
+                res['clan'] = clan.tag
+            except DoesNotExist:
+                pass
+
+            try:
+                avatar = user.avatars.select().where(UserAvatar.selected == True)[0].avatar
+
+                res['avatar'] = dict(name='',tooltip=avatar.tooltip,url=avatar.url)
+            except: # If avatar does not exist
+                res['avatar'] = dict(name='',tooltip='',url='')
+
+            return res
+
+    @staticmethod
+    def search(query):
+        return Match([User.login], query)
+
+class MapRes(Resource):
+    name = 'map'
+    model = Map
+
+    @staticmethod
+    def get(id, detail='info'):
+        if detail == 'info':
+            map = Map.get(Map.id == id)
+
+            result = map.dict()
+
+            result['norushoffset'] = [x.dict() for x in map.norushoffset]
+
+            return result
+
+        if detail == 'versions':
+            return [
+                x.ver.dict() for x in MapVersion.select().where(MapVersion.map == id)
+            ]
+
+        if detail == 'notes':
+            return [
+                note.dict() for note in MapNote.select().where(MapNote.map == id)
+            ]
+
+        if detail == 'markers':
+            markers = MapMarker.select().where(MapMarker.map == id)
+
+            ret = []
+            for marker in markers:
+                rep = marker.json()
+
+                if 'prop' in rep:
+                    rep['prop'] = MapProp.get(MapProp.id == rep['prop'])
+
+                if 'editorIcon' in rep:
+                    rep['editorIcon'] = MapEditorIcon.get(MapEditorIcon.id == rep['editorIcon'])
+
+                ret.append(rep)
+
+            return ret
+
+    @staticmethod
+    def search(query):
+        return Match([Map.name, Map.description, Map.author], query)
+
+class ModRes(Resource):
+    name = 'mod'
+    model = Mod
+
+    @staticmethod
+    def get(id, detail='info'):
+        if detail == 'info':
+            return Mod.get(Mod.id == id).dict()
+
+        if detail == 'versions':
+            return [ dsum(x.ver.dict(), dict(uid=x.uid))
+                     for x in ModVersion.select().where(ModVersion.mod == id)]
+
+    @staticmethod
+    def search(query):
+        return Match(
+            [Mod.name, Mod.description, Mod.author, Mod.url, Mod.copyright],
+            query
         )
 
-        if user.ip:
-            ip_info = geolite2.city(user.ip)
-            if ip_info and ip_info.country:
-                res['country'] = ip_info.country.iso_code
+# ======== Unified Resource Routes ========
 
-        try:
-            clan = ClanMember.get(ClanMember.player == user).clan
+resources = dict(
+    user=UserRes,
+    map=MapRes,
+    mod=ModRes
+)
 
-            res['clan'] = clan.tag
-        except:
-            pass
+@app.route('/<resource>/<int:id>')
+@app.route('/<resource>/<int:id>/<detail>')
+def resource_get(resource, id, detail='info'):
+    if resource not in resources:
+        return 'Unknown resource type=%s' % resource, 404
 
-        try:
-            avatar = user.avatars.select().where(UserAvatar.selected == True)[0].avatar
+    return resources[resource].get(id, detail)
 
-            res['avatar'] = dict(name='',tooltip=avatar.tooltip,url=avatar.url)
-        except: # If avatar does not exist
-            res['avatar'] = dict(name='',tooltip='',url='')
+@app.route('/<resource>/search/')
+def resource_search(resource):
+    if resource not in resources:
+        return 'Unknown resource type=%s' % resource, 404
 
-        return res
+    resClass = resources[resource]
+    rModel = resClass.model
+
+    query = request.args.get('q', '')
+    limit = request.args.get('l') or 20
+
+    if len(query) < 2:
+        return 'Cannot search with less than 2 characters.', 400
+
+    query = ' '.join([x+'*' for x in query.split()])
+    search_clause = resClass.search(query)
+
+    if not search_clause or isinstance(search_clause, tuple):
+        # Search failed / unsearchable.
+        return search_clause
+
+    id_select = rModel.select(rModel.id).where(search_clause).limit(limit)
+
+    return [resClass.get(id) for id in id_select]
+
+# ======== Extra Routes ========
 
 @app.route('/user/byname/<username>')
-@app.route('/user/byname/<username>/<resource>')
-def user_byname_get(username, resource='info'):
+@app.route('/user/byname/<username>/<detail>')
+def user_byname_get(username, detail='info'):
     try:
-        user = User.get(User.login == username)
+        user = User.select(User.id).where(User.login == username)
     except DoesNotExist:
         return 'No such user name=%s' % username, 404
 
-    return user_get(user.id, resource)
+    return UserRes.get(user, detail)
 
 # ======== Version Resources =========
 
@@ -106,63 +255,3 @@ def version_default_get(mod_name):
         result.append(ver)
 
     return result
-
-# ============ Map Resources ==============
-
-@app.route('/map/notes')
-def map_list_notes():
-    return [
-        note.dict() for note in MapNote.select()
-    ]
-
-@app.route('/map/<int:id>', defaults=dict(resource='info'))
-@app.route('/map/<int:id>/<resource>')
-def map_get(id, resource):
-    if resource == 'info':
-        map = Map.get(Map.id == id)
-
-        result = map.dict()
-
-        result['norushoffset'] = [x.dict() for x in map.norushoffset]
-
-        return result
-
-    if resource == 'versions':
-        return [
-            x.ver.dict() for x in MapVersion.select().where(MapVersion.map == id)
-        ]
-
-    if resource == 'notes':
-        return [
-            note.dict() for note in MapNote.select().where(MapNote.map == id)
-        ]
-
-    if resource == 'markers':
-        markers = MapMarker.select().where(MapMarker.map == id)
-
-        ret = []
-        for marker in markers:
-            rep = marker.json()
-
-            if 'prop' in rep:
-                rep['prop'] = MapProp.get(MapProp.id == rep['prop'])
-
-            if 'editorIcon' in rep:
-                rep['editorIcon'] = MapEditorIcon.get(MapEditorIcon.id == rep['editorIcon'])
-
-            ret.append(rep)
-
-        return ret
-
-# ============= Mod Resources ==============
-
-@app.route('/mod/<int:id>',defaults=dict(resource='info'))
-@app.route('/mod/<int:id>/<resource>')
-def mod_get(id, resource):
-    if resource == 'info':
-        return Mod.get(Mod.id == id).dict()
-
-    if resource == 'versions':
-        return [ dsum(x.ver.dict(), dict(uid=x.uid))
-                 for x in ModVersion.select().where(ModVersion.mod == id)]
-
