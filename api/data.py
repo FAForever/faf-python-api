@@ -216,11 +216,11 @@ def resource_search(resource):
 @app.route('/user/byname/<username>/<detail>')
 def user_byname_get(username, detail='info'):
     try:
-        user = User.select(User.id).where(User.login == username)
+        user = User.get(User.login == username)
     except DoesNotExist:
         return 'No such user name=%s' % username, 404
 
-    return UserRes.get(user, detail)
+    return UserRes.get(user.id, detail)
 
 # ======== Version Resources =========
 
