@@ -4,7 +4,7 @@ Deals with basic data passing from db
 
 from api import *
 
-from flask import request
+from flask import request, Response
 
 from os.path import join as pjoin, dirname
 import _geoip_geolite2
@@ -19,6 +19,11 @@ def dsum(a,b):
     d = a
     d.update(b)
     return a
+
+def serve_db_file(file: DBFile):
+    return Response(file.data, 200,
+        {'Content-Length': len(file.data)},
+        file.mime_type + '/' + file.mime_subtype)
 
 class Resource:
     "Represents a URL reachable resource."
@@ -162,6 +167,14 @@ class ModRes(Resource):
             return [ dsum(x.ver.dict(), dict(uid=x.uid))
                      for x in ModVersion.select().where(ModVersion.mod == id)]
 
+        if detail == 'icon':
+            mod = Mod.get(Mod.id == id)
+
+            if mod.icon:
+                return serve_db_file(mod.icon)
+            else:
+                return "No icon for mod id=%d." % id, 404
+
     @staticmethod
     def search(query):
         return Match(
@@ -185,7 +198,7 @@ def resource_get(resource, id, detail='info'):
 
     return resources[resource].get(id, detail)
 
-@app.route('/<resource>/search/')
+@app.route('/<resource>/search')
 def resource_search(resource):
     if resource not in resources:
         return 'Unknown resource type=%s' % resource, 404
