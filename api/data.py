@@ -121,6 +121,10 @@ class MapRes(Resource):
 
             result['norushoffset'] = [x.dict() for x in map.norushoffset]
 
+            latest = MapVersion.select().join(RepoVersion).where(MapVersion.map == map) \
+                     .order_by(RepoVersion.time_added.desc()).get()
+
+            result['repo'] = latest.ver.dict()
             return result
 
         if detail == 'versions':
@@ -161,7 +165,14 @@ class ModRes(Resource):
     @staticmethod
     def get(id, detail='info'):
         if detail == 'info':
-            return Mod.get(Mod.id == id).dict()
+            mod = Mod.get(Mod.id == id)
+
+            latest = ModVersion.select().join(RepoVersion).where(ModVersion.mod == mod) \
+                     .order_by(RepoVersion.time_added.desc()).get()
+
+            res = mod.dict()
+            res['repo'] = latest.ver.dict()
+            return res
 
         if detail == 'versions':
             return [ dsum(x.ver.dict(), dict(uid=x.uid))
