@@ -1,7 +1,7 @@
 """
 Holds the authorization url routes
 """
-from flask import request, redirect, render_template
+from flask import request, redirect, render_template, send_from_directory
 
 from api import *
 from api.oauth import *
@@ -34,6 +34,9 @@ def oauth_check_token(access_token):
 def access_token():
     return None
 
+@app.route('/<path:path>')
+def public(path):
+    return send_from_directory('c:\\workspace\\api\\public', path)
 
 @app.route('/oauth/authorize', methods=['GET', 'POST'])
 @oauth.authorize_handler

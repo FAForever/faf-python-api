@@ -1,0 +1,78 @@
+@font-face {
+    font-family: trajanPro;
+    src: url(../fonts/TrajanPro-Regular.ttf)
+}
+body {
+    margin: 0;
+    padding: 0;
+    background: url('../images/sign_in_background.png') center top no-repeat;
+    font-family: trajanPro, sans-serif;
+}
+
+.container {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+.welcome-overlay {
+    background: #fff;
+    border: #000;
+    opacity: 0.7;
+    width: 100%;
+    margin-top: 380px;
+    margin-left: 0;
+    margin-right: 0;
+    text-align: center;
+}
+
+.welcome-overlay  {
+
+}
+
+.sign-in-dialog {
+    background: #fff;
+    border-radius: 15px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 180px;
+    width: 480px;
+    font-variant: all-small-caps;
+}
+
+.sign-in-dialog .top {
+    width: 100%;
+    padding: 10px 25px;
+    margin: 0;
+    background: #fff;
+    border-top: 2px solid #bc6d58;
+    border-left: 2px solid #bc6d58;
+    border-right: 2px solid #bc6d58;
+    border-radius: 15px 15px 0 0;
+    text-align: center;
+}
+
+.sign-in-dialog .bottom {
+    width: 100%;
+    padding: 15px;
+    margin: 0;
+    background: #d4beb9;
+    border-bottom: 2px solid #bc6d58;
+    border-left: 2px solid #bc6d58;
+    border-right: 2px solid #bc6d58;
+    border-radius: 0 0 15px 15px;
+}
+
+.sign-in-dialog .bottom p {
+    text-align: center;
+}
+
+.sign-in-button {
+    color: #bc6d58;
+    display: inline;
+}
+
+.sign-up-container {
+    background: #d4beb9;
+    width: 100%;
+}

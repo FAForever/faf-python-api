@@ -13,7 +13,7 @@ from flask_oauthlib.provider import OAuth2Provider
 
 # ======== Init Flask ==========
 
-app = Flask('api')
+app = Flask('api', static_url_path='/public/', static_folder='public')
 oauth = OAuth2Provider(app)
 
 _make_response = app.make_response
