@@ -10,13 +10,13 @@ from flask import request
 @app.route("/avatar", methods=['GET', 'POST'])
 def avatars():
     if request.method == 'POST':
+
         file = request.files['file']
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['AVATAR_FOLDER'], filename))
 
         try:
             avatar = Avatar.create(url=app.config['AVATAR_URL'], tooltip=request.form['tooltip'])
-            avatar.save()
         except IntegrityError:
             return json.dumps(dict(error="Avatar already exists")), 400
 
