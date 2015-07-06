@@ -56,7 +56,10 @@ def github_hook():
         repo = body['repository']
         repo_url = uritemplate.expand(GITHUB_DEPLOYMENTS_URI, owner='FAForever', repo=repo['name'])
         if deployment['environment'] == app.config['ENVIRONMENT']:
-            status, description = deploy(body['repository']['name'], body['repository']['clone_url'], deployment['ref'], deployment['sha'])
+            status, description = deploy(body['repository']['name'],
+                                         body['repository']['clone_url'],
+                                         deployment['ref'],
+                                         deployment['sha'])
             status_response = requests.post(repo_url+'/{}/statuses'.format(deployment['id']),
                                             data=json.dumps({
                                                 "state": status,
