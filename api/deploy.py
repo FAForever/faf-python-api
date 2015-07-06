@@ -77,11 +77,14 @@ def deploy(repository, clone_url, ref, sha):
     if repository not in ['api']:
         return "error", "invalid repository"
     repo_path = app.config.get('{}_PATH'.format(repository.upper()))
-    if not subprocess.call('git -C {} fetch {}'.format(
+    git_path = app.config.get('GIT_PATH', '/usr/bin/git')
+    if not subprocess.call('{} -C {} fetch {}'.format(
+                git_path,
                 repo_path,
                 clone_url)) == 0:
         return "error", "git fetch returned nonzero access code"
-    if not subprocess.call('git -C {} checkout -f {}'.format(
+    if not subprocess.call('{} -C {} checkout -f {}'.format(
+        git_path,
         repo_path,
         sha
     )):
