@@ -73,10 +73,10 @@ def github_hook():
 def deploy(repository, clone_url, ref, sha):
     """
     Perform deployment on this machine
-    :param repository:
-    :param ref:
-    :param sha:
-    :return:
+    :param repository: the repository to deploy
+    :param ref: ref to fetch
+    :param sha: hash to verify deployment with
+    :return: (status: str, description: str)
     """
     if repository not in ['api']:
         return "error", "invalid repository"
