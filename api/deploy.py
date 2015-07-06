@@ -37,6 +37,8 @@ def github_hook():
     if event == 'push':
         if body['repository']['name'] == 'api':
             head_commit = body['head_commit']
+            if not head_commit['distinct']:
+                return "OK", 200
             match = re.search('Deploy: ([\w\W]+)', head_commit['message'])
             if match:
                 repo_url = uritemplate.expand(GITHUB_DEPLOYMENTS_URI, owner='FAForever', repo=body['repository']['name'])
