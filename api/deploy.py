@@ -33,7 +33,7 @@ def github_hook():
     if event == 'push':
         if body['repository']['name'] == 'api':
             head_commit = body['head_commit']
-            match = re.match('Deploy: ([\w\W]+)', head_commit['message'])
+            match = re.search('Deploy: ([\w\W]+)', head_commit['message'])
             if match:
                 repo_url = uritemplate.expand(GITHUB_DEPLOYMENTS_URI, owner='FAForever', repo=body['repository']['name'])
                 deployment_response = requests.post(repo_url,
