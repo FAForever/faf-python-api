@@ -23,8 +23,13 @@ def make_response_json(*args, **kwargs):
     Override the flask make_response function to default to application/json
     for lists and dictionaries.
     """
-    if len(args) > 0 and isinstance(args[0], (list, dict)):
+    if len(args) == 1 and isinstance(args[0], (list, dict)):
         return flask.json.jsonify(*args, **kwargs)
+    elif (len(args) == 2 and isinstance(args[0], (list, dict))
+                         and isinstance(args[1], int)):
+        response = flask.json.jsonify(*args[0])
+        response.status_code = args[1]
+        return response
     else:
         return _make_response(*args, **kwargs)
 
