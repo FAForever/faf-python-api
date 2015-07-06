@@ -51,6 +51,7 @@ import api.oauth
 
 # ======== Import (initialize) routes =========
 import api.data
+import api.deploy
 import api.auth
 import api.avatars
 import api.games
