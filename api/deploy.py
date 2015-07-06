@@ -25,6 +25,10 @@ def validate_github_request(body, signature):
 
 @app.route('/github', methods=['POST'])
 def github_hook():
+    """
+    Generic github hook suitable for receiving github status events.
+    :return:
+    """
     body = request.get_json()
     if not validate_github_request(request.data,
                                    request.headers['X-Hub-Signature'].split("sha1=")[1]):
