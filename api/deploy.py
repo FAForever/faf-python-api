@@ -82,12 +82,13 @@ def deploy(repository, clone_url, ref, sha):
         return "error", "invalid repository"
     repo_path = app.config.get('{}_PATH'.format(repository.upper()))
     git_path = app.config.get('GIT_PATH', '/usr/bin/git')
-    if not subprocess.call([git_path,
-                            '-C',
-                            repo_path,
-                            'fetch',
-                            clone_url]) == 0:
-        return "error", "git fetch returned nonzero code"
+    fetch_exit_code = subprocess.call([git_path,
+                                       '-C',
+                                       repo_path,
+                                       'fetch',
+                                       clone_url])
+    if fetch_exit_code != 0:
+        return "error", "git fetch returned nonzero code: {}".format(fetch_exit_code)
     subprocess.call([git_path,
                     '-C', repo_path,
                     'checkout',
