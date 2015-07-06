@@ -4,7 +4,7 @@ Holds routes for deployment based off of Github events
 import json
 import re
 
-from flask import request, render_template
+from flask import request, render_template, url_for
 from requests.auth import HTTPBasicAuth
 
 from api import *
@@ -17,7 +17,7 @@ import uritemplate
 import os
 
 GITHUB_DEPLOYMENTS_URI = "https://api.github.com/repos/{owner}/{repo}/deployments{/id}"
-GITHUB_DEPLOYMENT_STATUS_URI = "{deployment_uri}/statuses"
+GITHUB_DEPLOYMENT_STATUS_URI = GITHUB_DEPLOYMENTS_URI+"/statuses"
 
 github_session = None
 
@@ -26,13 +26,32 @@ def get_github_session():
     if not github_session:
         github_session = requests.Session()
         github_session.auth = HTTPBasicAuth(app.config['GITHUB_USER'],
-                               app.config['GITHUB_TOKEN'])
+                                            app.config['GITHUB_TOKEN'])
     return github_session
 
 def validate_github_request(body, signature):
     digest = hmac.new(app.config['GITHUB_SECRET'],
                    body, 'sha1').hexdigest()
     return hmac.compare_digest(digest, signature)
+
+@app.route('/deployment/<repo>/<int:id>', methods=['GET'])
+def deployment(repo, id):
+    session = get_github_session()
+    return session.get(uritemplate.expand(GITHUB_DEPLOYMENTS_URI,
+                                          owner='FAForever',
+                                          repo=repo,
+                                          id=str(id))).json()
+
+@app.route('/status/<repo>', methods=['GET'])
+def deployments(repo):
+    session = get_github_session()
+    deployments = session.get(uritemplate.expand(GITHUB_DEPLOYMENTS_URI,
+                                                 owner='FAForever',
+                                                 repo=repo)).json()
+    return {
+        'status': 'OK',
+        'deployments': deployments
+    }
 
 @app.route('/github', methods=['POST'])
 def github_hook():
@@ -75,6 +94,9 @@ def github_hook():
             status_response = session.post(repo_url+'/{}/statuses'.format(deployment['id']),
                                             data=json.dumps({
                                                 "state": status,
+                                                "target_url": url_for('deployment',
+                                                                      repo=repo['name'],
+                                                                      id=deployment['id']),
                                                 "description": description
                                             }))
             return "Success", status_response.status_code
