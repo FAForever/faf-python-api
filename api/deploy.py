@@ -1,10 +1,10 @@
 """
-Holds routes for deployment based off of github events
+Holds routes for deployment based off of Github events
 """
 import json
 import re
 
-from flask import request, redirect, render_template
+from flask import request
 from requests.auth import HTTPBasicAuth
 
 from api import *
