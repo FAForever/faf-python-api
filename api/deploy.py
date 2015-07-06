@@ -89,14 +89,15 @@ def deploy(repository, clone_url, ref, sha):
                                        '-C',
                                        repo_path,
                                        'fetch',
-                                       clone_url])
+                                       clone_url,
+                                       ref])
     if fetch_exit_code != 0:
         return "error", "git fetch returned nonzero code: {}".format(fetch_exit_code)
     subprocess.call([git_path,
                     '-C', repo_path,
                     'checkout',
                     '-f',
-                    ref])
+                    'FETCH_HEAD'])
     checked_out = subprocess.check_output([git_path,
                                     'rev-parse',
                                     'HEAD']).decode().strip()
