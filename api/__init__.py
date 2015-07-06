@@ -3,6 +3,7 @@ Main file for the Flask application
 """
 
 import sys
+import flask
 
 if sys.version_info.major != 3:
     raise RuntimeError(
@@ -17,19 +18,15 @@ app = Flask('api')
 oauth = OAuth2Provider(app)
 
 _make_response = app.make_response
-def make_response_json(result):
-    "Overrides the original make_response to emit json for python types"
-    from flask import Response, json
-
-    if isinstance(result,(int,bool,float,str,list,dict)):
-        # Json response
-        resp = Response(status=200,mimetype='application/json')
-
-        resp.set_data(json.dumps(result))
-
-        return resp
+def make_response_json(*args, **kwargs):
+    """
+    Override the flask make_response function to default to application/json
+    for lists and dictionaries.
+    """
+    if len(args) > 0 and isinstance(args[0], (list, dict)):
+        return flask.json.jsonify(*args, **kwargs)
     else:
-        return _make_response(result)
+        return _make_response(*args, **kwargs)
 
 app.make_response = make_response_json
 

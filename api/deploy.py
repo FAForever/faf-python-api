@@ -4,7 +4,7 @@ Holds routes for deployment based off of Github events
 import json
 import re
 
-from flask import request
+from flask import request, render_template
 from requests.auth import HTTPBasicAuth
 
 from api import *
