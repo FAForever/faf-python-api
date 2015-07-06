@@ -89,10 +89,11 @@ def deploy(repository, clone_url, ref, sha):
                     'checkout',
                     '-f',
                     ref])
-    if not subprocess.check_output([git_path,
+    checked_out = subprocess.check_output([git_path,
                                     'rev-parse',
-                                    'HEAD']).strip() == sha:
-        return "error", "checkout out hash doesn't match"
+                                    'HEAD']).strip()
+    if not checked_out == sha:
+        return "error", "checkout oud hash ({}) doesn't match {}".format(checked_out, sha)
     restart_file = repo_path+'/tmp/restart.txt'
     with open(restart_file):
         os.utime(restart_file, None)
