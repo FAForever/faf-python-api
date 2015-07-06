@@ -83,13 +83,17 @@ def deploy(repository, clone_url, ref, sha):
                             repo_path,
                             'fetch',
                             clone_url]) == 0:
-        return "error", "git fetch returned nonzero access code"
+        return "error", "git fetch returned nonzero code"
     if not subprocess.call([git_path,
                             '-C', repo_path,
                             'checkout',
                             '-f',
-                            sha]):
-        return "error", "git checkout returned nonzero access code"
+                            ref]):
+        return "error", "git checkout returned nonzero code"
+    if not subprocess.check_output([git_path,
+                                    'rev-parse',
+                                    'HEAD']).strip() == sha:
+        return "error", "checkout out hash doesn't match"
     restart_file = repo_path+'/tmp/restart.txt'
     with open(restart_file):
         os.utime(restart_file, None)
