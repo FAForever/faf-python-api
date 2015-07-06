@@ -78,16 +78,17 @@ def deploy(repository, clone_url, ref, sha):
         return "error", "invalid repository"
     repo_path = app.config.get('{}_PATH'.format(repository.upper()))
     git_path = app.config.get('GIT_PATH', '/usr/bin/git')
-    if not subprocess.call('{} -C {} fetch {}'.format(
-                git_path,
-                repo_path,
-                clone_url)) == 0:
+    if not subprocess.call([git_path,
+                            '-C',
+                            repo_path,
+                            'fetch',
+                            clone_url]) == 0:
         return "error", "git fetch returned nonzero access code"
-    if not subprocess.call('{} -C {} checkout -f {}'.format(
-        git_path,
-        repo_path,
-        sha
-    )):
+    if not subprocess.call([git_path,
+                            '-C', repo_path,
+                            'checkout',
+                            '-f',
+                            sha]):
         return "error", "git checkout returned nonzero access code"
     restart_file = repo_path+'/tmp/restart.txt'
     with open(restart_file):
