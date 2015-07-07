@@ -5,29 +5,18 @@ import json
 import re
 
 from flask import request, render_template, url_for
-from requests.auth import HTTPBasicAuth
 
 from api import *
 from api.oauth import *
 
 import hmac
 import subprocess
-import requests
-import uritemplate
 import os
 
-GITHUB_DEPLOYMENTS_URI = "https://api.github.com/repos/{owner}/{repo}/deployments{/id}"
-GITHUB_DEPLOYMENT_STATUS_URI = GITHUB_DEPLOYMENTS_URI+"/statuses"
+
 
 github_session = None
 
-def get_github_session():
-    global github_session
-    if not github_session:
-        github_session = requests.Session()
-        github_session.auth = HTTPBasicAuth(app.config['GITHUB_USER'],
-                                            app.config['GITHUB_TOKEN'])
-    return github_session
 
 def validate_github_request(body, signature):
     digest = hmac.new(app.config['GITHUB_SECRET'],
@@ -36,21 +25,13 @@ def validate_github_request(body, signature):
 
 @app.route('/deployment/<repo>/<int:id>', methods=['GET'])
 def deployment(repo, id):
-    session = get_github_session()
-    return session.get(uritemplate.expand(GITHUB_DEPLOYMENTS_URI,
-                                          owner='FAForever',
-                                          repo=repo,
-                                          id=str(id))).json()
+    return app.github.deployment(owner='FAForever', repo=repo, id=id).json()
 
 @app.route('/status/<repo>', methods=['GET'])
 def deployments(repo):
-    session = get_github_session()
-    deployments = session.get(uritemplate.expand(GITHUB_DEPLOYMENTS_URI,
-                                                 owner='FAForever',
-                                                 repo=repo)).json()
     return {
         'status': 'OK',
-        'deployments': deployments
+        'deployments': app.github.deployments(owner='FAForever', repo=repo).json()
     }
 
 @app.route('/github', methods=['POST'])
@@ -59,7 +40,6 @@ def github_hook():
     Generic github hook suitable for receiving github status events.
     :return:
     """
-    session = get_github_session()
     body = request.get_json()
     if not validate_github_request(request.data,
                                    request.headers['X-Hub-Signature'].split("sha1=")[1]):
@@ -72,32 +52,31 @@ def github_hook():
                 return dict(status="OK"), 200
             match = re.search('Deploy: ([\w\W]+)', head_commit['message'])
             if match:
-                repo_url = uritemplate.expand(GITHUB_DEPLOYMENTS_URI, owner='FAForever', repo=body['repository']['name'])
-                deployment_response = session.post(repo_url,
-                                                    data=json.dumps({
-                                                        "ref": body['ref'],
-                                                        "environment": match.group(1),
-                                                        "description": head_commit['message']
-                                                    }))
-                if not deployment_response.status_code == 201:
-                    raise Exception(deployment_response.content)
+                resp = app.github.create_deployment(owner='FAForever',
+                                                    repo=body['repository']['name'],
+                                                    ref=body['ref'],
+                                                    environment=match.group(1),
+                                                    description=head_commit['message'])
+                if not resp.status_code == 201:
+                    raise Exception(resp.content)
     elif event == 'deployment':
         deployment = body['deployment']
         repo = body['repository']
-        repo_url = uritemplate.expand(GITHUB_DEPLOYMENTS_URI, owner='FAForever', repo=repo['name'])
         if deployment['environment'] == app.config['ENVIRONMENT']:
             status, description = deploy(body['repository']['name'],
                                          body['repository']['clone_url'],
                                          deployment['ref'],
                                          deployment['sha'])
-            status_response = session.post(repo_url+'/{}/statuses'.format(deployment['id']),
-                                            data=json.dumps({
-                                                "state": status,
-                                                "target_url": url_for('deployment',
-                                                                      repo=repo['name'],
-                                                                      id=deployment['id']),
-                                                "description": description
-                                            }))
+            status_response = app.github.create_deployment_status(
+                owner='FAForever',
+                repo=repo['name'],
+                id=deployment['id'],
+                state=status,
+                target_url=url_for('deployment',
+                                   repo=repo['name'],
+                                   id=deployment['id']),
+                description=description
+            )
             return dict(status=status), status_response.status_code
     return dict(status="OK"), 200
 

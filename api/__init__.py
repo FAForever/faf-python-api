@@ -50,9 +50,13 @@ from playhouse.flask_utils import FlaskDB
 flask_db = FlaskDB()
 
 def api_init():
-    "Initializes flask. Call _after_ setting flask config."
+    """
+    Initializes flask. Call _after_ setting flask config.
+    """
     flask_db.init_app(app)
     faf_orm_init_db(flask_db.database)
+    app.github = github.make_session(app.config['GITHUB_USER'],
+                                     app.config['GITHUB_TOKEN'])
 
 # ======== Import (initialize) oauth2 handlers =====
 import api.oauth
@@ -64,3 +68,4 @@ import api.deploy
 import api.auth
 import api.avatars
 import api.games
+import api.github
