@@ -131,6 +131,7 @@ bind_cache_grant(app, oauth, get_current_user)
 import api.oauth
 # ======== Import (initialize) routes =========
 import api.deploy
+import api.deployers
 import api.auth
 import api.avatars
 import api.games

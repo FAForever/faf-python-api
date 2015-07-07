@@ -7,11 +7,11 @@ import re
 from flask import request, render_template, url_for
 
 from api import *
+from api import deployers
 from api.oauth import *
 
 import hmac
-import subprocess
-import os
+from pathlib import Path
 
 
 
@@ -72,14 +72,16 @@ def github_hook():
                 repo=repo['name'],
                 id=deployment['id'],
                 state=status,
-                target_url=url_for('deployment',
-                                   repo=repo['name'],
-                                   id=deployment['id']),
-                description=description
-            )
-            return (dict(status=status,
-                        description=description),
-                   status_response.status_code)
+                description=description)
+            if status_response.status_code == 201:
+                return (dict(status=status,
+                            description=description),
+                       201)
+            else:
+                return ((dict(status='error',
+                             description="Failure creating github deployment status: {}"
+                             .format(status_response.content))),
+                        status_response.status_code)
     return dict(status="OK"), 200
 
 def deploy(repository, clone_url, ref, sha):
@@ -90,29 +92,12 @@ def deploy(repository, clone_url, ref, sha):
     :param sha: hash to verify deployment with
     :return: (status: str, description: str)
     """
-    if repository not in ['api']:
-        return "error", "invalid repository"
-    repo_path = app.config.get('{}_PATH'.format(repository.upper()))
-    git_path = app.config.get('GIT_PATH', '/usr/bin/git')
-    fetch_exit_code = subprocess.call([git_path,
-                                       '-C',
-                                       repo_path,
-                                       'fetch',
-                                       clone_url,
-                                       ref])
-    if fetch_exit_code != 0:
-        return "error", "git fetch returned nonzero code: {}".format(fetch_exit_code)
-    subprocess.call([git_path,
-                    '-C', repo_path,
-                    'checkout',
-                    '-f',
-                    'FETCH_HEAD'])
-    checked_out = subprocess.check_output([git_path,
-                                    'rev-parse',
-                                    'HEAD']).strip().decode()
-    if not checked_out == sha:
-        return "error", "checked out hash {} doesn't match {}".format(checked_out, sha)
-    restart_file = repo_path + '/tmp/restart.txt'
-    with open(restart_file):
-        os.utime(restart_file, None)
-    return "success", "Deployed successfully"
+    try:
+        repo_paths = {
+            'api': app.config['API_PATH']
+        }
+        return {
+            'api': deployers.deploy_api
+        }[repository](Path(repo_paths[repository]), clone_url, ref, sha)
+    except KeyError:
+        return 'error', 'unknown repository'
