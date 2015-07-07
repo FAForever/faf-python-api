@@ -9,7 +9,7 @@ if sys.version_info.major != 3:
     raise RuntimeError(
         "FAForever API requires python 3.\n")
 
-from flask import Flask, session
+from flask import Flask, session, jsonify
 from flask_oauthlib.provider import OAuth2Provider
 
 # ======== Init Flask ==========
@@ -18,20 +18,27 @@ app = Flask('api')
 oauth = OAuth2Provider(app)
 
 _make_response = app.make_response
-def make_response_json(*args, **kwargs):
+def make_response_json(rv):
     """
     Override the flask make_response function to default to application/json
     for lists and dictionaries.
     """
-    if len(args) == 1 and isinstance(args[0], (list, dict)):
-        return flask.json.jsonify(*args, **kwargs)
-    elif (len(args) == 2 and isinstance(args[0], (list, dict))
-                         and isinstance(args[1], int)):
-        response = flask.json.jsonify(*args[0])
-        response.status_code = args[1]
+    if isinstance(rv, app.response_class):
+        return rv
+    if isinstance(rv, dict):
+        return jsonify(rv)
+    elif isinstance(rv, tuple):
+        values = dict(zip(['response', 'status', 'headers'], rv))
+        response, status, headers = values.get('response', ''), values.get('status', 200), values.get('headers', [])
+        if isinstance(response, dict):
+            response = jsonify(values['response'])
+        else:
+            response = _make_response(response)
+        response.status_code = values.get('status', 200)
+        response.headers = values.get('headers', response.headers)
         return response
     else:
-        return _make_response(*args, **kwargs)
+        return _make_response(rv)
 
 app.make_response = make_response_json
 

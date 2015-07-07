@@ -63,13 +63,13 @@ def github_hook():
     body = request.get_json()
     if not validate_github_request(request.data,
                                    request.headers['X-Hub-Signature'].split("sha1=")[1]):
-        return "Invalid request", 400
+        return dict(status="Invalid request"), 400
     event = request.headers['X-Github-Event']
     if event == 'push':
         if body['repository']['name'] == 'api':
             head_commit = body['head_commit']
             if not head_commit['distinct']:
-                return "OK", 200
+                return dict(status="OK"), 200
             match = re.search('Deploy: ([\w\W]+)', head_commit['message'])
             if match:
                 repo_url = uritemplate.expand(GITHUB_DEPLOYMENTS_URI, owner='FAForever', repo=body['repository']['name'])
@@ -81,7 +81,6 @@ def github_hook():
                                                     }))
                 if not deployment_response.status_code == 201:
                     raise Exception(deployment_response.content)
-        return "OK", 200
     elif event == 'deployment':
         deployment = body['deployment']
         repo = body['repository']
@@ -99,11 +98,8 @@ def github_hook():
                                                                       id=deployment['id']),
                                                 "description": description
                                             }))
-            return "Success", status_response.status_code
-        else:
-            return "Unknown error", 400
-    else:
-        return "Noop", 200
+            return dict(status=status), status_response.status_code
+    return dict(status="OK"), 200
 
 def deploy(repository, clone_url, ref, sha):
     """
