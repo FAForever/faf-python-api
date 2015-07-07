@@ -76,7 +76,10 @@ class Github:
         :param description:
         :return:
         """
-        repo_url = uritemplate.expand(DEPLOYMENT_STATUS_URI, owner=owner, repo=repo, id=id)
+        repo_url = uritemplate.expand(DEPLOYMENT_STATUS_URI,
+                                      owner=owner,
+                                      repo=repo,
+                                      id=str(id))
         return self._session.post(repo_url,
                                   data=json.dumps({
                                       "state": state,
