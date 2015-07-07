@@ -77,7 +77,9 @@ def github_hook():
                                    id=deployment['id']),
                 description=description
             )
-            return dict(status=status), status_response.status_code
+            return (dict(status=status,
+                        description=description),
+                   status_response.status_code)
     return dict(status="OK"), 200
 
 def deploy(repository, clone_url, ref, sha):
