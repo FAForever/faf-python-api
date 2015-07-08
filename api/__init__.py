@@ -95,6 +95,7 @@ def api_init():
     faf.db.init_db(app.config)
     app.github = github.make_session(app.config['GITHUB_USER'],
                                      app.config['GITHUB_TOKEN'])
+    app.slack = slack.make_session(app.config['SLACK_HOOK_URL'])
 
     app.secret_key = app.config['FLASK_LOGIN_SECRET_KEY']
 
@@ -140,3 +141,4 @@ import api.maps
 import api.github
 import api.oauth_client
 import api.oauth_token
+import api.slack

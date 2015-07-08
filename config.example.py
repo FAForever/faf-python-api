@@ -32,3 +32,4 @@ GITHUB_TOKEN = 'some-token'
 AUTO_DEPLOY = ['patchnotes']
 
 FLASK_LOGIN_SECRET_KEY = os.getenv("FLASK_LOGIN_SECRET_KEY", '1234')
+SLACK_HOOK_URL = 'http://example.com'

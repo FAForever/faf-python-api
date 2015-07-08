@@ -73,6 +73,11 @@ def github_hook():
                 id=deployment['id'],
                 state=status,
                 description=description)
+            app.slack.send_message(username='deploybot',
+                                   text="Deployed {}:{} to {}".format(
+                                       repo['name'],
+                                       "{}@{}".format(deployment['ref'], deployment['sha']),
+                                       deployment['environment']))
             if status_response.status_code == 201:
                 return (dict(status=status,
                             description=description),
