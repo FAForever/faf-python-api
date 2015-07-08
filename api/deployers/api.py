@@ -25,6 +25,6 @@ def deploy(repo_path: Path, clone_url: str, ref: str, sha: str):
     checked_out = subprocess.check_output(git_command + ['rev-parse', 'HEAD']).strip().decode()
     if not checked_out == sha:
         return "failure", "checked out hash {} doesn't match {}".format(checked_out, sha)
-    restart_file = Path(repo_path, '/tmp/restart.txt')
+    restart_file = Path(repo_path, 'tmp/restart.txt')
     restart_file.touch()
     return "success", "Deployed successfully"
