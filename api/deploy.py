@@ -52,11 +52,12 @@ def github_hook():
             if not head_commit['distinct']:
                 return dict(status="OK"), 200
             match = re.search('Deploy: ([\w\W]+)', head_commit['message'])
+            environment = match.group(1) if match else app.config['ENVIRONMENT']
             if match or repo_name in app.config['AUTO_DEPLOY']:
                 resp = app.github.create_deployment(owner='FAForever',
                                                     repo=repo_name,
                                                     ref=body['ref'],
-                                                    environment=match.group(1),
+                                                    environment=environment,
                                                     description=head_commit['message'])
                 if not resp.status_code == 201:
                     raise Exception(resp.content)
