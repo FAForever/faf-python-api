@@ -46,14 +46,15 @@ def github_hook():
         return dict(status="Invalid request"), 400
     event = request.headers['X-Github-Event']
     if event == 'push':
-        if body['repository']['name'] in app.config['REPO_PATHS'].keys():
+        repo_name = body['repository']['name']
+        if repo_name in app.config['REPO_PATHS'].keys():
             head_commit = body['head_commit']
             if not head_commit['distinct']:
                 return dict(status="OK"), 200
             match = re.search('Deploy: ([\w\W]+)', head_commit['message'])
-            if match:
+            if match or repo_name in app.config['AUTO_DEPLOY']:
                 resp = app.github.create_deployment(owner='FAForever',
-                                                    repo=body['repository']['name'],
+                                                    repo=repo_name,
                                                     ref=body['ref'],
                                                     environment=match.group(1),
                                                     description=head_commit['message'])
