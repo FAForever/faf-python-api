@@ -46,7 +46,7 @@ def github_hook():
         return dict(status="Invalid request"), 400
     event = request.headers['X-Github-Event']
     if event == 'push':
-        if body['repository']['name'] == 'api':
+        if body['repository']['name'] in app.config['REPO_PATHS'].keys():
             head_commit = body['head_commit']
             if not head_commit['distinct']:
                 return dict(status="OK"), 200
@@ -89,7 +89,7 @@ def github_hook():
                         status_response.status_code)
     return dict(status="OK"), 200
 
-def deploy(repository, clone_url, ref, sha):
+def deploy(repository, remote_url, ref, sha):
     """
     Perform deployment on this machine
     :param repository: the repository to deploy
@@ -98,11 +98,9 @@ def deploy(repository, clone_url, ref, sha):
     :return: (status: str, description: str)
     """
     try:
-        repo_paths = {
-            'api': app.config['API_PATH']
-        }
         return {
-            'api': deployers.deploy_api
-        }[repository](Path(repo_paths[repository]), clone_url, ref, sha)
-    except KeyError:
-        return 'error', 'unknown repository'
+            'api': deployers.deploy_web,
+            'patchnotes': deployers.deploy_web,
+        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, ref, sha)
+    except Exception as e:
+        return 'error', str(e)
