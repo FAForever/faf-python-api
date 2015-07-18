@@ -104,7 +104,7 @@ def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
 
 def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
     checkout_repo(repo_path, remote_url, ref, sha)
-    mod_info = parse_mod_info(repo_path)
+    mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))
     files = build_mod(repo_path)
     deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(mod_info['_faf_modname']))
     for f in files:
