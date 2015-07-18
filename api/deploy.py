@@ -5,14 +5,18 @@ import json
 import re
 
 from flask import request, render_template, url_for
+import shutil
 
 from api import *
-from api import deployers
 from api.oauth import *
 
 import hmac
 from pathlib import Path
 
+from faftools.fa.mods import parse_mod_info
+from faftools.fa.build_mod import build_mod
+
+from .git import checkout_repo
 
 
 github_session = None
@@ -91,6 +95,29 @@ def github_hook():
                         status_response.status_code)
     return dict(status="OK"), 200
 
+
+def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
+    checkout_repo(repo_path, remote_url, ref, sha)
+    restart_file = Path(repo_path, 'tmp/restart.txt')
+    restart_file.touch()
+
+
+def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
+    checkout_repo(repo_path, remote_url, ref, sha)
+    mod_info = parse_mod_info(repo_path)
+    files = build_mod(repo_path)
+    deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(mod_info['_faf_modname']))
+    for f in files:
+        destination = deploy_path / f['cache_path'].name
+        if not destination.exists():
+            shutil.copy2(str(f['cache_path']), str(destination))
+        shutil.chown(str(destination), user='faforever', group='www-data')
+        db.execute_sql('delete from updates_{}_files where fileId = ? and version = ?;', (f['id'], mod_info['version']))
+        db.execute_sql('insert into updates_{}_files '
+                       '(fileId, version, md5, filename) '
+                       'values (?,?,?,?)',
+                       (f['id'], mod_info['version'], mod_info['md5'], f['cache_path'].name))
+
 def deploy(repository, remote_url, ref, sha):
     """
     Perform deployment on this machine
@@ -101,8 +128,9 @@ def deploy(repository, remote_url, ref, sha):
     """
     try:
         return {
-            'api': deployers.deploy_web,
-            'patchnotes': deployers.deploy_web,
+            'api': deploy_web,
+            'patchnotes': deploy_web,
+            'fa': deploy_game
         }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, ref, sha)
     except Exception as e:
         return 'error', str(e)

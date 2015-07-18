@@ -20,6 +20,7 @@ REPO_PATHS = {
 }
 
 GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'
+
 # FIXME set paths
 MOD_UPLOAD_PATH = '/opt/dev/www/content/faf/FIXME'
 MAP_UPLOAD_PATH = '/opt/dev/www/content/faf/FIXME'

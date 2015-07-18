@@ -7,6 +7,7 @@ if sys.platform == 'win32':
 else:
     GIT_PATH = '/usr/bin/git'
 
+
 def checkout_repo(repo_path: Path, remote_url: Path, ref: str, sha: str):
     if not repo_path.exists():
         raise Exception("Repository to deploy doesn't exist")
