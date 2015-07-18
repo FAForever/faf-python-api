@@ -118,7 +118,7 @@ def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
             shutil.copy2(str(f['path']), str(destination))
         db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;'.format(faf_modname), (f['id'], mod_info['version']))
         db.execute_sql('insert into updates_{}_files '
-                       '(fileId, version, md5, filename) '
+                       '(fileId, version, md5, name) '
                        'values (%s,%s,%s,%s)'.format(faf_modname),
                        (f['id'], mod_info['version'], f['md5'], f['path'].name))
 
