@@ -108,6 +108,7 @@ def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
     checkout_repo(repo_path, remote_url, ref, sha)
     mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))
     files = build_mod(repo_path)
+    logger.info("Build result: {}".format(files))
     deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(mod_info['_faf_modname']))
     logger.info("Deploying {} to {}".format(mod_info['_faf_modname'], deploy_path))
     for f in files:
@@ -136,4 +137,4 @@ def deploy(repository, remote_url, ref, sha):
             'fa': deploy_game
         }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, ref, sha)
     except Exception as e:
-        return 'error', str(e)
+        return 'error', "{}: {}".format(type(e), e)
