@@ -102,7 +102,7 @@ def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
     checkout_repo(repo_path, remote_url, ref, sha)
     restart_file = Path(repo_path, 'tmp/restart.txt')
     restart_file.touch()
-    return 'ok', 'success'
+    return 'success', 'Deployed'
 
 
 def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
@@ -114,6 +114,7 @@ def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
     deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(mod_info['_faf_modname']))
     logger.info("Deploying {} to {}".format(faf_modname, deploy_path))
     for f in files:
+        logger.info("Deploying ")
         destination = deploy_path / (f['filename'] + str(mod_info['version']) + ".zip")
         if not destination.exists():
             shutil.copy2(str(f['path']), str(destination))
@@ -122,7 +123,7 @@ def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
                        '(fileId, version, md5, name) '
                        'values (%s,%s,%s,%s)'.format(faf_modname),
                        (f['id'], mod_info['version'], f['md5'], destination.name))
-    return 'ok', 'success'
+    return 'success', 'Deployed'
 
 def deploy(repository, remote_url, ref, sha):
     """
