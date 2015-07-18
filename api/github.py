@@ -63,7 +63,8 @@ class Github:
                                   data=json.dumps({
                                       "ref": ref,
                                       "environment": environment,
-                                      "description": description
+                                      "description": description,
+                                      "auto_merge": False
                                   }))
 
     def create_deployment_status(self, owner='FAForever', repo=None, id=None, state=None, description=None):
