@@ -115,10 +115,10 @@ def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
         destination = deploy_path / f['path'].name
         if not destination.exists():
             shutil.copy2(str(f['path']), str(destination))
-        db.execute_sql('delete from updates_{}_files where fileId = ? and version = ?;', (f['id'], mod_info['version']))
+        db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;', (f['id'], mod_info['version']))
         db.execute_sql('insert into updates_{}_files '
                        '(fileId, version, md5, filename) '
-                       'values (?,?,?,?)',
+                       'values (%s,%s,%s,%s)',
                        (f['id'], mod_info['version'], mod_info['md5'], f['cache_path'].name))
 
 def deploy(repository, remote_url, ref, sha):
