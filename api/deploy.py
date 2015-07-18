@@ -120,7 +120,7 @@ def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
         db.execute_sql('insert into updates_{}_files '
                        '(fileId, version, md5, filename) '
                        'values (%s,%s,%s,%s)'.format(faf_modname),
-                       (f['id'], mod_info['version'], mod_info['md5'], f['cache_path'].name))
+                       (f['id'], mod_info['version'], f['md5'], f['path'].name))
 
 def deploy(repository, remote_url, ref, sha):
     """
