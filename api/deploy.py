@@ -107,18 +107,19 @@ def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
 def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
     checkout_repo(repo_path, remote_url, ref, sha)
     mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))
+    faf_modname = mod_info['_faf_modname']
     files = build_mod(repo_path)
     logger.info("Build result: {}".format(files))
     deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(mod_info['_faf_modname']))
-    logger.info("Deploying {} to {}".format(mod_info['_faf_modname'], deploy_path))
+    logger.info("Deploying {} to {}".format(faf_modname, deploy_path))
     for f in files:
         destination = deploy_path / f['path'].name
         if not destination.exists():
             shutil.copy2(str(f['path']), str(destination))
-        db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;', (f['id'], mod_info['version']))
+        db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;'.format(faf_modname), (f['id'], mod_info['version']))
         db.execute_sql('insert into updates_{}_files '
                        '(fileId, version, md5, filename) '
-                       'values (%s,%s,%s,%s)',
+                       'values (%s,%s,%s,%s)'.format(faf_modname),
                        (f['id'], mod_info['version'], mod_info['md5'], f['cache_path'].name))
 
 def deploy(repository, remote_url, ref, sha):
