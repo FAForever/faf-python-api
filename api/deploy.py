@@ -112,9 +112,9 @@ def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
     deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(mod_info['_faf_modname']))
     logger.info("Deploying {} to {}".format(mod_info['_faf_modname'], deploy_path))
     for f in files:
-        destination = deploy_path / f['cache_path'].name
+        destination = deploy_path / f['path'].name
         if not destination.exists():
-            shutil.copy2(str(f['cache_path']), str(destination))
+            shutil.copy2(str(f['path']), str(destination))
         shutil.chown(str(destination), user='faforever', group='www-data')
         db.execute_sql('delete from updates_{}_files where fileId = ? and version = ?;', (f['id'], mod_info['version']))
         db.execute_sql('insert into updates_{}_files '
