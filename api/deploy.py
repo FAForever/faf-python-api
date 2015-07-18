@@ -18,6 +18,8 @@ from faftools.fa.build_mod import build_mod
 
 from .git import checkout_repo
 
+import logging
+logger = logging.getLogger(__name__)
 
 github_session = None
 
@@ -107,6 +109,7 @@ def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
     mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))
     files = build_mod(repo_path)
     deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(mod_info['_faf_modname']))
+    logger.info("Deploying {} to {}".format(mod_info['_faf_modname'], deploy_path))
     for f in files:
         destination = deploy_path / f['cache_path'].name
         if not destination.exists():
