@@ -137,4 +137,5 @@ def deploy(repository, remote_url, ref, sha):
             'fa': deploy_game
         }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, ref, sha)
     except Exception as e:
+        logger.exception(e)
         return 'error', "{}: {}".format(type(e), e)
