@@ -114,7 +114,7 @@ def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
     deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(mod_info['_faf_modname']))
     logger.info("Deploying {} to {}".format(faf_modname, deploy_path))
     for f in files:
-        destination = deploy_path / (f['filename'] + faf_modname + "." + str(mod_info['version']) + f['sha1'][:6] + ".zip")
+        destination = deploy_path / (f['filename'] + "." + faf_modname + "." + str(mod_info['version']) + f['sha1'][:6] + ".zip")
         logger.info("Deploying {} to {}".format(f, destination))
         shutil.copy2(str(f['path']), str(destination))
         db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;'.format(faf_modname), (f['id'], mod_info['version']))
