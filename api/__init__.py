@@ -1,6 +1,13 @@
 """
-Main file for the Flask application
+Forged Alliance Forever API project
+
+Distributed under GPLv3, see license.txt
 """
+__version__ = '0.1'
+__author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus'
+__contact__ = 'admin@faforever.com'
+__license__ = 'GPLv3'
+__copyright__ = 'Copyright (c) 2011-2015 ' + __author__
 
 import sys
 import flask
