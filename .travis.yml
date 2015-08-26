@@ -16,7 +16,7 @@ before_script:
 
 script:
   - pip install -e .
-  - py.test --slow --cov-report term-missing --cov=api
+  - py.test --cov-report term-missing --cov=api
   - pyflakes . || true
 
 after_success:
