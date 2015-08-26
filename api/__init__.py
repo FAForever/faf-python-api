@@ -33,7 +33,9 @@ def make_response_json(rv):
     if isinstance(rv, app.response_class):
         return rv
     if isinstance(rv, dict):
-        return jsonify(rv)
+        response = jsonify(rv)
+        response.headers['content-type'] = 'application/vnd.api+json'
+        return response
     elif isinstance(rv, tuple):
         values = dict(zip(['response', 'status', 'headers'], rv))
         response, status, headers = values.get('response', ''), values.get('status', 200), values.get('headers', [])
@@ -43,6 +45,7 @@ def make_response_json(rv):
             response = _make_response(response)
         response.status_code = values.get('status', 200)
         response.headers = values.get('headers', response.headers)
+        response.headers['content-type'] = 'application/vnd.api+json'
         return response
     else:
         return _make_response(rv)
@@ -70,4 +73,5 @@ import api.deploy
 import api.auth
 import api.avatars
 import api.games
+import api.mods
 import api.github
