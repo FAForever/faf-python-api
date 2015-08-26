@@ -6,3 +6,4 @@ python-geoip-geolite2
 geoip2
 uritemplate.py
 requests
+pymysql

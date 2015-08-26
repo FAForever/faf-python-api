@@ -51,17 +51,13 @@ app.make_response = make_response_json
 
 # ======== Init Database =======
 
-from db.faf_orm import *
-from playhouse.flask_utils import FlaskDB
-
-flask_db = FlaskDB()
+import db
 
 def api_init():
     """
     Initializes flask. Call _after_ setting flask config.
     """
-    flask_db.init_app(app)
-    faf_orm_init_db(flask_db.database)
+    db.init_db(app.config)
     app.github = github.make_session(app.config['GITHUB_USER'],
                                      app.config['GITHUB_TOKEN'])
 
@@ -70,7 +66,6 @@ import api.oauth
 
 
 # ======== Import (initialize) routes =========
-import api.data
 import api.deploy
 import api.auth
 import api.avatars

@@ -3,7 +3,6 @@ import os
 from peewee import IntegrityError
 from werkzeug.utils import secure_filename
 from api import *
-from db.faf_orm import Avatar
 
 from flask import request
 
