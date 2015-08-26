@@ -4,4 +4,4 @@ provide required REST services to clients.
 
 # Documentation
 
-Currently documentation is sparse. Please help us out!
+See [documentation.md](documentation.md) for API documentation in markdown format.
