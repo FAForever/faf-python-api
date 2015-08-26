@@ -4,4 +4,5 @@ provide required REST services to clients.
 
 # Documentation
 
-See [documentation.md](documentation.md) for API documentation in markdown format.
+See [documentation](documentation.apibp) for API documentation in markdown format.
+
