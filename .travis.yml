@@ -3,6 +3,9 @@ language: python
 python:
   - "3.4"
 
+before_install:
+  - sudo apt-get install liblua5.1-dev
+
 install:
   - cp config.example.py config.py
   - "pip install --upgrade pip"
