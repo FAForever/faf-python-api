@@ -9,3 +9,5 @@ uritemplate.py
 requests
 pymysql
 pyflakes
+pytest-mock
+pytest-cov
