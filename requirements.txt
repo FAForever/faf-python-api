@@ -8,3 +8,4 @@ geoip2
 uritemplate.py
 requests
 pymysql
+pyflakes
