@@ -1,5 +1,6 @@
 Flask >= 0.10.1
 Flask-OAuthlib
+coveralls
 peewee >= 2.4.2
 lupa >= 1.0.1
 python-geoip-geolite2
