@@ -22,3 +22,12 @@ def clan_get(id):
             return { 'clan_details': clan_details,
                      'members': cursor.fetchall() }
     return {}
+
+@app.route('/clan_members')
+def clan_members_get():
+    members = []
+    with db.connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        cursor.execute('SELECT * FROM clan_members')
+        members = cursor.fetchall()
+        
+    return { 'data': members }
