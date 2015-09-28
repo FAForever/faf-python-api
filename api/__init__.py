@@ -75,3 +75,4 @@ import api.avatars
 import api.games
 import api.mods
 import api.github
+import api.clans
