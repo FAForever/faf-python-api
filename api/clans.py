@@ -18,7 +18,7 @@ def clan_get(id):
         if cursor.rowcount == 1:
             clan_details = cursor.fetchall()
             cursor.execute('SELECT `player_id`, `player_name`, `join_clan_date` '
-                + 'FROM clan_members WHERE clan_id = %s LIMIT 1', id)
+                + 'FROM clan_members WHERE clan_id = %s', id)
             return { 'clan_details': clan_details,
                      'members': cursor.fetchall() }
     return {}
