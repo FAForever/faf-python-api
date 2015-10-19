@@ -106,3 +106,5 @@ import api.mods
 import api.github
 import api.oauth_client
 import api.oauth_token
+import api.achievements
+import api.events
