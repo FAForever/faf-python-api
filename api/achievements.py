@@ -3,15 +3,7 @@ import flask
 from api import *
 from api.oauth import current_user
 
-
-@app.route('/achievements')
-def achievements_list():
-    language = request.args.get('language', 'en')
-    region = request.args.get('region', 'US')
-
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
-        cursor.execute(
-            """SELECT
+SELECT_ACHIEVEMENTS_QUERY = """SELECT
                     ach.id,
                     ach.type,
                     ach.total_steps,
@@ -43,30 +35,36 @@ def achievements_list():
                 LEFT OUTER JOIN messages desc_def
                     ON ach.description_key = desc_def.key
                         AND desc_def.language = 'en'
-                        AND desc_def.region = 'US'""",
-            {
-                'language': language,
-                'region': region
-            })
+                        AND desc_def.region = 'US'""";
+
+
+@app.route('/achievements')
+def achievements_list():
+    language = request.args.get('language', 'en')
+    region = request.args.get('region', 'US')
+
+    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+        cursor.execute(SELECT_ACHIEVEMENTS_QUERY,
+                       {
+                           'language': language,
+                           'region': region
+                       })
 
     return flask.jsonify(items=cursor.fetchall())
 
 
 @app.route('/achievements/<achievement_id>')
 def achievements_get(achievement_id):
+    language = request.args.get('language', 'en')
+    region = request.args.get('region', 'US')
+
     with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
-        cursor.execute("""SELECT
-                         id,
-                         name,
-                         description,
-                         type,
-                         total_steps,
-                         revealed_icon_url,
-                         unlocked_icon_url,
-                         initial_state,
-                         experience_points
-                       FROM achievement_definitions
-                       WHERE id = %s""", achievement_id)
+        cursor.execute(SELECT_ACHIEVEMENTS_QUERY + "WHERE ach.id = %(achievement_id)s",
+                       {
+                           'language': language,
+                           'region': region,
+                           'achievement_id': achievement_id
+                       })
 
     return cursor.fetchone()
 
@@ -115,12 +113,16 @@ def achievements_increment(achievement_id):
                            'state': new_state,
                        })
 
+    db.connection.commit()
+    cursor.close()
+
     return {'current_steps': new_current_steps, 'current_state': new_state, 'newly_unlocked': newly_unlocked}
 
 
 @app.route('/achievements/<achievement_id>/unlock', methods=['POST'])
 def achievements_unlock(achievement_id):
-    current_player_id = current_user()
+    # FIXME get player ID from OAuth session
+    current_player_id = 1
 
     with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""SELECT
@@ -145,6 +147,9 @@ def achievements_unlock(achievement_id):
                            'achievement_id': achievement_id,
                            'state': new_state,
                        })
+
+    db.connection.commit()
+    cursor.close()
 
     return {'newly_unlocked': newly_unlocked}
 
@@ -175,6 +180,9 @@ def achievements_reveal(achievement_id):
                            'achievement_id': achievement_id,
                            'state': new_state,
                        })
+
+    db.connection.commit()
+    cursor.close()
 
     return {'current_state': new_state}
 
@@ -217,8 +225,8 @@ def achievements_list_player(player_id):
                             achievement_id,
                             current_steps,
                             state,
-                            create_time,
-                            update_time
+                            UNIX_TIMESTAMP(create_time) as create_time,
+                            UNIX_TIMESTAMP(update_time) as update_time
                         FROM player_achievements
                         WHERE player_id = '%s'""" % player_id)
 
