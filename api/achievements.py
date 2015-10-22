@@ -1,7 +1,7 @@
 from flask import request
 import flask
+
 from api import *
-from api.oauth import current_user
 
 SELECT_ACHIEVEMENTS_QUERY = """SELECT
                     ach.id,
@@ -35,11 +35,37 @@ SELECT_ACHIEVEMENTS_QUERY = """SELECT
                 LEFT OUTER JOIN messages desc_def
                     ON ach.description_key = desc_def.key
                         AND desc_def.language = 'en'
-                        AND desc_def.region = 'US'""";
+                        AND desc_def.region = 'US'"""
 
 
 @app.route('/achievements')
 def achievements_list():
+    """Lists all achievement definitions.
+
+    HTTP Parameters::
+
+        language    string  The preferred language to use for strings returned by this method
+        region      string  The preferred region to use for strings returned by this method
+
+    :return:
+        If successful, this method returns a response body with the following structure::
+
+            {
+              "items": [
+                {
+                  "id": string,
+                  "name": string,
+                  "description": string,
+                  "type": string,
+                  "total_steps": integer,
+                  "initial_state": string,
+                  "experience_points": integer,
+                  "revealed_icon_url": string,
+                  "unlocked_icon_url": string
+                }
+              ]
+            }
+    """
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
 
@@ -50,11 +76,35 @@ def achievements_list():
                            'region': region
                        })
 
-    return flask.jsonify(items=cursor.fetchall())
+        return flask.jsonify(items=cursor.fetchall())
 
 
 @app.route('/achievements/<achievement_id>')
 def achievements_get(achievement_id):
+    """Gets an achievement definition.
+
+    HTTP Parameters::
+
+        language    string  The preferred language to use for strings returned by this method
+        region      string  The preferred region to use for strings returned by this method
+
+    :param achievement_id: ID of the achievement to get
+
+    :return:
+        If successful, this method returns a response body with the following structure::
+
+            {
+              "id": string,
+              "name": string,
+              "description": string,
+              "type": string,
+              "total_steps": integer,
+              "initial_state": string,
+              "experience_points": integer,
+              "revealed_icon_url": string,
+              "unlocked_icon_url": string
+            }
+    """
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
 
@@ -66,160 +116,185 @@ def achievements_get(achievement_id):
                            'achievement_id': achievement_id
                        })
 
-    return cursor.fetchone()
+        return cursor.fetchone()
 
 
 @app.route('/achievements/<achievement_id>/increment', methods=['POST'])
 def achievements_increment(achievement_id):
-    achievement = achievements_get(achievement_id)
-    current_player_id = current_user()
-    steps_to_increment = request.args.get('steps', 1)
+    """Increments the steps of the achievement with the given ID for the currently authenticated player.
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
-        cursor.execute("""SELECT
-                            current_steps,
-                            state
-                        FROM player_achievements
-                        WHERE achievement_id = %s AND player_id = %s""",
-                       (achievement_id, current_player_id))
+    HTTP Parameters::
 
-    player_achievement = cursor.fetchone()
+        player_id    integer ID of the player to increment the achievement for
+        steps        string  The number of steps to increment
 
-    new_current_steps = steps_to_increment
-    new_state = 'REVEALED'
-    newly_unlocked = False
+    :param achievement_id: ID of the achievement to increment
 
-    if player_achievement:
-        new_current_steps += player_achievement['current_steps']
+    :return:
+        If successful, this method returns a response body with the following structure::
 
-    if new_current_steps >= achievement['total_steps']:
-        new_state = 'UNLOCKED'
-        new_current_steps = achievement['total_steps']
+            {
+              "current_steps": integer,
+              "current_state": string,
+              "newly_unlocked": boolean,
+            }
+    """
+    # FIXME get player ID from OAuth session
+    player_id = request.args.get('player_id')
+    steps = request.args.get('steps', 1)
 
-        if player_achievement:
-            newly_unlocked = player_achievement['state'] != 'UNLOCKED'
+    return flask.jsonify(increment_achievement(achievement_id, player_id, steps))
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
-        cursor.execute("""INSERT INTO player_achievements (player_id, achievement_id, current_steps, state)
-                        VALUES
-                            (%(player_id)s, %(achievement_id)s, %(current_steps)s, %(state)s)
-                        ON DUPLICATE KEY UPDATE
-                            current_steps = VALUES(current_steps),
-                            state = VALUES(state)""",
-                       {
-                           'player_id': current_player_id,
-                           'achievement_id': achievement_id,
-                           'current_steps': new_current_steps,
-                           'state': new_state,
-                       })
 
-    db.connection.commit()
-    cursor.close()
+@app.route('/achievements/<achievement_id>/setStepsAtLeast', methods=['POST'])
+def achievements_set_steps_at_least(achievement_id):
+    """Sets the steps of an achievement. If the steps parameter is less than the current number of steps
+     that the player already gained for the achievement, the achievement is not modified.
+     This function is NOT an endpoint."""
+    # FIXME get player ID from OAuth session
+    player_id = request.args.get('player_id')
+    steps = request.args.get('steps', 1)
 
-    return {'current_steps': new_current_steps, 'current_state': new_state, 'newly_unlocked': newly_unlocked}
+    return flask.jsonify(set_steps_at_least(achievement_id, player_id, steps))
 
 
 @app.route('/achievements/<achievement_id>/unlock', methods=['POST'])
 def achievements_unlock(achievement_id):
+    """Unlocks an achievement for the currently authenticated player.
+
+    HTTP Parameters::
+
+        player_id    integer ID of the player to unlock the achievement for
+
+    :param achievement_id: ID of the achievement to unlock
+
+    :return:
+        If successful, this method returns a response body with the following structure::
+
+            {
+              "newly_unlocked": boolean,
+            }
+    """
     # FIXME get player ID from OAuth session
-    current_player_id = 1
+    player_id = request.args.get('player_id')
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
-        cursor.execute("""SELECT
-                            state
-                        FROM player_achievements
-                        WHERE achievement_id = %s AND player_id = %s""",
-                       (achievement_id, current_player_id))
-
-    player_achievement = cursor.fetchone()
-
-    new_state = 'UNLOCKED'
-    newly_unlocked = not player_achievement or player_achievement['state'] != 'UNLOCKED'
-
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
-        cursor.execute("""INSERT INTO player_achievements (player_id, achievement_id, state)
-                        VALUES
-                            (%(player_id)s, %(achievement_id)s, %(state)s)
-                        ON DUPLICATE KEY UPDATE
-                            state = VALUES(state)""",
-                       {
-                           'player_id': current_player_id,
-                           'achievement_id': achievement_id,
-                           'state': new_state,
-                       })
-
-    db.connection.commit()
-    cursor.close()
-
-    return {'newly_unlocked': newly_unlocked}
+    return flask.jsonify(unlock_achievement(achievement_id, player_id))
 
 
 @app.route('/achievements/<achievement_id>/reveal', methods=['POST'])
 def achievements_reveal(achievement_id):
-    current_player_id = current_user()
+    """Reveals an achievement for the currently authenticated player.
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
-        cursor.execute("""SELECT
-                            state
-                        FROM player_achievements
-                        WHERE achievement_id = %s AND player_id = %s""",
-                       (achievement_id, current_player_id))
+    HTTP Parameters::
 
-    player_achievement = cursor.fetchone()
+        player_id    integer ID of the player to reveal the achievement for
 
-    new_state = player_achievement['state'] if player_achievement else 'REVEALED'
+    :param achievement_id: ID of the achievement to reveal
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
-        cursor.execute("""INSERT INTO player_achievements (player_id, achievement_id, state)
-                        VALUES
-                            (%(player_id)s, %(achievement_id)s, %(state)s)
-                        ON DUPLICATE KEY UPDATE
-                            state = VALUES(state)""",
-                       {
-                           'player_id': current_player_id,
-                           'achievement_id': achievement_id,
-                           'state': new_state,
-                       })
+    :return:
+        If successful, this method returns a response body with the following structure::
 
-    db.connection.commit()
-    cursor.close()
+            {
+              "current_state": string,
+            }
+    """
+    # FIXME get player ID from OAuth session
+    player_id = request.args.get('player_id')
 
-    return {'current_state': new_state}
+    return flask.jsonify(reveal_achievement(achievement_id, player_id))
 
 
 @app.route('/achievements/updateMultiple', methods=['POST'])
 def achievements_update_multiple():
-    updates = request.args.get('updates')
+    """Updates multiple achievements for the currently authenticated player.
+
+    HTTP Parameters::
+
+        player_id    integer ID of the player to update the achievements for
+
+    HTTP Body:
+        In the request body, supply data with the following structure::
+
+            {
+              "updates": [
+
+                "achievement_id": string,
+                "update_type": string,
+                "steps": integer
+              ]
+            }
+
+        ``updateType`` being one of "REVEAL", "INCREMENT" or "UNLOCK"
+
+    :return:
+        If successful, this method returns a response body with the following structure::
+
+            {
+              "updated_achievements": [
+                "achievement_id": string,
+                "current_state": string,
+                "current_steps": integer,
+                "newly_unlocked": boolean,
+              ],
+            }
+    """
+    player_id = request.args.get('player_id')
+
+    updates = request.json['updates']
 
     result = {'updated_achievements': []}
 
     for update in updates:
-        achievement_id = update['achievementId']
-        update_type = update['updateType']
+        achievement_id = update['achievement_id']
+        update_type = update['update_type']
 
         update_result = {'achievement_id': achievement_id}
 
         if update_type == 'REVEAL':
-            reveal_result = achievements_reveal(achievement_id)
+            reveal_result = reveal_achievement(achievement_id, player_id)
             update_result['current_state'] = reveal_result['current_state']
             update_result['current_state'] = 'REVEALED'
         elif update_type == 'UNLOCK':
-            unlock_result = achievements_unlock(achievement_id)
+            unlock_result = unlock_achievement(achievement_id, player_id)
             update_result['newly_unlocked'] = unlock_result['newly_unlocked']
             update_result['current_state'] = 'UNLOCKED'
         elif update_type == 'INCREMENT':
-            increment_result = achievements_increment(achievement_id)
+            increment_result = increment_achievement(achievement_id, player_id, update['steps'])
             update_result['current_steps'] = increment_result['current_steps']
             update_result['current_state'] = increment_result['current_state']
             update_result['newly_unlocked'] = increment_result['newly_unlocked']
+        elif update_type == 'SET_STEPS_AT_LEAST':
+            set_steps_at_least_result = set_steps_at_least(achievement_id, player_id, update['steps'])
+            update_result['current_steps'] = set_steps_at_least_result['current_steps']
+            update_result['current_state'] = set_steps_at_least_result['current_state']
+            update_result['newly_unlocked'] = set_steps_at_least_result['newly_unlocked']
 
         result['updated_achievements'].append(update_result)
 
     return result
 
 
-@app.route('/player/<int:player_id>/achievements')
+@app.route('/players/<int:player_id>/achievements')
 def achievements_list_player(player_id):
+    """Lists the progress of achievements for a player.
+
+    :param player_id: ID of the player.
+
+    :return:
+        If successful, this method returns a response body with the following structure::
+
+            {
+              "items": [
+                {
+                  "achievement_id": string,
+                  "state": string,
+                  "current_steps": integer,
+                  "create_time": long,
+                  "update_time": long
+                }
+              ]
+            }
+    """
     with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""SELECT
                             achievement_id,
@@ -230,4 +305,155 @@ def achievements_list_player(player_id):
                         FROM player_achievements
                         WHERE player_id = '%s'""" % player_id)
 
-    return flask.jsonify(items=cursor.fetchall())
+        return flask.jsonify(items=cursor.fetchall())
+
+
+def increment_achievement(achievement_id, player_id, steps):
+    steps_function = lambda current_steps, new_steps: current_steps + new_steps
+    return update_steps(achievement_id, player_id, steps, steps_function)
+
+
+def set_steps_at_least(achievement_id, player_id, steps):
+    steps_function = lambda current_steps, new_steps: max(current_steps, new_steps)
+    return update_steps(achievement_id, player_id, steps, steps_function)
+
+
+def update_steps(achievement_id, player_id, steps, steps_function):
+    """Increments the steps of an achievement. This function is NOT an endpoint.
+
+    :param achievement_id: ID of the achievement to increment
+    :param player_id: ID of the player to increment the achievement for
+    :param steps: The number of steps to increment
+    :param steps_function: The function to use to calculate the new steps value. Two parameters are passed; the current
+    step count and the parameter ``steps``
+
+    :return:
+        If successful, this method returns a dictionary with the following structure::
+
+            {
+              "current_steps": integer,
+              "current_state": string,
+              "newly_unlocked": boolean,
+            }
+    """
+    achievement = achievements_get(achievement_id)
+
+    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+        cursor.execute("""SELECT
+                            current_steps,
+                            state
+                        FROM player_achievements
+                        WHERE achievement_id = %s AND player_id = %s""",
+                       (achievement_id, player_id))
+
+        player_achievement = cursor.fetchone()
+
+        new_state = 'REVEALED'
+        newly_unlocked = False
+
+        current_steps = player_achievement['current_steps'] if player_achievement else 0
+        new_current_steps = steps_function(current_steps, steps)
+
+        if new_current_steps >= achievement['total_steps']:
+            new_state = 'UNLOCKED'
+            new_current_steps = achievement['total_steps']
+            newly_unlocked = player_achievement['state'] != 'UNLOCKED' if player_achievement else False
+
+        cursor.execute("""INSERT INTO player_achievements (player_id, achievement_id, current_steps, state)
+                        VALUES
+                            (%(player_id)s, %(achievement_id)s, %(current_steps)s, %(state)s)
+                        ON DUPLICATE KEY UPDATE
+                            current_steps = VALUES(current_steps),
+                            state = VALUES(state)""",
+                       {
+                           'player_id': player_id,
+                           'achievement_id': achievement_id,
+                           'current_steps': new_current_steps,
+                           'state': new_state,
+                       })
+
+        db.connection.commit()
+
+    return {'current_steps': new_current_steps, 'current_state': new_state, 'newly_unlocked': newly_unlocked}
+
+
+def unlock_achievement(achievement_id, player_id):
+    """Unlocks an achievement. This function is NOT an endpoint.
+
+    :param achievement_id: ID of the achievement to unlock
+    :param player_id: ID of the player to unlock the achievement for
+
+    :return:
+        If successful, this method returns a dictionary with the following structure::
+
+            {
+              "newly_unlocked": boolean,
+            }
+    """
+
+    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+        cursor.execute("""SELECT
+                            state
+                        FROM player_achievements
+                        WHERE achievement_id = %s AND player_id = %s""",
+                       (achievement_id, player_id))
+
+        player_achievement = cursor.fetchone()
+
+        new_state = 'UNLOCKED'
+        newly_unlocked = not player_achievement or player_achievement['state'] != 'UNLOCKED'
+
+        cursor.execute("""INSERT INTO player_achievements (player_id, achievement_id, state)
+                        VALUES
+                            (%(player_id)s, %(achievement_id)s, %(state)s)
+                        ON DUPLICATE KEY UPDATE
+                            state = VALUES(state)""",
+                       {
+                           'player_id': player_id,
+                           'achievement_id': achievement_id,
+                           'state': new_state,
+                       })
+
+        db.connection.commit()
+
+    return {'newly_unlocked': newly_unlocked}
+
+
+def reveal_achievement(achievement_id, player_id):
+    """Reveals an achievement.
+
+    :param achievement_id: ID of the achievement to unlock
+    :param player_id: ID of the player to reveal the achievement for
+
+    :return:
+        If successful, this method returns a response body with the following structure::
+
+            {
+              "current_state": string,
+            }
+    """
+    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+        cursor.execute("""SELECT
+                            state
+                        FROM player_achievements
+                        WHERE achievement_id = %s AND player_id = %s""",
+                       (achievement_id, player_id))
+
+        player_achievement = cursor.fetchone()
+
+        new_state = player_achievement['state'] if player_achievement else 'REVEALED'
+
+        cursor.execute("""INSERT INTO player_achievements (player_id, achievement_id, state)
+                        VALUES
+                            (%(player_id)s, %(achievement_id)s, %(state)s)
+                        ON DUPLICATE KEY UPDATE
+                            state = VALUES(state)""",
+                       {
+                           'player_id': player_id,
+                           'achievement_id': achievement_id,
+                           'state': new_state,
+                       })
+
+        db.connection.commit()
+
+    return {'current_state': new_state}
