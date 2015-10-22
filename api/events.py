@@ -136,7 +136,6 @@ def record_event(event_id, player_id, update_count):
 
         db.connection.commit()
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
         cursor.execute("""SELECT
                             event_id,
                             count
