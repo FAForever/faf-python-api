@@ -3,6 +3,8 @@ Forged Alliance Forever API project
 
 Distributed under GPLv3, see license.txt
 """
+from api.invalid_usage import InvalidUsage
+
 __version__ = '0.1'
 __author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus'
 __contact__ = 'admin@faforever.com'
@@ -51,6 +53,13 @@ def make_response_json(rv):
         return _make_response(rv)
 
 app.make_response = make_response_json
+
+
+@app.errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    return response
 
 # ======== Init Database =======
 
