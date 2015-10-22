@@ -38,13 +38,8 @@ def events_list():
                 {
                   "id": string,
                   "name": string,
-                  "description": string,
                   "type": string,
-                  "total_steps": integer,
-                  "initial_state": string,
-                  "experience_points": integer,
-                  "revealed_icon_url": string,
-                  "unlocked_icon_url": string
+                  "image_url": string
                 }
               ]
             }
@@ -54,7 +49,7 @@ def events_list():
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-        cursor.execute(SELECT_EVENTS_QUERY,
+        cursor.execute(SELECT_EVENTS_QUERY + " ORDER BY id ASC",
                        {
                            'language': language,
                            'region': region,
@@ -94,7 +89,7 @@ def events_record_multiple():
             }
     """
     # FIXME get player ID from OAuth session
-    player_id = request.args.get('player_id')
+    player_id = request.json['player_id']
 
     updates = request.json['updates']
 
@@ -143,4 +138,4 @@ def record_event(event_id, player_id, update_count):
                         WHERE event_id = %s AND player_id = %s""",
                        (event_id, player_id))
 
-    return cursor.fetchone()
+        return cursor.fetchone()

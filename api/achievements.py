@@ -1,5 +1,4 @@
 from flask import request
-import flask
 
 from api import *
 
@@ -51,7 +50,7 @@ def achievements_list():
         If successful, this method returns a response body with the following structure::
 
             {
-              "items": [
+              "updated_achievements": [
                 {
                   "id": string,
                   "name": string,
@@ -71,7 +70,7 @@ def achievements_list():
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-        cursor.execute(SELECT_ACHIEVEMENTS_QUERY,
+        cursor.execute(SELECT_ACHIEVEMENTS_QUERY + " ORDER BY `order` ASC",
                        {
                            'language': language,
                            'region': region
@@ -142,8 +141,8 @@ def achievements_increment(achievement_id):
             }
     """
     # FIXME get player ID from OAuth session
-    player_id = request.args.get('player_id')
-    steps = request.args.get('steps', 1)
+    player_id = int(request.form.get('player_id'))
+    steps = int(request.form.get('steps', 1))
 
     return flask.jsonify(increment_achievement(achievement_id, player_id, steps))
 
@@ -154,8 +153,8 @@ def achievements_set_steps_at_least(achievement_id):
      that the player already gained for the achievement, the achievement is not modified.
      This function is NOT an endpoint."""
     # FIXME get player ID from OAuth session
-    player_id = request.args.get('player_id')
-    steps = request.args.get('steps', 1)
+    player_id = int(request.form.get('player_id'))
+    steps = int(request.form.get('steps', 1))
 
     return flask.jsonify(set_steps_at_least(achievement_id, player_id, steps))
 
@@ -178,7 +177,7 @@ def achievements_unlock(achievement_id):
             }
     """
     # FIXME get player ID from OAuth session
-    player_id = request.args.get('player_id')
+    player_id = int(request.form.get('player_id'))
 
     return flask.jsonify(unlock_achievement(achievement_id, player_id))
 
@@ -201,7 +200,7 @@ def achievements_reveal(achievement_id):
             }
     """
     # FIXME get player ID from OAuth session
-    player_id = request.args.get('player_id')
+    player_id = int(request.form.get('player_id'))
 
     return flask.jsonify(reveal_achievement(achievement_id, player_id))
 
@@ -210,16 +209,12 @@ def achievements_reveal(achievement_id):
 def achievements_update_multiple():
     """Updates multiple achievements for the currently authenticated player.
 
-    HTTP Parameters::
-
-        player_id    integer ID of the player to update the achievements for
-
     HTTP Body:
         In the request body, supply data with the following structure::
 
             {
+              "player_id": integer,
               "updates": [
-
                 "achievement_id": string,
                 "update_type": string,
                 "steps": integer
@@ -240,17 +235,18 @@ def achievements_update_multiple():
               ],
             }
     """
-    player_id = request.args.get('player_id')
+    # FIXME get player ID from OAuth session
+    player_id = request.json['player_id']
 
     updates = request.json['updates']
 
-    result = {'updated_achievements': []}
+    result = dict(updated_achievements=[])
 
     for update in updates:
         achievement_id = update['achievement_id']
         update_type = update['update_type']
 
-        update_result = {'achievement_id': achievement_id}
+        update_result = dict(achievement_id=achievement_id)
 
         if update_type == 'REVEAL':
             reveal_result = reveal_achievement(achievement_id, player_id)
@@ -361,7 +357,7 @@ def update_steps(achievement_id, player_id, steps, steps_function):
         if new_current_steps >= achievement['total_steps']:
             new_state = 'UNLOCKED'
             new_current_steps = achievement['total_steps']
-            newly_unlocked = player_achievement['state'] != 'UNLOCKED' if player_achievement else False
+            newly_unlocked = player_achievement['state'] != 'UNLOCKED' if player_achievement else True
 
         cursor.execute("""INSERT INTO player_achievements (player_id, achievement_id, current_steps, state)
                         VALUES
@@ -376,11 +372,11 @@ def update_steps(achievement_id, player_id, steps, steps_function):
                            'state': new_state,
                        })
 
-    return {'current_steps': new_current_steps, 'current_state': new_state, 'newly_unlocked': newly_unlocked}
+    return dict(current_steps=new_current_steps, current_state=new_state, newly_unlocked=newly_unlocked)
 
 
 def unlock_achievement(achievement_id, player_id):
-    """Unlocks an achievement. This function is NOT an endpoint.
+    """Unlocks a standard achievement. This function is NOT an endpoint.
 
     :param achievement_id: ID of the achievement to unlock
     :param player_id: ID of the player to unlock the achievement for
@@ -392,9 +388,16 @@ def unlock_achievement(achievement_id, player_id):
               "newly_unlocked": boolean,
             }
     """
+    newly_unlocked = False
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+
+        cursor.execute('SELECT type FROM achievement_definitions WHERE id = %s', achievement_id)
+        achievement = cursor.fetchone()
+        if achievement['type'] != 'STANDARD':
+            raise InvalidUsage('Only standard achievements can be unlocked directly', status_code=400)
+
         cursor.execute("""SELECT
                             state
                         FROM player_achievements
@@ -417,7 +420,7 @@ def unlock_achievement(achievement_id, player_id):
                            'state': new_state,
                        })
 
-    return {'newly_unlocked': newly_unlocked}
+    return dict(newly_unlocked=newly_unlocked)
 
 
 def reveal_achievement(achievement_id, player_id):
@@ -456,4 +459,4 @@ def reveal_achievement(achievement_id, player_id):
                            'state': new_state,
                        })
 
-    return {'current_state': new_state}
+    return dict(current_state=new_state)

@@ -8,6 +8,8 @@ from flask_login import LoginManager
 
 from api.user import User
 
+from api.invalid_usage import InvalidUsage
+
 __version__ = '0.1'
 __author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus, Michel Jung'
 __contact__ = 'admin@faforever.com'
@@ -59,6 +61,13 @@ def make_response_json(rv):
 
 
 app.make_response = make_response_json
+
+
+@app.errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    return response
 
 
 # ======== Init Database =======
