@@ -69,7 +69,8 @@ def achievements_list():
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
         cursor.execute(SELECT_ACHIEVEMENTS_QUERY,
                        {
                            'language': language,
@@ -108,7 +109,8 @@ def achievements_get(achievement_id):
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
         cursor.execute(SELECT_ACHIEVEMENTS_QUERY + "WHERE ach.id = %(achievement_id)s",
                        {
                            'language': language,
@@ -295,7 +297,8 @@ def achievements_list_player(player_id):
               ]
             }
     """
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
         cursor.execute("""SELECT
                             achievement_id,
                             current_steps,
@@ -338,7 +341,8 @@ def update_steps(achievement_id, player_id, steps, steps_function):
     """
     achievement = achievements_get(achievement_id)
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
         cursor.execute("""SELECT
                             current_steps,
                             state
@@ -372,8 +376,6 @@ def update_steps(achievement_id, player_id, steps, steps_function):
                            'state': new_state,
                        })
 
-        db.connection.commit()
-
     return {'current_steps': new_current_steps, 'current_state': new_state, 'newly_unlocked': newly_unlocked}
 
 
@@ -391,7 +393,8 @@ def unlock_achievement(achievement_id, player_id):
             }
     """
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
         cursor.execute("""SELECT
                             state
                         FROM player_achievements
@@ -414,8 +417,6 @@ def unlock_achievement(achievement_id, player_id):
                            'state': new_state,
                        })
 
-        db.connection.commit()
-
     return {'newly_unlocked': newly_unlocked}
 
 
@@ -432,7 +433,8 @@ def reveal_achievement(achievement_id, player_id):
               "current_state": string,
             }
     """
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
         cursor.execute("""SELECT
                             state
                         FROM player_achievements
@@ -453,7 +455,5 @@ def reveal_achievement(achievement_id, player_id):
                            'achievement_id': achievement_id,
                            'state': new_state,
                        })
-
-        db.connection.commit()
 
     return {'current_state': new_state}

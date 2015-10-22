@@ -52,7 +52,8 @@ def events_list():
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
         cursor.execute(SELECT_EVENTS_QUERY,
                        {
                            'language': language,
@@ -122,7 +123,8 @@ def record_event(event_id, player_id, update_count):
             }
     """
 
-    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
         cursor.execute("""INSERT INTO player_events (player_id, event_id, count)
                         VALUES
                             (%(player_id)s, %(event_id)s, %(update_count)s)
@@ -133,8 +135,6 @@ def record_event(event_id, player_id, update_count):
                            'event_id': event_id,
                            'update_count': update_count,
                        })
-
-        db.connection.commit()
 
         cursor.execute("""SELECT
                             event_id,
