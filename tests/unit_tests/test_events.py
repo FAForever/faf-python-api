@@ -4,7 +4,7 @@ import db
 import unittest
 
 
-class AchievementsTestCase(unittest.TestCase):
+class EventsTestCase(unittest.TestCase):
     def setUp(self):
         api.app.config.from_object('config')
         api.api_init()
