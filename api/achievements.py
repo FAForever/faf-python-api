@@ -338,6 +338,8 @@ def update_steps(achievement_id, player_id, steps, steps_function):
             }
     """
     achievement = achievements_get(achievement_id)
+    if achievement['type'] != 'INCREMENTAL':
+        raise InvalidUsage('Only incremental achievements can be incremented', status_code=400)
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
@@ -353,16 +355,13 @@ def update_steps(achievement_id, player_id, steps, steps_function):
         new_state = 'REVEALED'
         newly_unlocked = False
 
-        if achievement['type'] != 'INCREMENTAL':
-            new_current_steps = None
-        else:
-            current_steps = player_achievement['current_steps'] if player_achievement else 0
-            new_current_steps = steps_function(current_steps, steps)
+        current_steps = player_achievement['current_steps'] if player_achievement else 0
+        new_current_steps = steps_function(current_steps, steps)
 
-            if new_current_steps >= achievement['total_steps']:
-                new_state = 'UNLOCKED'
-                new_current_steps = achievement['total_steps']
-                newly_unlocked = player_achievement['state'] != 'UNLOCKED' if player_achievement else True
+        if new_current_steps >= achievement['total_steps']:
+            new_state = 'UNLOCKED'
+            new_current_steps = achievement['total_steps']
+            newly_unlocked = player_achievement['state'] != 'UNLOCKED' if player_achievement else True
 
         cursor.execute("""INSERT INTO player_achievements (player_id, achievement_id, current_steps, state)
                         VALUES
