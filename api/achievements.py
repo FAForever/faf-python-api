@@ -301,8 +301,8 @@ def achievements_list_player(player_id):
                             achievement_id,
                             current_steps,
                             state,
-                            UNIX_TIMESTAMP(create_time) as create_time,
-                            UNIX_TIMESTAMP(update_time) as update_time
+                            create_time,
+                            update_time
                         FROM player_achievements
                         WHERE player_id = %s""", player_id)
 
@@ -338,6 +338,8 @@ def update_steps(achievement_id, player_id, steps, steps_function):
             }
     """
     achievement = achievements_get(achievement_id)
+    if achievement['type'] != 'INCREMENTAL':
+        raise InvalidUsage('Only incremental achievements can be incremented', status_code=400)
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
