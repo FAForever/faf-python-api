@@ -2,6 +2,8 @@ from flask import request
 import flask
 from api import *
 
+import faf.db as db
+
 SELECT_EVENTS_QUERY = """SELECT
                             events.id,
                             events.image_url,

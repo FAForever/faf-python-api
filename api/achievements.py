@@ -2,6 +2,8 @@ from flask import request
 
 from api import *
 
+import faf.db as db
+
 SELECT_ACHIEVEMENTS_QUERY = """SELECT
                     ach.id,
                     ach.type,
