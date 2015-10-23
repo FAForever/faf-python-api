@@ -1,6 +1,6 @@
 import json
 import api
-import db
+import faf.db as db
 import unittest
 
 

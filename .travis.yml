@@ -1,7 +1,7 @@
 language: python
 
 python:
-  - "3.4"
+  - "3.5"
 
 before_install:
   - sudo apt-get install liblua5.1-dev
@@ -10,9 +10,12 @@ install:
   - cp config.example.py config.py
   - "pip install --upgrade pip"
   - "pip install --trusted-host content.dev.faforever.com -r requirements.txt"
+  - "pip install -e db"
 
 before_script:
   - "mysql -e 'create database faf_test;'"
+  - "mysql -uroot < db/db-structure.sql"
+  - "mysql -uroot < db/db-data.sql"
 
 script:
   - pip install -e .
