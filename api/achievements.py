@@ -299,8 +299,8 @@ def achievements_list_player(player_id):
                             achievement_id,
                             current_steps,
                             state,
-                            UNIX_TIMESTAMP(create_time) as create_time,
-                            UNIX_TIMESTAMP(update_time) as update_time
+                            create_time,
+                            update_time
                         FROM player_achievements
                         WHERE player_id = %s""", player_id)
 
@@ -351,13 +351,16 @@ def update_steps(achievement_id, player_id, steps, steps_function):
         new_state = 'REVEALED'
         newly_unlocked = False
 
-        current_steps = player_achievement['current_steps'] if player_achievement else 0
-        new_current_steps = steps_function(current_steps, steps)
+        if achievement['type'] != 'INCREMENTAL':
+            new_current_steps = None
+        else:
+            current_steps = player_achievement['current_steps'] if player_achievement else 0
+            new_current_steps = steps_function(current_steps, steps)
 
-        if new_current_steps >= achievement['total_steps']:
-            new_state = 'UNLOCKED'
-            new_current_steps = achievement['total_steps']
-            newly_unlocked = player_achievement['state'] != 'UNLOCKED' if player_achievement else True
+            if new_current_steps >= achievement['total_steps']:
+                new_state = 'UNLOCKED'
+                new_current_steps = achievement['total_steps']
+                newly_unlocked = player_achievement['state'] != 'UNLOCKED' if player_achievement else True
 
         cursor.execute("""INSERT INTO player_achievements (player_id, achievement_id, current_steps, state)
                         VALUES

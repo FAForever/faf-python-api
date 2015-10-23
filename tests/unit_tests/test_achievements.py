@@ -239,6 +239,27 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertEqual('326493d7-ce2c-4a43-bbc8-3e990e2685a1', data['updated_achievements'][2]['achievement_id'])
         self.assertEqual('REVEALED', data['updated_achievements'][2]['current_state'])
 
+    def test_achievements_list_player(self):
+        self.app.post('/achievements/5b7ec244-58c0-40ca-9d68-746b784f0cad/unlock', data=dict(player_id=1))
+        self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/unlock', data=dict(player_id=1))
+
+        response = self.app.get('/players/1/achievements')
+        data = json.loads(response.get_data(as_text=True))
+
+        self.assertEqual(2, len(data['items']))
+
+        self.assertEqual("50260d04-90ff-45c8-816b-4ad8d7b97ecd", data['items'][0]['achievement_id'])
+        self.assertEqual("UNLOCKED", data['items'][0]['state'])
+        self.assertEqual(None, data['items'][0]['current_steps'])
+        self.assertTrue('create_time' in data['items'][0])
+        self.assertTrue('update_time' in data['items'][0])
+
+        self.assertEqual("5b7ec244-58c0-40ca-9d68-746b784f0cad", data['items'][1]['achievement_id'])
+        self.assertEqual("UNLOCKED", data['items'][1]['state'])
+        self.assertEqual(None, data['items'][1]['current_steps'])
+        self.assertTrue('create_time' in data['items'][1])
+        self.assertTrue('update_time' in data['items'][1])
+
 
 if __name__ == '__main__':
     unittest.main()
