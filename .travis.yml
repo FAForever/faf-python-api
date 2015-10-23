@@ -15,7 +15,7 @@ install:
 before_script:
   - "mysql -e 'create database faf_test;'"
   - "mysql -uroot < db/db-structure.sql"
-  - "mysql -uroot < db/db-data.sql"
+  - "mysql -uroot faf_test < db/db-data.sql"
 
 script:
   - pip install -e .
