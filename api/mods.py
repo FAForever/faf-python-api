@@ -1,4 +1,4 @@
-import db
+import faf.db as db
 
 from api import app
 

@@ -54,13 +54,13 @@ app.make_response = make_response_json
 
 # ======== Init Database =======
 
-import db
+import faf.db
 
 def api_init():
     """
     Initializes flask. Call _after_ setting flask config.
     """
-    db.init_db(app.config)
+    faf.db.init_db(app.config)
     app.github = github.make_session(app.config['GITHUB_USER'],
                                      app.config['GITHUB_TOKEN'])
 
