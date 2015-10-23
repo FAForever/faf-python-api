@@ -80,6 +80,15 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertEqual(10, data['current_steps'])
         self.assertFalse(data['newly_unlocked'])
 
+    def test_achievements_increment_standard_achievement_fails(self):
+        response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/increment', data=dict(
+            player_id=1, steps=10
+        ))
+        data = json.loads(response.get_data(as_text=True))
+
+        self.assertEqual(400, response.status_code)
+        self.assertTrue('message' in data)
+
     def test_achievements_increment_caps_at_max(self):
         response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(
             player_id=1, steps=11
