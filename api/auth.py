@@ -71,7 +71,7 @@ def login(*args, **kwargs):
 
     login_user(user, remember=True)
 
-    redirect_url = request.args.get('next')
+    redirect_url = request.form.get('next')
 
     if not redirect_url_is_valid(redirect_url):
         return abort(400)
@@ -80,5 +80,5 @@ def login(*args, **kwargs):
 
 
 def redirect_url_is_valid(redirect_url):
-    return VALID_REDIRECT_URL_PATTERN.match(redirect_url) is not None
+    return redirect_url is not None and VALID_REDIRECT_URL_PATTERN.match(redirect_url) is not None
 

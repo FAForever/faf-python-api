@@ -1,4 +1,5 @@
 import db
+from db.user import User
 
 
 class OAuthToken(object):
@@ -11,7 +12,7 @@ class OAuthToken(object):
         self.client_id = kwargs.get('client_id')
         self.scopes = kwargs.get('scopes')
         self.expires = kwargs.get('expires')
-        self.user_id = kwargs.get('user_id')
+        self.user = User.get_by_id(kwargs.get('user_id'))
 
     @classmethod
     def get(cls, **kwargs):
@@ -19,9 +20,9 @@ class OAuthToken(object):
             cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
             cursor.execute("""
             SELECT
-                id, access_token, refresh_token, client_id, scopes, expires, user_id
+                id, token_type, access_token, refresh_token, client_id, scopes, expires, user_id
             FROM oauth_tokens
-            WHERE access_token = %s OR refresh_token = %s""", kwargs.get('access_token'), kwargs.get('refresh_token'))
+            WHERE access_token = %s OR refresh_token = %s""", (kwargs.get('access_token'), kwargs.get('refresh_token')))
 
             token = cursor.fetchone()
             return OAuthToken(**token) if token else None
