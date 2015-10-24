@@ -16,7 +16,7 @@ def get_client(client_id):
 
 @oauth.tokengetter
 def get_token(access_token=None, refresh_token=None):
-    OAuthToken.get(access_token=access_token, refresh_token=refresh_token)
+    return OAuthToken.get(access_token=access_token, refresh_token=refresh_token)
 
 
 @oauth.tokensetter
