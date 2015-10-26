@@ -124,5 +124,7 @@ class OAuthTestCase(unittest.TestCase):
         response = self.app.post('/login', data=dict(username='User', password='321',
                                                      next='http://faforever.com.fake.com'))
 
+        self.assertEqual(400, response.status_code)
+
 if __name__ == '__main__':
     unittest.main()
