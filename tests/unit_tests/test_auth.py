@@ -3,11 +3,8 @@ import json
 import re
 import unittest
 
-from flask_oauthlib.contrib.oauth2 import Grant
-
+import faf.db as db
 import api
-import db
-from api import oauth
 
 
 class OAuthTestCase(unittest.TestCase):
@@ -15,6 +12,7 @@ class OAuthTestCase(unittest.TestCase):
         api.app.config.from_object('config')
         api.api_init()
 
+        api.app.debug = True
         self.app = api.app.test_client()
         db.init_db(api.app.config)
 

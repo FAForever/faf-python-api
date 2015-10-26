@@ -1,4 +1,4 @@
-import db
+import faf.db as db
 
 
 class OAuthClient(object):
