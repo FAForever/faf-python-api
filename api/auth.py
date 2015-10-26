@@ -52,6 +52,12 @@ def authorize(*args, **kwargs):
 @app.route('/oauth/token', methods=['POST'])
 @oauth.token_handler
 def access_token():
+    """
+    The implementation of this endpoint is handled by the @oauth.token_handler function
+
+    Function left blank intentionally
+    :return: None
+    """
     return None
 
 
