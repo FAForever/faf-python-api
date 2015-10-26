@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
-from flask_oauthlib.contrib import oauth2
+
 from flask_oauthlib.contrib.cache import Cache
 
 from api import *
-from db.oauth_client import OAuthClient
-from db.oauth_token import OAuthToken
+from api.oauth_client import OAuthClient
+from api.oauth_token import OAuthToken
 
 cache = Cache(app, 'OAUTH2')
 
@@ -21,7 +21,7 @@ def get_token(access_token=None, refresh_token=None):
 
 @oauth.tokensetter
 def set_token(token, request, *args, **kwargs):
-    with db.connection:
+    with faf.db.connection:
         # make sure that every client has only one token connected to a user
         OAuthToken.delete(request.client.client_id, request.user.id)
 

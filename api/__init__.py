@@ -6,7 +6,7 @@ Distributed under GPLv3, see license.txt
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
 from flask_login import LoginManager
 
-from db.user import User
+from api.user import User
 
 __version__ = '0.1'
 __author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus, Michel Jung'
@@ -61,26 +61,6 @@ def make_response_json(rv):
 app.make_response = make_response_json
 
 
-# ======== Init OAuth =======
-
-
-def get_current_user():
-    if 'user_id' not in session:
-        return None
-
-    with db.connection:
-        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-        cursor.execute("SELECT id, username FROM auth_user WHERE id = %s", session['user_id'])
-
-        user = cursor.fetchone()
-        return User(**user) if user else None
-
-oauth = OAuth2Provider(app)
-app.config.update({'OAUTH2_CACHE_TYPE': 'simple'})
-
-bind_cache_grant(app, oauth, get_current_user)
-
-
 # ======== Init Database =======
 
 import faf.db
@@ -96,6 +76,28 @@ def api_init():
 
     app.secret_key = app.config['FLASK_LOGIN_SECRET_KEY']
 
+# ======== Init OAuth =======
+
+
+def get_current_user():
+    if 'user_id' not in session:
+        return None
+
+    with faf.db.connection:
+        cursor = faf.db.connection.cursor(faf.db.pymysql.cursors.DictCursor)
+        cursor.execute("SELECT id, username FROM auth_user WHERE id = %s", session['user_id'])
+
+        user = cursor.fetchone()
+        return User(**user) if user else None
+
+oauth = OAuth2Provider(app)
+app.config.update({'OAUTH2_CACHE_TYPE': 'simple'})
+
+bind_cache_grant(app, oauth, get_current_user)
+
+
+
+
 
 # ======== Import (initialize) oauth2 handlers =====
 import api.oauth
@@ -108,3 +110,5 @@ import api.avatars
 import api.games
 import api.mods
 import api.github
+import api.oauth_client
+import api.oauth_token

@@ -1,5 +1,5 @@
-import db
-from db.user import User
+from api.user import User
+import faf.db as db
 
 
 class OAuthToken(object):
