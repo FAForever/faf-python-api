@@ -3,14 +3,11 @@ Holds the authorization url routes
 """
 from functools import wraps
 from hashlib import sha256
+from urllib.parse import urlparse
 import re
-
 from flask import request, redirect, url_for, render_template, abort, g
 from flask_login import login_user, current_user
-
 from api.oauth import *
-
-VALID_REDIRECT_URL_PATTERN = re.compile("^https?://(?:localhost|.*?\.faforever.com)(?:[:/].*)?$")
 
 
 @app.before_request
@@ -85,6 +82,11 @@ def login(*args, **kwargs):
     return redirect(redirect_url)
 
 
-def redirect_url_is_valid(redirect_url):
-    return redirect_url is not None and VALID_REDIRECT_URL_PATTERN.match(redirect_url) is not None
+VALIDATE_DOMAIN_REGEX = re.compile("^(localhost|.*\.faforever.com):?(?:[0-9]*)?$")
 
+
+def redirect_url_is_valid(redirect_url):
+    if not redirect_url:
+        return False
+    parsed = urlparse(redirect_url)
+    return VALIDATE_DOMAIN_REGEX.match(parsed.netloc)
