@@ -18,7 +18,7 @@ class OAuthTestCase(unittest.TestCase):
 
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute('TRUNCATE TABLE auth_user')
+            cursor.execute('TRUNCATE TABLE login')
             cursor.execute('TRUNCATE TABLE oauth_clients')
             cursor.execute('TRUNCATE TABLE oauth_tokens')
 
@@ -37,9 +37,9 @@ class OAuthTestCase(unittest.TestCase):
 
     def insert_user(self, username, password):
         cursor = db.connection.cursor()
-        cursor.execute("""INSERT INTO auth_user
-        (username, password, first_name, last_name, email, is_staff, is_active, is_superuser, last_login, date_joined)
-        VALUES (%s, %s, '', '', '', FALSE, TRUE, FALSE, NOW(), NOW())""",
+        cursor.execute("""INSERT INTO login
+        (login, password, email)
+        VALUES (%s, %s, 'example@example.com')""",
                        (username, sha256(password.encode('utf-8')).hexdigest()))
 
     def test_authorize_flow(self):
