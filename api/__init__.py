@@ -3,14 +3,18 @@ Forged Alliance Forever API project
 
 Distributed under GPLv3, see license.txt
 """
+from flask_oauthlib.contrib.oauth2 import bind_cache_grant
+from flask_login import LoginManager
+
+from api.user import User
+
 __version__ = '0.1'
-__author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus'
+__author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus, Michel Jung'
 __contact__ = 'admin@faforever.com'
 __license__ = 'GPLv3'
 __copyright__ = 'Copyright (c) 2011-2015 ' + __author__
 
 import sys
-import flask
 
 if sys.version_info.major != 3:
     raise RuntimeError(
@@ -22,9 +26,12 @@ from flask_oauthlib.provider import OAuth2Provider
 # ======== Init Flask ==========
 
 app = Flask('api')
-oauth = OAuth2Provider(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
 
 _make_response = app.make_response
+
+
 def make_response_json(rv):
     """
     Override the flask make_response function to default to application/json
@@ -50,11 +57,14 @@ def make_response_json(rv):
     else:
         return _make_response(rv)
 
+
 app.make_response = make_response_json
+
 
 # ======== Init Database =======
 
 import faf.db
+
 
 def api_init():
     """
@@ -63,6 +73,25 @@ def api_init():
     faf.db.init_db(app.config)
     app.github = github.make_session(app.config['GITHUB_USER'],
                                      app.config['GITHUB_TOKEN'])
+
+    app.secret_key = app.config['FLASK_LOGIN_SECRET_KEY']
+
+
+# ======== Init OAuth =======
+
+
+def get_current_user():
+    if 'user_id' not in session:
+        return None
+
+    return User.get_by_id(session['user_id'])
+
+
+oauth = OAuth2Provider(app)
+app.config.update({'OAUTH2_CACHE_TYPE': 'simple'})
+
+bind_cache_grant(app, oauth, get_current_user)
+
 
 # ======== Import (initialize) oauth2 handlers =====
 import api.oauth
@@ -75,3 +104,5 @@ import api.avatars
 import api.games
 import api.mods
 import api.github
+import api.oauth_client
+import api.oauth_token
