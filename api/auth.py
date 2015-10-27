@@ -82,7 +82,7 @@ def login(*args, **kwargs):
     return redirect(redirect_url)
 
 
-VALIDATE_DOMAIN_REGEX = re.compile("^(localhost|.*\.faforever.com):?(?:[0-9]*)?$")
+VALIDATE_DOMAIN_REGEX = re.compile("^(localhost|(.*\.)?faforever.com):?(?:[0-9]*)?$")
 
 
 def redirect_url_is_valid(redirect_url):
