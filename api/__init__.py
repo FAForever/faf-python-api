@@ -76,6 +76,7 @@ def api_init():
 
     app.secret_key = app.config['FLASK_LOGIN_SECRET_KEY']
 
+
 # ======== Init OAuth =======
 
 
@@ -83,20 +84,13 @@ def get_current_user():
     if 'user_id' not in session:
         return None
 
-    with faf.db.connection:
-        cursor = faf.db.connection.cursor(faf.db.pymysql.cursors.DictCursor)
-        cursor.execute("SELECT id, username FROM auth_user WHERE id = %s", session['user_id'])
+    return User.get_by_id(session['user_id'])
 
-        user = cursor.fetchone()
-        return User(**user) if user else None
 
 oauth = OAuth2Provider(app)
 app.config.update({'OAUTH2_CACHE_TYPE': 'simple'})
 
 bind_cache_grant(app, oauth, get_current_user)
-
-
-
 
 
 # ======== Import (initialize) oauth2 handlers =====
