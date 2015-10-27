@@ -61,6 +61,7 @@ def events_list():
 
 
 @app.route('/events/recordMultiple', methods=['POST'])
+@oauth.require_oauth('write_events')
 def events_record_multiple():
     """Records multiple events for the currently authenticated player.
 

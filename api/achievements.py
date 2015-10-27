@@ -124,6 +124,7 @@ def achievements_get(achievement_id):
 
 
 @app.route('/achievements/<achievement_id>/increment', methods=['POST'])
+@oauth.require_oauth('write_achievements')
 def achievements_increment(achievement_id):
     """Increments the steps of the achievement with the given ID for the currently authenticated player.
 
@@ -151,6 +152,7 @@ def achievements_increment(achievement_id):
 
 
 @app.route('/achievements/<achievement_id>/setStepsAtLeast', methods=['POST'])
+@oauth.require_oauth('write_achievements')
 def achievements_set_steps_at_least(achievement_id):
     """Sets the steps of an achievement. If the steps parameter is less than the current number of steps
      that the player already gained for the achievement, the achievement is not modified.
@@ -163,6 +165,7 @@ def achievements_set_steps_at_least(achievement_id):
 
 
 @app.route('/achievements/<achievement_id>/unlock', methods=['POST'])
+@oauth.require_oauth('write_achievements')
 def achievements_unlock(achievement_id):
     """Unlocks an achievement for the currently authenticated player.
 
@@ -186,6 +189,7 @@ def achievements_unlock(achievement_id):
 
 
 @app.route('/achievements/<achievement_id>/reveal', methods=['POST'])
+@oauth.require_oauth('write_achievements')
 def achievements_reveal(achievement_id):
     """Reveals an achievement for the currently authenticated player.
 
@@ -209,6 +213,7 @@ def achievements_reveal(achievement_id):
 
 
 @app.route('/achievements/updateMultiple', methods=['POST'])
+@oauth.require_oauth('write_achievements')
 def achievements_update_multiple():
     """Updates multiple achievements for the currently authenticated player.
 
@@ -276,6 +281,7 @@ def achievements_update_multiple():
 
 
 @app.route('/players/<int:player_id>/achievements')
+@oauth.require_oauth('read_achievements')
 def achievements_list_player(player_id):
     """Lists the progress of achievements for a player.
 
