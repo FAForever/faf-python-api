@@ -10,7 +10,7 @@ from flask_login import login_user, current_user
 
 from api.oauth import *
 
-VALID_REDIRECT_URL_PATTERN = re.compile("^https?://(?:localhost|.*?faforever.com)(?:[:/].*)?$")
+VALID_REDIRECT_URL_PATTERN = re.compile("^https?://(?:localhost|.*?\.faforever.com)(?:[:/].*)?$")
 
 
 @app.before_request
