@@ -1,53 +1,92 @@
 """
 Holds the authorization url routes
 """
-from flask import request, redirect, render_template
-
-from api import *
+from functools import wraps
+from hashlib import sha256
+from urllib.parse import urlparse
+import re
+from flask import request, redirect, url_for, render_template, abort, g
+from flask_login import login_user, current_user
 from api.oauth import *
 
-from time import mktime
 
-@app.route('/oauth/check/<access_token>', methods=['GET', 'POST'])
-def oauth_check_token(access_token):
-    try:
-        token = OAuthToken.get(OAuthToken.access_token == access_token)
+@app.before_request
+def before_request():
+    g.user = current_user
 
-        active = token.expires < datetime.now()
 
-        res = dict(
-            active = active,
-            exp = mktime(token.expires.timetuple())
-        )
+def require_login(function):
+    @wraps(function)
+    def decorated_function(*args, **kwargs):
+        if g.user is None or not g.user.is_authenticated:
+            return redirect(url_for('login', next=request.url))
+        return function(*args, **kwargs)
 
-        res['scope'] = token._scopes
+    return decorated_function
 
-        res['client_id'] = token.client.client_id
-        res['user_id'] = token.user.id
 
-        return res
-    except DoesNotExist:
-        return dict(active = False)
-
-@app.route('/oauth/token')
-@oauth.token_handler
-def access_token():
-    return None
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get_by_id(int(user_id))
 
 
 @app.route('/oauth/authorize', methods=['GET', 'POST'])
+@require_login
 @oauth.authorize_handler
 def authorize(*args, **kwargs):
-    user = current_user()
-    if not user:
-        return redirect('/')
-
     if request.method == 'GET':
         client_id = kwargs.get('client_id')
-        client = OAuthClient.get(OAuthClient.client_id == client_id)
+        client = get_client(client_id)
+        scopes = kwargs.get('scope')
         kwargs['client'] = client
-        kwargs['user'] = user
+        kwargs['user'] = current_user
+        kwargs['scopes'] = scopes.split() if scopes else client.default_scopes;
         return render_template('authorize.html', **kwargs)
 
-    confirm = request.form.get('confirm', 'no')
-    return confirm == 'yes'
+    return request.form.get('allow', None) is not None
+
+
+@app.route('/oauth/token', methods=['POST'])
+@oauth.token_handler
+def access_token():
+    """
+    The implementation of this endpoint is handled by the @oauth.token_handler function
+
+    Function left blank intentionally
+    :return: None
+    """
+    return None
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login(*args, **kwargs):
+    if request.method == 'GET':
+        return render_template('login.html', **kwargs)
+
+    username = request.form.get('username')
+    # TODO implement salt as soon as available
+    password = request.form.get('password').encode('utf-8')
+
+    user = User.get_by_username(username)
+
+    if user is None or user.password != sha256(password).hexdigest():
+        return render_template('login.html', **kwargs)
+
+    login_user(user, remember=True)
+
+    redirect_url = request.form.get('next')
+
+    if not redirect_url_is_valid(redirect_url):
+        return abort(400)
+
+    return redirect(redirect_url)
+
+
+VALIDATE_DOMAIN_REGEX = re.compile("^(localhost|(.*\.)?faforever.com):?(?:[0-9]*)?$")
+
+
+def redirect_url_is_valid(redirect_url):
+    if not redirect_url:
+        return False
+    parsed = urlparse(redirect_url)
+    return VALIDATE_DOMAIN_REGEX.match(parsed.netloc)
