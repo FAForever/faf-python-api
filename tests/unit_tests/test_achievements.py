@@ -1,5 +1,5 @@
 import datetime
-import pytest
+import importlib
 
 import api
 
@@ -7,6 +7,7 @@ import json
 import faf.db as db
 import unittest
 from tests.unit_tests.mock_oauth_token import MockOAuthToken
+
 
 class AchievementsTestCase(unittest.TestCase):
     def get_token(self, access_token=None, refresh_token=None):
@@ -16,6 +17,10 @@ class AchievementsTestCase(unittest.TestCase):
         )
 
     def setUp(self):
+        importlib.reload(api)
+        importlib.reload(api.oauth_handlers)
+        importlib.reload(api.achievements)
+
         api.app.config.from_object('config')
         api.api_init()
         api.app.debug = True
@@ -103,9 +108,9 @@ class AchievementsTestCase(unittest.TestCase):
         response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/increment', data=dict(
             player_id=1, steps=10
         ))
+        self.assertEqual(400, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
-        self.assertEqual(400, response.status_code)
         self.assertTrue('message' in data)
 
     def test_achievements_increment_caps_at_max(self):
@@ -242,9 +247,9 @@ class AchievementsTestCase(unittest.TestCase):
         response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/unlock', data=dict(
             player_id=1
         ))
+        self.assertEqual(400, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
-        self.assertEqual(400, response.status_code)
         self.assertTrue('message' in data)
 
     def test_achievements_reveal(self):

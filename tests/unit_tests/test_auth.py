@@ -1,4 +1,5 @@
 from hashlib import sha256
+import importlib
 import json
 import re
 import unittest
@@ -9,6 +10,10 @@ import api
 
 class OAuthTestCase(unittest.TestCase):
     def setUp(self):
+        importlib.reload(api)
+        importlib.reload(api.oauth_handlers)
+        importlib.reload(api.auth)
+
         api.app.config.from_object('config')
         api.api_init()
         api.app.debug = True

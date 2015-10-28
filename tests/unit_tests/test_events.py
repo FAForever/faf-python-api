@@ -1,4 +1,5 @@
 import datetime
+import importlib
 import json
 import api
 import faf.db as db
@@ -14,6 +15,10 @@ class EventsTestCase(unittest.TestCase):
         )
 
     def setUp(self):
+        importlib.reload(api)
+        importlib.reload(api.oauth_handlers)
+        importlib.reload(api.events)
+
         api.app.config.from_object('config')
         api.api_init()
         api.app.debug = True
@@ -33,6 +38,7 @@ class EventsTestCase(unittest.TestCase):
 
     def test_events_list(self):
         response = self.app.get('/events')
+        self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
         self.assertEqual(28, len(data['items']))
