@@ -11,10 +11,9 @@ class OAuthTestCase(unittest.TestCase):
     def setUp(self):
         api.app.config.from_object('config')
         api.api_init()
-
         api.app.debug = True
+
         self.app = api.app.test_client()
-        db.init_db(api.app.config)
 
         with db.connection:
             cursor = db.connection.cursor()

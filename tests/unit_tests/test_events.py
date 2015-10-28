@@ -1,13 +1,24 @@
+import datetime
 import json
 import api
 import faf.db as db
 import unittest
+from tests.unit_tests.mock_oauth_token import MockOAuthToken
 
 
 class EventsTestCase(unittest.TestCase):
+    def get_token(self, access_token=None, refresh_token=None):
+        return MockOAuthToken(
+            expires=datetime.datetime.now() + datetime.timedelta(hours=1),
+            scopes=['write_events']
+        )
+
     def setUp(self):
         api.app.config.from_object('config')
         api.api_init()
+        api.app.debug = True
+
+        api.oauth.tokengetter(self.get_token)
 
         self.app = api.app.test_client()
         db.init_db(api.app.config)
@@ -41,6 +52,7 @@ class EventsTestCase(unittest.TestCase):
 
         response = self.app.post('/events/recordMultiple', headers=[('Content-Type', 'application/json')],
                                  data=json.dumps(request_data))
+        self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
         self.assertEqual(2, len(data['updated_events']))
