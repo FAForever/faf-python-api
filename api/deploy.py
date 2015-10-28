@@ -7,7 +7,7 @@ import re
 from flask import request, render_template, url_for
 
 from api import *
-from api.oauth import *
+from api.oauth_handlers import *
 
 import hmac
 import subprocess

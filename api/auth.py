@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 import re
 from flask import request, redirect, url_for, render_template, abort, g
 from flask_login import login_user, current_user
-from api.oauth import *
+from api.oauth_handlers import *
 
 
 @app.before_request

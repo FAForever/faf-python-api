@@ -103,7 +103,7 @@ bind_cache_grant(app, oauth, get_current_user)
 
 
 # ======== Import (initialize) oauth2 handlers =====
-import api.oauth
+import api.oauth_handlers
 
 
 # ======== Import (initialize) routes =========
