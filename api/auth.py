@@ -61,6 +61,7 @@ def access_token():
 @app.route('/login', methods=['GET', 'POST'])
 def login(*args, **kwargs):
     if request.method == 'GET':
+        kwargs['next'] = request.values.get('next')
         return render_template('login.html', **kwargs)
 
     username = request.form.get('username')
@@ -70,11 +71,12 @@ def login(*args, **kwargs):
     user = User.get_by_username(username)
 
     if user is None or user.password != sha256(password).hexdigest():
+        kwargs['next'] = request.values.get('next')
         return render_template('login.html', **kwargs)
 
     login_user(user, remember=True)
 
-    redirect_url = request.form.get('next')
+    redirect_url = request.values.get('next')
 
     if not redirect_url_is_valid(redirect_url):
         return abort(400)
