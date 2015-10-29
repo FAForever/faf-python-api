@@ -91,9 +91,7 @@ def events_record_multiple():
               ],
             }
     """
-    # FIXME get player ID from OAuth session
-    player_id = request.json['player_id']
-
+    player_id = request.oauth.user.id
     updates = request.json['updates']
 
     result = {'updated_events': []}

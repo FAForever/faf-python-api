@@ -2,14 +2,17 @@ import datetime
 import importlib
 import json
 import api
+from api import User
+from api.oauth_token import OAuthToken
 import faf.db as db
 import unittest
-from tests.unit_tests.mock_oauth_token import MockOAuthToken
 
 
 class EventsTestCase(unittest.TestCase):
     def get_token(self, access_token=None, refresh_token=None):
-        return MockOAuthToken(
+        return OAuthToken(
+            user=User(id=1),
+            client_id=1,
             expires=datetime.datetime.now() + datetime.timedelta(hours=1),
             scopes=['write_events']
         )

@@ -1,5 +1,5 @@
 import flask
-from flask import request
+from flask import request, g
 
 from api import *
 
@@ -144,11 +144,9 @@ def achievements_increment(achievement_id):
               "newly_unlocked": boolean,
             }
     """
-    # FIXME get player ID from OAuth session
-    player_id = int(request.form.get('player_id'))
     steps = int(request.form.get('steps', 1))
 
-    return flask.jsonify(increment_achievement(achievement_id, player_id, steps))
+    return flask.jsonify(increment_achievement(achievement_id, request.oauth.user.id, steps))
 
 
 @app.route('/achievements/<achievement_id>/setStepsAtLeast', methods=['POST'])
@@ -157,11 +155,9 @@ def achievements_set_steps_at_least(achievement_id):
     """Sets the steps of an achievement. If the steps parameter is less than the current number of steps
      that the player already gained for the achievement, the achievement is not modified.
      This function is NOT an endpoint."""
-    # FIXME get player ID from OAuth session
-    player_id = int(request.form.get('player_id'))
     steps = int(request.form.get('steps', 1))
 
-    return flask.jsonify(set_steps_at_least(achievement_id, player_id, steps))
+    return flask.jsonify(set_steps_at_least(achievement_id, request.oauth.user.id, steps))
 
 
 @app.route('/achievements/<achievement_id>/unlock', methods=['POST'])
@@ -182,10 +178,7 @@ def achievements_unlock(achievement_id):
               "newly_unlocked": boolean,
             }
     """
-    # FIXME get player ID from OAuth session
-    player_id = int(request.form.get('player_id'))
-
-    return flask.jsonify(unlock_achievement(achievement_id, player_id))
+    return flask.jsonify(unlock_achievement(achievement_id, request.oauth.user.id))
 
 
 @app.route('/achievements/<achievement_id>/reveal', methods=['POST'])
@@ -206,10 +199,7 @@ def achievements_reveal(achievement_id):
               "current_state": string,
             }
     """
-    # FIXME get player ID from OAuth session
-    player_id = int(request.form.get('player_id'))
-
-    return flask.jsonify(reveal_achievement(achievement_id, player_id))
+    return flask.jsonify(reveal_achievement(achievement_id, request.oauth.user.id))
 
 
 @app.route('/achievements/updateMultiple', methods=['POST'])
@@ -243,8 +233,7 @@ def achievements_update_multiple():
               ],
             }
     """
-    # FIXME get player ID from OAuth session
-    player_id = request.json['player_id']
+    player_id = request.oauth.user.id
 
     updates = request.json['updates']
 
@@ -308,8 +297,8 @@ def achievements_list_player(player_id):
                             achievement_id,
                             current_steps,
                             state,
-                            create_time,
-                            update_time
+                            UNIX_TIMESTAMP(create_time) as create_time,
+                            UNIX_TIMESTAMP(update_time) as update_time
                         FROM player_achievements
                         WHERE player_id = %s""", player_id)
 

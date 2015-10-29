@@ -33,7 +33,7 @@ class OAuthTestCase(unittest.TestCase):
     def insert_oauth_client(self, client_id, name, secret, redirect_uris, default_scopes):
         cursor = db.connection.cursor()
         cursor.execute("""INSERT INTO oauth_clients
-            (id, name, client_secret, redirect_uris, default_redirect_uri, default_scopes)
+            (id, name, client_secret, redirect_uris, default_redirect_uri, default_scope)
             VALUES (%s, %s, %s, %s, %s, %s)""", (
             client_id, name, secret, redirect_uris, '', default_scopes
         ))

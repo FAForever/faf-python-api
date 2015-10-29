@@ -4,6 +4,7 @@ import importlib
 import api
 
 import json
+from api import User
 import faf.db as db
 import unittest
 from tests.unit_tests.mock_oauth_token import MockOAuthToken
@@ -12,6 +13,7 @@ from tests.unit_tests.mock_oauth_token import MockOAuthToken
 class AchievementsTestCase(unittest.TestCase):
     def get_token(self, access_token=None, refresh_token=None):
         return MockOAuthToken(
+            user=User(id=1),
             expires=datetime.datetime.now() + datetime.timedelta(hours=1),
             scopes=['read_achievements', 'write_achievements']
         )
@@ -315,14 +317,14 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertEqual("50260d04-90ff-45c8-816b-4ad8d7b97ecd", data['items'][0]['achievement_id'])
         self.assertEqual("UNLOCKED", data['items'][0]['state'])
         self.assertEqual(None, data['items'][0]['current_steps'])
-        self.assertTrue('create_time' in data['items'][0])
-        self.assertTrue('update_time' in data['items'][0])
+        self.assertTrue('create_time' in data['items'][0] and type(data['items'][0]['create_time']) is int)
+        self.assertTrue('update_time' in data['items'][0] and type(data['items'][0]['update_time']) is int)
 
         self.assertEqual("5b7ec244-58c0-40ca-9d68-746b784f0cad", data['items'][1]['achievement_id'])
         self.assertEqual("UNLOCKED", data['items'][1]['state'])
         self.assertEqual(None, data['items'][1]['current_steps'])
-        self.assertTrue('create_time' in data['items'][1])
-        self.assertTrue('update_time' in data['items'][1])
+        self.assertTrue('create_time' in data['items'][1] and type(data['items'][1]['create_time']) is int)
+        self.assertTrue('update_time' in data['items'][1] and type(data['items'][1]['update_time']) is int)
 
 
 if __name__ == '__main__':
