@@ -10,7 +10,7 @@ class OAuthToken(object):
         self.access_token = kwargs.get('access_token')
         self.refresh_token = kwargs.get('refresh_token')
         self.client_id = kwargs.get('client_id')
-        self.scopes = kwargs.get('scopes')
+        self.scopes = kwargs.get('_scopes').split()
         self.expires = kwargs.get('expires')
         self.user = User.get_by_id(kwargs.get('user_id'))
 
@@ -20,7 +20,7 @@ class OAuthToken(object):
             cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
             cursor.execute("""
             SELECT
-                id, token_type, access_token, refresh_token, client_id, scopes, expires, user_id
+                id, token_type, access_token, refresh_token, client_id, scopes as _scopes, expires, user_id
             FROM oauth_tokens
             WHERE access_token = %s OR refresh_token = %s""", (kwargs.get('access_token'), kwargs.get('refresh_token')))
 
