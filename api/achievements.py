@@ -79,7 +79,7 @@ def achievements_list():
                            'region': region
                        })
 
-        return flask.jsonify(items=cursor.fetchall())
+        return dict(items=cursor.fetchall())
 
 
 @app.route('/achievements/<achievement_id>')
@@ -146,7 +146,7 @@ def achievements_increment(achievement_id):
     """
     steps = int(request.form.get('steps', 1))
 
-    return flask.jsonify(increment_achievement(achievement_id, request.oauth.user.id, steps))
+    return increment_achievement(achievement_id, request.oauth.user.id, steps)
 
 
 @app.route('/achievements/<achievement_id>/setStepsAtLeast', methods=['POST'])
@@ -157,7 +157,7 @@ def achievements_set_steps_at_least(achievement_id):
      This function is NOT an endpoint."""
     steps = int(request.form.get('steps', 1))
 
-    return flask.jsonify(set_steps_at_least(achievement_id, request.oauth.user.id, steps))
+    return set_steps_at_least(achievement_id, request.oauth.user.id, steps)
 
 
 @app.route('/achievements/<achievement_id>/unlock', methods=['POST'])
@@ -178,7 +178,7 @@ def achievements_unlock(achievement_id):
               "newly_unlocked": boolean,
             }
     """
-    return flask.jsonify(unlock_achievement(achievement_id, request.oauth.user.id))
+    return unlock_achievement(achievement_id, request.oauth.user.id)
 
 
 @app.route('/achievements/<achievement_id>/reveal', methods=['POST'])
@@ -199,7 +199,7 @@ def achievements_reveal(achievement_id):
               "current_state": string,
             }
     """
-    return flask.jsonify(reveal_achievement(achievement_id, request.oauth.user.id))
+    return reveal_achievement(achievement_id, request.oauth.user.id)
 
 
 @app.route('/achievements/updateMultiple', methods=['POST'])
@@ -302,7 +302,7 @@ def achievements_list_player(player_id):
                         FROM player_achievements
                         WHERE player_id = %s""", player_id)
 
-        return flask.jsonify(items=cursor.fetchall())
+        return dict(items=cursor.fetchall())
 
 
 def increment_achievement(achievement_id, player_id, steps):

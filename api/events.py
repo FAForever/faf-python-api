@@ -57,7 +57,7 @@ def events_list():
                            'region': region,
                        })
 
-    return flask.jsonify(items=cursor.fetchall())
+    return dict(items=cursor.fetchall())
 
 
 @app.route('/events/recordMultiple', methods=['POST'])
