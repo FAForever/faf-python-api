@@ -27,3 +27,6 @@ GITHUB_TOKEN = 'some-token'
 AUTO_DEPLOY = ['patchnotes']
 
 FLASK_LOGIN_SECRET_KEY = os.getenv("FLASK_LOGIN_SECRET_KEY", '1234')
+SECRET_KEY = os.getenv("SECRET_KEY", '1234')
+JWT_AUTH_URL_RULE = None
+JWT_AUTH_HEADER_PREFIX = "Bearer"

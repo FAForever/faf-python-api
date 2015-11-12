@@ -3,11 +3,12 @@ Forged Alliance Forever API project
 
 Distributed under GPLv3, see license.txt
 """
+from flask_jwt import JWT
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
 from flask_login import LoginManager
 
+from api.jwt_user import JwtUser
 from api.user import User
-
 from api.invalid_usage import InvalidUsage
 
 __version__ = '0.1'
@@ -34,6 +35,12 @@ login_manager.init_app(app)
 _make_response = app.make_response
 
 
+def jwt_identity(payload):
+    return User.get_by_id(payload['identity'])
+
+flask_jwt = JWT(None, authentication_handler=None, identity_handler=jwt_identity)
+
+
 def make_response_json(rv):
     """
     Override the flask make_response function to default to application/json
@@ -53,7 +60,9 @@ def make_response_json(rv):
         else:
             response = _make_response(response)
         response.status_code = values.get('status', 200)
-        response.headers = values.get('headers', response.headers)
+
+        if 'headers' in values and values['headers'] is not None:
+            response.headers = values.get('headers')
         response.headers['content-type'] = 'application/vnd.api+json'
         return response
     else:
@@ -75,15 +84,20 @@ def handle_invalid_usage(error):
 import faf.db
 
 
+# ======== Init App =======
+
 def api_init():
     """
     Initializes flask. Call _after_ setting flask config.
     """
+
     faf.db.init_db(app.config)
     app.github = github.make_session(app.config['GITHUB_USER'],
                                      app.config['GITHUB_TOKEN'])
 
     app.secret_key = app.config['FLASK_LOGIN_SECRET_KEY']
+    flask_jwt.init_app(app)
+
 
 
 # ======== Init OAuth =======
@@ -101,11 +115,8 @@ app.config.update({'OAUTH2_CACHE_TYPE': 'simple'})
 
 bind_cache_grant(app, oauth, get_current_user)
 
-
 # ======== Import (initialize) oauth2 handlers =====
 import api.oauth_handlers
-
-
 # ======== Import (initialize) routes =========
 import api.deploy
 import api.auth

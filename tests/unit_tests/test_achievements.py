@@ -45,7 +45,7 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
-        self.assertEqual(63, len(data['items']))
+        self.assertEqual(57, len(data['items']))
         self.assertEqual('c6e6039f-c543-424e-ab5f-b34df1336e81', data['items'][0]['id'])
         self.assertEqual('Novice', data['items'][0]['name'])
         self.assertEqual('Play 10 games', data['items'][0]['description'])

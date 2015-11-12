@@ -1,8 +1,6 @@
-import flask
-from flask import request, g
-
+from flask import request
+from flask_jwt import jwt_required, current_identity
 from api import *
-
 import faf.db as db
 
 SELECT_ACHIEVEMENTS_QUERY = """SELECT
@@ -130,8 +128,7 @@ def achievements_increment(achievement_id):
 
     HTTP Parameters::
 
-        player_id    integer ID of the player to increment the achievement for
-        steps        string  The number of steps to increment
+        steps string  The number of steps to increment
 
     :param achievement_id: ID of the achievement to increment
 
@@ -149,6 +146,14 @@ def achievements_increment(achievement_id):
     return increment_achievement(achievement_id, request.oauth.user.id, steps)
 
 
+@app.route('/jwt/achievements/<achievement_id>/increment', methods=['POST'])
+@jwt_required()
+def jwt_achievements_increment(achievement_id):
+    steps = int(request.values.get('steps', 1))
+
+    return increment_achievement(achievement_id, current_identity.id, steps)
+
+
 @app.route('/achievements/<achievement_id>/setStepsAtLeast', methods=['POST'])
 @oauth.require_oauth('write_achievements')
 def achievements_set_steps_at_least(achievement_id):
@@ -160,14 +165,18 @@ def achievements_set_steps_at_least(achievement_id):
     return set_steps_at_least(achievement_id, request.oauth.user.id, steps)
 
 
+@app.route('/jwt/achievements/<achievement_id>/setStepsAtLeast', methods=['POST'])
+@jwt_required()
+def jwt_achievements_set_steps_at_least(achievement_id):
+    steps = int(request.values.get('steps', 1))
+
+    return set_steps_at_least(achievement_id, current_identity.id, steps)
+
+
 @app.route('/achievements/<achievement_id>/unlock', methods=['POST'])
 @oauth.require_oauth('write_achievements')
 def achievements_unlock(achievement_id):
     """Unlocks an achievement for the currently authenticated player.
-
-    HTTP Parameters::
-
-        player_id    integer ID of the player to unlock the achievement for
 
     :param achievement_id: ID of the achievement to unlock
 
@@ -181,14 +190,16 @@ def achievements_unlock(achievement_id):
     return unlock_achievement(achievement_id, request.oauth.user.id)
 
 
+@app.route('/jwt/achievements/<achievement_id>/unlock', methods=['POST'])
+@jwt_required()
+def jwt_achievements_unlock(achievement_id):
+    return unlock_achievement(achievement_id, current_identity.id)
+
+
 @app.route('/achievements/<achievement_id>/reveal', methods=['POST'])
 @oauth.require_oauth('write_achievements')
 def achievements_reveal(achievement_id):
     """Reveals an achievement for the currently authenticated player.
-
-    HTTP Parameters::
-
-        player_id    integer ID of the player to reveal the achievement for
 
     :param achievement_id: ID of the achievement to reveal
 
@@ -200,6 +211,12 @@ def achievements_reveal(achievement_id):
             }
     """
     return reveal_achievement(achievement_id, request.oauth.user.id)
+
+
+@app.route('/jwt/achievements/<achievement_id>/reveal', methods=['POST'])
+@jwt_required()
+def jwt_achievements_reveal(achievement_id):
+    return reveal_achievement(achievement_id, current_identity.id)
 
 
 @app.route('/achievements/updateMultiple', methods=['POST'])
@@ -236,37 +253,13 @@ def achievements_update_multiple():
     player_id = request.oauth.user.id
 
     updates = request.json['updates']
+    update_multiple(player_id, updates)
 
-    result = dict(updated_achievements=[])
 
-    for update in updates:
-        achievement_id = update['achievement_id']
-        update_type = update['update_type']
-
-        update_result = dict(achievement_id=achievement_id)
-
-        if update_type == 'REVEAL':
-            reveal_result = reveal_achievement(achievement_id, player_id)
-            update_result['current_state'] = reveal_result['current_state']
-            update_result['current_state'] = 'REVEALED'
-        elif update_type == 'UNLOCK':
-            unlock_result = unlock_achievement(achievement_id, player_id)
-            update_result['newly_unlocked'] = unlock_result['newly_unlocked']
-            update_result['current_state'] = 'UNLOCKED'
-        elif update_type == 'INCREMENT':
-            increment_result = increment_achievement(achievement_id, player_id, update['steps'])
-            update_result['current_steps'] = increment_result['current_steps']
-            update_result['current_state'] = increment_result['current_state']
-            update_result['newly_unlocked'] = increment_result['newly_unlocked']
-        elif update_type == 'SET_STEPS_AT_LEAST':
-            set_steps_at_least_result = set_steps_at_least(achievement_id, player_id, update['steps'])
-            update_result['current_steps'] = set_steps_at_least_result['current_steps']
-            update_result['current_state'] = set_steps_at_least_result['current_state']
-            update_result['newly_unlocked'] = set_steps_at_least_result['newly_unlocked']
-
-        result['updated_achievements'].append(update_result)
-
-    return result
+@app.route('/jwt/achievements/updateMultiple', methods=['POST'])
+@jwt_required()
+def jwt_achievements_update_multiple():
+    pass
 
 
 @app.route('/players/<int:player_id>/achievements')
@@ -460,3 +453,36 @@ def reveal_achievement(achievement_id, player_id):
                        })
 
     return dict(current_state=new_state)
+
+
+def update_multiple(player_id, updates):
+    result = dict(updated_achievements=[])
+
+    for update in updates:
+        achievement_id = update['achievement_id']
+        update_type = update['update_type']
+
+        update_result = dict(achievement_id=achievement_id)
+
+        if update_type == 'REVEAL':
+            reveal_result = reveal_achievement(achievement_id, player_id)
+            update_result['current_state'] = reveal_result['current_state']
+            update_result['current_state'] = 'REVEALED'
+        elif update_type == 'UNLOCK':
+            unlock_result = unlock_achievement(achievement_id, player_id)
+            update_result['newly_unlocked'] = unlock_result['newly_unlocked']
+            update_result['current_state'] = 'UNLOCKED'
+        elif update_type == 'INCREMENT':
+            increment_result = increment_achievement(achievement_id, player_id, update['steps'])
+            update_result['current_steps'] = increment_result['current_steps']
+            update_result['current_state'] = increment_result['current_state']
+            update_result['newly_unlocked'] = increment_result['newly_unlocked']
+        elif update_type == 'SET_STEPS_AT_LEAST':
+            set_steps_at_least_result = set_steps_at_least(achievement_id, player_id, update['steps'])
+            update_result['current_steps'] = set_steps_at_least_result['current_steps']
+            update_result['current_state'] = set_steps_at_least_result['current_state']
+            update_result['newly_unlocked'] = set_steps_at_least_result['newly_unlocked']
+
+        result['updated_achievements'].append(update_result)
+
+    return result
