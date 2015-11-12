@@ -1,8 +1,6 @@
 import datetime
 import importlib
-
 import api
-
 import json
 from api import User
 import faf.db as db
@@ -70,9 +68,7 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertEqual(None, data['unlocked_icon_url'])
 
     def test_achievements_increment_inserts_if_not_existing(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(
-            player_id=1, steps=5
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(steps=5))
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -81,9 +77,7 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertFalse(data['newly_unlocked'])
 
     def test_achievements_increment_unlocks(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(
-            player_id=1, steps=10
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(steps=10))
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -92,13 +86,9 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertTrue(data['newly_unlocked'])
 
     def test_achievements_increment_unlocks_only_once(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(
-            player_id=1, steps=10
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(steps=10))
         self.assertEqual(200, response.status_code)
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(
-            player_id=1, steps=1
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(steps=1))
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -107,18 +97,14 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertFalse(data['newly_unlocked'])
 
     def test_achievements_increment_standard_achievement_fails(self):
-        response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/increment', data=dict(
-            player_id=1, steps=10
-        ))
+        response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/increment', data=dict(steps=10))
         self.assertEqual(400, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
         self.assertTrue('message' in data)
 
     def test_achievements_increment_caps_at_max(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(
-            player_id=1, steps=11
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(steps=11))
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -127,14 +113,10 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertTrue(data['newly_unlocked'])
 
     def test_achievements_increment_increments_if_existing(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(
-            player_id=1, steps=1
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(steps=1))
         self.assertEqual(200, response.status_code)
 
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(
-            player_id=1, steps=1
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(steps=1))
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -143,9 +125,8 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertFalse(data['newly_unlocked'])
 
     def test_achievements_set_steps_at_least_inserts_if_not_existing(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast', data=dict(
-            player_id=1, steps=5
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast',
+                                 data=dict(steps=5))
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -154,14 +135,12 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertFalse(data['newly_unlocked'])
 
     def test_achievements_set_steps_at_least_updates_if_existing(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast', data=dict(
-            player_id=1, steps=1
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast',
+                                 data=dict(steps=1))
         self.assertEqual(200, response.status_code)
 
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast', data=dict(
-            player_id=1, steps=3
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast',
+                                 data=dict(steps=3))
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -170,14 +149,12 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertFalse(data['newly_unlocked'])
 
     def test_achievements_set_steps_at_least_keeps_highest(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast', data=dict(
-            player_id=1, steps=9
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast',
+                                 data=dict(steps=9))
         self.assertEqual(200, response.status_code)
 
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast', data=dict(
-            player_id=1, steps=3
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast',
+                                 data=dict(steps=3))
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -186,9 +163,8 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertFalse(data['newly_unlocked'])
 
     def test_achievements_set_steps_at_least_unlocks(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast', data=dict(
-            player_id=1, steps=10
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast',
+                                 data=dict(steps=10))
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -197,13 +173,11 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertTrue(data['newly_unlocked'])
 
     def test_achievements_set_steps_at_least_unlocks_only_once(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast', data=dict(
-            player_id=1, steps=10
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast',
+                                 data=dict(steps=10))
         self.assertEqual(200, response.status_code)
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast', data=dict(
-            player_id=1, steps=1
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast',
+                                 data=dict(steps=1))
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -212,9 +186,8 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertFalse(data['newly_unlocked'])
 
     def test_achievements_set_steps_at_least_caps_at_max(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast', data=dict(
-            player_id=1, steps=11
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/setStepsAtLeast',
+                                 data=dict(steps=11))
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -223,41 +196,31 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertTrue(data['newly_unlocked'])
 
     def test_achievements_unlock(self):
-        response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/unlock', data=dict(
-            player_id=1
-        ))
+        response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/unlock', data=dict())
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
         self.assertTrue(data['newly_unlocked'])
 
     def test_achievements_unlock_unlocks_only_once(self):
-        response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/unlock', data=dict(
-            player_id=1
-        ))
+        response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/unlock', data=dict())
         self.assertEqual(200, response.status_code)
 
-        response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/unlock', data=dict(
-            player_id=1
-        ))
+        response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/unlock', data=dict())
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
         self.assertFalse(data['newly_unlocked'])
 
     def test_achievements_unlock_unlocking_incremental_fails(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/unlock', data=dict(
-            player_id=1
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/unlock', data=dict())
         self.assertEqual(400, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
         self.assertTrue('message' in data)
 
     def test_achievements_reveal(self):
-        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/reveal', data=dict(
-            player_id=1
-        ))
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/reveal', data=dict())
         self.assertEqual(200, response.status_code)
         data = json.loads(response.get_data(as_text=True))
 
@@ -265,7 +228,6 @@ class AchievementsTestCase(unittest.TestCase):
 
     def test_achievements_update_multiple(self):
         request_data = dict(
-            player_id=1,
             updates=[
                 dict(achievement_id='c6e6039f-c543-424e-ab5f-b34df1336e81', update_type='INCREMENT', steps=10),
                 dict(achievement_id='50260d04-90ff-45c8-816b-4ad8d7b97ecd', update_type='UNLOCK'),

@@ -1,7 +1,7 @@
 from flask import request
-import flask
-from api import *
+from flask_jwt import jwt_required, current_identity
 
+from api import *
 import faf.db as db
 
 SELECT_EVENTS_QUERY = """SELECT
@@ -65,17 +65,15 @@ def events_list():
 def events_record_multiple():
     """Records multiple events for the currently authenticated player.
 
-    HTTP Parameters::
-
-        player_id    integer ID of the player to update the achievements for
-
     HTTP Body:
         In the request body, supply data with the following structure::
 
             {
               "updates": [
-                "event_id": string,
-                "update_count": long,
+                {
+                  "event_id": string,
+                  "count": long
+                }
               ]
             }
 
@@ -86,36 +84,34 @@ def events_record_multiple():
               "updated_events": [
                 {
                   "event_id": string,
-                  "count": long,
+                  "count": long
                 }
               ],
             }
     """
-    player_id = request.oauth.user.id
-    updates = request.json['updates']
-
-    result = {'updated_events': []}
-
-    for update in updates:
-        event_id = update['event_id']
-        update_count = update['update_count']
-
-        update_result = record_event(event_id, player_id, update_count)
-
-        result['updated_events'].append(update_result)
-
-    return result
+    return record_multiple(request.oauth.user.id, request.json['updates'])
 
 
-def record_event(event_id, player_id, update_count):
+@app.route('/jwt/events/recordMultiple', methods=['POST'])
+@jwt_required()
+def jwt_events_record_multiple():
+    return record_multiple(current_identity.id, request.json['updates'])
+
+
+@app.route('/events/<event_id>/record', methods=['POST'])
+@oauth.require_oauth('write_events')
+def events_record(event_id):
+    return record_event(event_id, request.oauth.user.id, request.values.get('count', 1))
+
+
+def record_event(event_id, player_id, count):
     """Records an event. This function is NOT an endpoint.
 
     :return:
         If successful, this method returns a dictionary with the following structure::
 
             {
-              "event_id": string,
-              "count": long,
+              "count": long
             }
     """
 
@@ -123,20 +119,34 @@ def record_event(event_id, player_id, update_count):
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
         cursor.execute("""INSERT INTO player_events (player_id, event_id, count)
                         VALUES
-                            (%(player_id)s, %(event_id)s, %(update_count)s)
+                            (%(player_id)s, %(event_id)s, %(count)s)
                         ON DUPLICATE KEY UPDATE
                             count = count + VALUES(count)""",
                        {
                            'player_id': player_id,
                            'event_id': event_id,
-                           'update_count': update_count,
+                           'count': count,
                        })
 
         cursor.execute("""SELECT
-                            event_id,
                             count
                         FROM player_events
                         WHERE event_id = %s AND player_id = %s""",
                        (event_id, player_id))
 
         return cursor.fetchone()
+
+
+def record_multiple(player_id, updates):
+    result = {'updated_events': []}
+
+    for update in updates:
+        event_id = update['event_id']
+        count = update['count']
+
+        update_result = dict(event_id=event_id)
+        update_result['count'] = record_event(event_id, player_id, count)['count']
+
+        result['updated_events'].append(update_result)
+
+    return result

@@ -159,7 +159,22 @@ def jwt_achievements_increment(achievement_id):
 def achievements_set_steps_at_least(achievement_id):
     """Sets the steps of an achievement. If the steps parameter is less than the current number of steps
      that the player already gained for the achievement, the achievement is not modified.
-     This function is NOT an endpoint."""
+
+    HTTP Parameters::
+
+        steps string  The number of steps to increment
+
+    :param achievement_id: ID of the achievement to increment
+
+    :return
+        If successful, this method returns a response body with the following structure::
+
+            {
+              "current_steps": integer,
+              "current_state": string,
+              "newly_unlocked": boolean,
+            }
+    """
     steps = int(request.form.get('steps', 1))
 
     return set_steps_at_least(achievement_id, request.oauth.user.id, steps)
@@ -228,38 +243,43 @@ def achievements_update_multiple():
         In the request body, supply data with the following structure::
 
             {
-              "player_id": integer,
               "updates": [
-                "achievement_id": string,
-                "update_type": string,
-                "steps": integer
+                {
+                    "achievement_id": string,
+                    "update_type": string,
+                    "steps": integer
+                }
               ]
             }
 
-        ``updateType`` being one of "REVEAL", "INCREMENT" or "UNLOCK"
+        ``updateType`` being one of "REVEAL", "INCREMENT", "UNLOCK" or "SET_STEPS_AT_LEAST"
+        ``steps`` being mandatory only for update type `` INCREMENT`` and ``SET_STEPS_AT_LEAST``
 
     :return:
         If successful, this method returns a response body with the following structure::
 
             {
               "updated_achievements": [
-                "achievement_id": string,
-                "current_state": string,
-                "current_steps": integer,
-                "newly_unlocked": boolean,
+                {
+                  "achievement_id": string,
+                  "current_state": string,
+                  "current_steps": integer,
+                  "newly_unlocked": boolean,
+                }
               ],
             }
     """
     player_id = request.oauth.user.id
 
     updates = request.json['updates']
-    update_multiple(player_id, updates)
+    return update_multiple(player_id, updates)
 
 
 @app.route('/jwt/achievements/updateMultiple', methods=['POST'])
 @jwt_required()
 def jwt_achievements_update_multiple():
-    pass
+    updates = request.json['updates']
+    return update_multiple(current_identity.id, updates)
 
 
 @app.route('/players/<int:player_id>/achievements')
@@ -328,7 +348,8 @@ def update_steps(achievement_id, player_id, steps, steps_function):
     """
     achievement = achievements_get(achievement_id)
     if achievement['type'] != 'INCREMENTAL':
-        raise InvalidUsage('Only incremental achievements can be incremented', status_code=400)
+        raise InvalidUsage('Only incremental achievements can be incremented ({})'.format(achievement_id),
+                           status_code=400)
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
@@ -389,7 +410,8 @@ def unlock_achievement(achievement_id, player_id):
         cursor.execute('SELECT type FROM achievement_definitions WHERE id = %s', achievement_id)
         achievement = cursor.fetchone()
         if achievement['type'] != 'STANDARD':
-            raise InvalidUsage('Only standard achievements can be unlocked directly', status_code=400)
+            raise InvalidUsage('Only standard achievements can be unlocked directly ({})'.format(achievement_id),
+                               status_code=400)
 
         cursor.execute("""SELECT
                             state

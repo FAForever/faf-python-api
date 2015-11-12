@@ -50,12 +50,19 @@ class EventsTestCase(unittest.TestCase):
         self.assertEqual('NUMERIC', data['items'][0]['type'])
         self.assertEqual(None, data['items'][0]['image_url'])
 
+    def test_events_record(self):
+        response = self.app.post('/events/15b6c19a-6084-4e82-ada9-6c30e282191f/record', data=dict(count=5))
+        self.assertEqual(200, response.status_code)
+        data = json.loads(response.get_data(as_text=True))
+
+        self.assertEqual(5, data['count'])
+
     def test_record_multiple(self):
         request_data = dict(
             player_id=1,
             updates=[
-                dict(event_id='15b6c19a-6084-4e82-ada9-6c30e282191f', update_count=10),
-                dict(event_id='1b900d26-90d2-43d0-a64e-ed90b74c3704', update_count=15)
+                dict(event_id='15b6c19a-6084-4e82-ada9-6c30e282191f', count=10),
+                dict(event_id='1b900d26-90d2-43d0-a64e-ed90b74c3704', count=15)
             ]
         )
 
@@ -65,10 +72,8 @@ class EventsTestCase(unittest.TestCase):
         data = json.loads(response.get_data(as_text=True))
 
         self.assertEqual(2, len(data['updated_events']))
-        self.assertEqual('15b6c19a-6084-4e82-ada9-6c30e282191f', data['updated_events'][0]['event_id'])
         self.assertEqual(10, data['updated_events'][0]['count'])
 
-        self.assertEqual('1b900d26-90d2-43d0-a64e-ed90b74c3704', data['updated_events'][1]['event_id'])
         self.assertEqual(15, data['updated_events'][1]['count'])
 
 
