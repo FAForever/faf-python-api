@@ -120,6 +120,7 @@ import api.auth
 import api.avatars
 import api.games
 import api.mods
+import api.maps
 import api.github
 import api.oauth_client
 import api.oauth_token
