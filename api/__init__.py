@@ -5,7 +5,6 @@ Distributed under GPLv3, see license.txt
 """
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
 from flask_login import LoginManager
-
 from api.user import User
 
 __version__ = '0.1'
@@ -23,6 +22,20 @@ if sys.version_info.major != 3:
 from flask import Flask, session, jsonify
 from flask_oauthlib.provider import OAuth2Provider
 
+
+class InvalidUsage(Exception):
+    def __init__(self, message, status_code=None, payload=None):
+        Exception.__init__(self)
+        self.message = message
+        self.status_code = status_code or 400
+        self.payload = payload
+
+    def to_dict(self):
+        rv = dict(self.payload or ())
+        rv['message'] = self.message
+        return rv
+
+
 # ======== Init Flask ==========
 
 app = Flask('api')
@@ -30,6 +43,14 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 _make_response = app.make_response
+
+
+@app.errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    response.headers['content-type'] = 'application/vnd.api+json'
+    return response
 
 
 def make_response_json(rv):
@@ -59,7 +80,6 @@ def make_response_json(rv):
 
 
 app.make_response = make_response_json
-
 
 # ======== Init Database =======
 
@@ -92,17 +112,15 @@ app.config.update({'OAUTH2_CACHE_TYPE': 'simple'})
 
 bind_cache_grant(app, oauth, get_current_user)
 
-
 # ======== Import (initialize) oauth2 handlers =====
 import api.oauth
-
-
 # ======== Import (initialize) routes =========
 import api.deploy
 import api.auth
 import api.avatars
 import api.games
 import api.mods
+import api.maps
 import api.github
 import api.oauth_client
 import api.oauth_token
