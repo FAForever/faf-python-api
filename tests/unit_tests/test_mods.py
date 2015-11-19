@@ -25,6 +25,21 @@ def mods(request):
     request.addfinalizer(finalizer)
 
 
+def test_mods_names(test_client, mods):
+    response = test_client.get('/mods/names')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'data' in result
+    assert len(result['data']) == 3
+
+    assert result['data'][0] == 'a'
+    assert result['data'][1] == 'b'
+    assert result['data'][2] == 'c'
+
+
 def test_mods(test_client, mods):
     response = test_client.get('/mods')
 
@@ -33,7 +48,7 @@ def test_mods(test_client, mods):
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    assert len(result['data']) > 0
+    assert len(result['data']) == 3
 
     for item in result['data']:
         assert 'type' in item

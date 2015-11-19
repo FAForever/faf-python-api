@@ -24,6 +24,23 @@ def mods_upload():
     return "ok"
 
 
+@app.route("/mods/names")
+def mods_names():
+
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+        cursor.execute("SELECT name FROM table_mod ORDER BY name ASC")
+
+        result = cursor.fetchall()
+
+    data = []
+
+    for row in result:
+        data.append(row['name'])
+
+    return {'data': data}
+
+
 @app.route('/mods')
 def mods():
     order_column = request.values.get('order_column', 'likes')
