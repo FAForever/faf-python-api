@@ -31,9 +31,10 @@ class InvalidUsage(Exception):
         self.payload = payload
 
     def to_dict(self):
-        rv = dict(self.payload or ())
-        rv['message'] = self.message
-        return rv
+        return {
+            **(self.payload or {}),
+            'message': self.message
+        }
 
 
 # ======== Init Flask ==========
