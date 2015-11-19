@@ -1,5 +1,8 @@
 import json
+from datetime import date, datetime
 from io import BytesIO
+
+import marshmallow
 import pytest
 import sys
 
@@ -12,10 +15,10 @@ def mods(request):
         cursor = db.connection.cursor()
         cursor.execute("TRUNCATE TABLE table_mod")
         cursor.execute("""INSERT INTO table_mod
-        (uid, name, version, author, ui, big, small, date, description, filename, icon, likes, likers) VALUES
-        ('mod-1', 'a', '1', 'author1', 0, 0, 0, FROM_UNIXTIME(1), '', 'mod1.zip', 'mod1.png', 100, x'00'),
-        ('mod-2', 'b', '2', 'author2', 0, 0, 0, FROM_UNIXTIME(2), '', 'mod2.zip', 'mod2.png', 200, x'00'),
-        ('mod-3', 'c', '3', 'author3', 0, 0, 0, FROM_UNIXTIME(3), '', 'mod3.zip', 'mod3.png', 300, x'00')""")
+        (uid, name, version, author, ui, date, description, filename, icon, likes, likers) VALUES
+        ('mod-1', 'a', '1', 'author1', 0, FROM_UNIXTIME(1), '', 'mod1.zip', 'mod1.png', 100, x'00'),
+        ('mod-2', 'b', '2', 'author2', 0, FROM_UNIXTIME(2), '', 'mod2.zip', 'mod2.png', 200, x'00'),
+        ('mod-3', 'c', '3', 'author3', 0, FROM_UNIXTIME(3), '', 'mod3.zip', 'mod3.png', 300, x'00')""")
 
     def finalizer():
         with db.connection:
@@ -23,21 +26,6 @@ def mods(request):
             cursor.execute("TRUNCATE TABLE table_mod")
 
     request.addfinalizer(finalizer)
-
-
-def test_mods_names(test_client, mods):
-    response = test_client.get('/mods/names')
-
-    assert response.status_code == 200
-    assert response.content_type == 'application/vnd.api+json'
-
-    result = json.loads(response.data.decode('utf-8'))
-    assert 'data' in result
-    assert len(result['data']) == 3
-
-    assert result['data'][0] == 'a'
-    assert result['data'][1] == 'b'
-    assert result['data'][2] == 'c'
 
 
 def test_mods(test_client, mods):
@@ -100,10 +88,11 @@ def test_mods_sort_by_create_time(test_client, mods):
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['data']) > 0
 
-    previous_create_time = 0
+    previous_create_time = marshmallow.utils.from_iso('1970-01-01T00:00:00+00:00')
     for item in result['data']:
-        assert item['attributes']['create_time'] > previous_create_time
-        previous_create_time = item['attributes']['create_time']
+        new_date = marshmallow.utils.from_iso(item['attributes']['create_time'])
+        assert new_date > previous_create_time
+        previous_create_time = new_date
 
 
 def test_mods_sort_by_likes(test_client, mods):

@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 
 import faf.db as db
 from api import app, InvalidUsage
+from faf.api import ModSchema
 
 ALLOWED_EXTENSIONS = {'zip'}
 MODS_PER_PAGE = 100
@@ -22,23 +23,6 @@ def mods_upload():
     filename = secure_filename(file.filename)
     file.save(os.path.join(app.config['MOD_UPLOAD_PATH'], filename))
     return "ok"
-
-
-@app.route("/mods/names")
-def mods_names():
-
-    with db.connection:
-        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-        cursor.execute("SELECT name FROM table_mod ORDER BY name ASC")
-
-        result = cursor.fetchall()
-
-    data = []
-
-    for row in result:
-        data.append(row['name'])
-
-    return {'data': data}
 
 
 @app.route('/mods')
@@ -66,13 +50,14 @@ def mods():
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
         cursor.execute("""
             SELECT
-                uid as id,
+                id,
+                uid,
                 name,
                 description,
                 version,
                 author,
                 ui as is_ui,
-                UNIX_TIMESTAMP(date) as create_time,
+                date as create_time,
                 downloads,
                 likes,
                 played as plays,
@@ -86,29 +71,12 @@ def mods():
 
         result = cursor.fetchall()
 
-    data = []
-
-    for row in result:
-        data.append({
-            'type': 'mod',
-            'id': row['id'],
-            'attributes': {
-                'name': row['name'],
-                'description': row['description'],
-                'version': row['version'],
-                'author': row['author'],
-                'downloads': row['downloads'],
-                'likes': row['likes'],
-                'plays': row['plays'],
-                'filename': row['filename'],
-                'icon_filename': row['icon_filename'],
-                'is_ui': bool(row['is_ui']),
-                'is_ranked': bool(row['is_ranked']),
-                'create_time': row['create_time']
-            }
-        })
-
-    return {'data': data}
+    schema = ModSchema()
+    result, errors = schema.dump(result, many=True)
+    print(result)
+    if errors:
+        raise Exception('Integrity error: {}'.format(errors))
+    return result
 
 
 def file_allowed(filename):
