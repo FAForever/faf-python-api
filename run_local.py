@@ -11,4 +11,5 @@ api_init()
 
 # By default, run debug mode
 app.debug = True
+print("Listening on port *:8080/tcp")
 app.run(host='0.0.0.0', port=8080)
