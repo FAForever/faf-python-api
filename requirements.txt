@@ -12,3 +12,4 @@ pymysql
 pyflakes
 pytest-mock
 pytest-cov
+git+https://github.com/FAForever/faftools.git#egg=faftools
