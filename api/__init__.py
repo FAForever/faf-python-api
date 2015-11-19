@@ -3,8 +3,13 @@ Forged Alliance Forever API project
 
 Distributed under GPLv3, see license.txt
 """
+import sys
+
+from flask import Flask, session, jsonify
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
+from flask_oauthlib.provider import OAuth2Provider
 from flask_login import LoginManager
+
 from api.user import User
 
 __version__ = '0.1'
@@ -13,14 +18,9 @@ __contact__ = 'admin@faforever.com'
 __license__ = 'GPLv3'
 __copyright__ = 'Copyright (c) 2011-2015 ' + __author__
 
-import sys
-
 if sys.version_info.major != 3:
     raise RuntimeError(
         "FAForever API requires python 3.\n")
-
-from flask import Flask, session, jsonify
-from flask_oauthlib.provider import OAuth2Provider
 
 
 class InvalidUsage(Exception):
