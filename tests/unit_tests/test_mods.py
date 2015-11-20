@@ -7,6 +7,7 @@ import pytest
 import sys
 
 from faf import db
+from faf.api import ModSchema
 
 
 @pytest.fixture
@@ -40,6 +41,28 @@ def test_mods(test_client, mods):
 
     for item in result['data']:
         assert 'type' in item
+
+
+def test_mod(test_client, mods):
+    response = test_client.get('/mods/mod-1')
+    schema = ModSchema()
+
+    result, errors = schema.loads(response.data.decode('utf-8'))
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+    assert not errors
+    assert result['author'] == 'author1'
+
+
+def test_mod_not_found(test_client, mods):
+    response = test_client.get('/mods/i_do_not_exist')
+
+    data = json.loads(response.data.decode('utf-8'))
+
+    assert response.status_code == 404
+    assert response.content_type == 'application/vnd.api+json'
+    assert 'errors' in data
 
 
 def test_mods_max(test_client, mods):

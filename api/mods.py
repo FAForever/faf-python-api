@@ -1,6 +1,7 @@
 import os
 
 from flask import request
+from pymysql.cursors import DictCursor
 from werkzeug.utils import secure_filename
 
 import faf.db as db
@@ -25,6 +26,41 @@ def mods_upload():
     return "ok"
 
 
+@app.route('/mods/<mod_uid>')
+def mod(mod_uid):
+    with db.connection:
+        cursor = db.connection.cursor(DictCursor)
+        cursor.execute("""
+            SELECT id,
+                uid,
+                name,
+                description,
+                version,
+                author,
+                ui as is_ui,
+                date as create_time,
+                downloads,
+                likes,
+                played as plays,
+                filename,
+                icon as icon_filename,
+                ranked as is_ranked
+            FROM table_mod
+            WHERE uid=%(mod_uid)s""", dict(mod_uid=mod_uid))
+        result = cursor.fetchone()
+        if not result:
+            return {'errors': [{'title': 'No mod with this uid was found'}]}, 404
+        schema = ModSchema()
+        serialized, errors = schema.dump(result)
+        if not errors:
+            return serialized
+        return {'errors': [
+            {'title': 'Integrity Error',
+             'detail': 'Database returned garbage'},
+            *errors
+        ]}, 500
+
+
 @app.route('/mods')
 def mods():
     order_column = request.values.get('order_column', 'likes')
@@ -47,7 +83,7 @@ def mods():
     limit = max_items
 
     with db.connection:
-        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+        cursor = db.connection.cursor(DictCursor)
         cursor.execute("""
             SELECT
                 id,
