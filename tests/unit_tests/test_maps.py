@@ -45,8 +45,8 @@ def test_maps(test_client, maps):
         assert 'type' in item
 
 
-def test_maps_max(test_client, maps):
-    response = test_client.get('/maps?max=1')
+def test_maps_page_size(test_client, maps):
+    response = test_client.get('/maps?page[size]=1')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -56,15 +56,15 @@ def test_maps_max(test_client, maps):
     assert len(result['data']) == 1
 
 
-def test_maps_invalid_max(test_client, maps):
-    response = test_client.get('/maps?max=101')
+def test_maps_invalid_page_size(test_client, maps):
+    response = test_client.get('/maps?page[size]=1001')
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid max'
+    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page size'
 
 
 def test_maps_page(test_client, maps):
-    response = test_client.get('/maps?max=1&page=2')
+    response = test_client.get('/maps?page[size]=1&page[number]=2')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -76,14 +76,14 @@ def test_maps_page(test_client, maps):
 
 
 def test_maps_invalid_page(test_client, maps):
-    response = test_client.get('/maps?page=-1')
+    response = test_client.get('/maps?page[number]=-1')
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page'
+    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page number'
 
 
 def test_maps_sort_by_max_players(test_client, maps):
-    response = test_client.get('/maps?order_column=max_players')
+    response = test_client.get('/maps?sort=max_players')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -98,7 +98,7 @@ def test_maps_sort_by_max_players(test_client, maps):
 
 
 def test_maps_sort_by_max_players_desc(test_client, maps):
-    response = test_client.get('/maps?order_column=max_players&order=desc')
+    response = test_client.get('/maps?sort=-max_players')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -112,18 +112,11 @@ def test_maps_sort_by_max_players_desc(test_client, maps):
         previous_create_time = item['attributes']['max_players']
 
 
-def test_maps_inject_sql_order(test_client):
-    response = test_client.get('/maps?order=or%201=1')
+def test_maps_inject_sql_sort(test_client):
+    response = test_client.get('/maps?sort=or%201=1')
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid order'
-
-
-def test_maps_inject_sql_order_column(test_client):
-    response = test_client.get('/maps?order_column=or%201=1')
-
-    assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid order column'
+    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid sort field'
 
 
 def test_maps_upload(test_client, app, tmpdir):

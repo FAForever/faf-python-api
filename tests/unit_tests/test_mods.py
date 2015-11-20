@@ -43,6 +43,22 @@ def test_mods(test_client, mods):
         assert 'type' in item
 
 
+def test_mods_fields(test_client, mods):
+    response = test_client.get('/mods?fields[mod]=name')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'data' in result
+    assert len(result['data']) == 3
+    assert len(result['data'][0]['attributes']) == 1
+
+    for item in result['data']:
+        assert 'name' in item
+        assert 'version' not in item
+
+
 def test_mod(test_client, mods):
     response = test_client.get('/mods/mod-1')
     schema = ModSchema()
@@ -65,8 +81,8 @@ def test_mod_not_found(test_client, mods):
     assert 'errors' in data
 
 
-def test_mods_max(test_client, mods):
-    response = test_client.get('/mods?max=1')
+def test_mods_page_size(test_client, mods):
+    response = test_client.get('/mods?page[size]=1')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -76,15 +92,15 @@ def test_mods_max(test_client, mods):
     assert len(result['data']) == 1
 
 
-def test_mods_invalid_max(test_client, mods):
-    response = test_client.get('/mods?max=101')
+def test_mods_invalid_page_size(test_client, mods):
+    response = test_client.get('/mods?page[size]=1001')
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid max'
+    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page size'
 
 
 def test_mods_page(test_client, mods):
-    response = test_client.get('/mods?max=1&page=2')
+    response = test_client.get('/mods?page[size]=1&page[number]=2')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -96,14 +112,14 @@ def test_mods_page(test_client, mods):
 
 
 def test_mods_invalid_page(test_client, mods):
-    response = test_client.get('/mods?page=-1')
+    response = test_client.get('/mods?page[number]=-1')
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page'
+    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page number'
 
 
 def test_mods_sort_by_create_time(test_client, mods):
-    response = test_client.get('/mods?order_column=create_time')
+    response = test_client.get('/mods?sort=create_time')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -119,7 +135,7 @@ def test_mods_sort_by_create_time(test_client, mods):
 
 
 def test_mods_sort_by_likes(test_client, mods):
-    response = test_client.get('/mods?order_column=likes')
+    response = test_client.get('/mods?sort=likes')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -134,7 +150,7 @@ def test_mods_sort_by_likes(test_client, mods):
 
 
 def test_mods_sort_by_likes_desc(test_client, mods):
-    response = test_client.get('/mods?order_column=likes&order=desc')
+    response = test_client.get('/mods?sort=-likes')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -142,24 +158,17 @@ def test_mods_sort_by_likes_desc(test_client, mods):
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['data']) > 0
 
-    previous_create_time = sys.maxsize
+    previous_likes = sys.maxsize
     for item in result['data']:
-        assert item['attributes']['likes'] < previous_create_time
-        previous_create_time = item['attributes']['likes']
+        assert item['attributes']['likes'] < previous_likes
+        previous_likes = item['attributes']['likes']
 
 
 def test_mods_inject_sql_order(test_client):
-    response = test_client.get('/mods?order=or%201=1')
+    response = test_client.get('/mods?sort=or%201=1')
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid order'
-
-
-def test_mods_inject_sql_order_column(test_client):
-    response = test_client.get('/mods?order_column=or%201=1')
-
-    assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid order column'
+    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid sort field'
 
 
 def test_mods_upload(test_client, app, tmpdir):

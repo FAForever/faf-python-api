@@ -1,14 +1,31 @@
 import os
 
+from faf.api.map_schema import MapSchema
 from flask import request
 from werkzeug.utils import secure_filename
 
 from api import app, InvalidUsage
-from faf import db
-from faf.api.map_schema import MapSchema
+from api.query_commons import fetch_data
 
 ALLOWED_EXTENSIONS = {'zip'}
-MAPS_PER_PAGE = 100
+MAX_PAGE_SIZE = 1000
+
+SELECT_EXPRESSIONS = {
+    'id': 'map.mapuid',
+    'name': 'map.name',
+    'description': 'map.description',
+    'max_players': 'COALESCE(map.max_players, 0)',
+    'map_type': 'map.map_type',
+    'battle_type': 'map.battle_type',
+    'map_sizeX': 'COALESCE(map.map_sizeX, 0)',
+    'map_sizeY': 'COALESCE(map.map_sizeY, 0)',
+    'version': 'map.version',
+    'filename': 'map.filename',
+    'downloads': 'COALESCE(features.downloads, 0)',
+    'num_draws': 'COALESCE(features.num_draws, 0)',
+    'rating': 'features.rating',
+    'times_played': 'COALESCE(features.times_played, 0)'
+}
 
 
 @app.route('/maps/upload', methods=['POST'])
@@ -27,55 +44,8 @@ def maps_upload():
 
 @app.route('/maps')
 def maps():
-    order_column = request.values.get('order_column', 'times_played')
-    if order_column not in {'name', 'max_players', 'map_type', 'battle_type', 'map_sizeX', 'map_sizeY', 'downloads',
-                            'num_draws', 'rating', 'times_played'}:
-        raise InvalidUsage("Invalid order column")
-
-    order = request.values.get('order', 'ASC')
-    if order.lower() not in {'asc', 'desc'}:
-        raise InvalidUsage("Invalid order")
-
-    max_items = int(request.values.get('max', MAPS_PER_PAGE))
-    if max_items > MAPS_PER_PAGE:
-        raise InvalidUsage("Invalid max")
-
-    page = int(request.values.get('page', 1))
-    if page < 1:
-        raise InvalidUsage("Invalid page")
-
-    offset = (page - 1) * max_items
-    limit = max_items
-
-    with db.connection:
-        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-        cursor.execute("""
-            SELECT
-                map.mapuid as id,
-                map.name,
-                map.description,
-                COALESCE(map.max_players, 0) as max_players,
-                map.map_type,
-                map.battle_type,
-                COALESCE(map.map_sizeX, 0) as map_size_x,
-                COALESCE(map.map_sizeY, 0) as map_size_y,
-                map.version,
-                map.filename,
-                COALESCE(features.downloads, 0) as downloads,
-                COALESCE(features.num_draws, 0) as num_draws,
-                COALESCE(features.rating, 0) as rating,
-                COALESCE(features.times_played, 0) as times_played
-            FROM table_map map
-            LEFT JOIN table_map_features features
-                ON features.map_id = map.id
-            ORDER BY {} {}
-            LIMIT %(offset)s, %(limit)s
-        """.format(order_column, order), dict(offset=offset, limit=limit))
-
-        result = cursor.fetchall()
-
-    schema = MapSchema()
-    return schema.dump(result, many=True).data
+    table = "table_map map LEFT JOIN table_map_features features ON features.map_id = map.id"
+    return fetch_data(MapSchema(), table, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request)
 
 
 def file_allowed(filename):
