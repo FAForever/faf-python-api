@@ -8,7 +8,7 @@ from api import app, InvalidUsage
 from api.query_commons import fetch_data
 
 ALLOWED_EXTENSIONS = {'zip'}
-MAX_PAGE_SIZE = 100
+MAX_PAGE_SIZE = 1000
 
 SELECT_EXPRESSIONS = {
     'id': 'uid',
