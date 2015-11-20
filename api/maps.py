@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 
 from api import app, InvalidUsage
 from faf import db
+from faf.api.map_schema import MapSchema
 
 ALLOWED_EXTENSIONS = {'zip'}
 MAPS_PER_PAGE = 100
@@ -73,30 +74,8 @@ def maps():
 
         result = cursor.fetchall()
 
-    data = []
-
-    for row in result:
-        data.append({
-            'type': 'map',
-            'id': row['id'],
-            'attributes': {
-                'name': row['name'],
-                'description': row['description'],
-                'max_players': int(row['max_players']),
-                'map_type': row['map_type'],
-                'battle_type': row['battle_type'],
-                'map_size_x': int(row['map_size_x']),
-                'map_size_y': int(row['map_size_y']),
-                'version': row['version'],
-                'filename': row['filename'],
-                'downloads': int(row['downloads']),
-                'num_draws': int(row['num_draws']),
-                'rating': float(row['rating']),
-                'times_played': int(row['times_played'])
-            }
-        })
-
-    return {'data': data}
+    schema = MapSchema()
+    return schema.dump(result, many=True).data
 
 
 def file_allowed(filename):
