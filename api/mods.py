@@ -31,8 +31,8 @@ def mod(mod_uid):
     with db.connection:
         cursor = db.connection.cursor(DictCursor)
         cursor.execute("""
-            SELECT id,
-                uid,
+            SELECT
+                uid as id,
                 name,
                 description,
                 version,
@@ -46,19 +46,12 @@ def mod(mod_uid):
                 icon as icon_filename,
                 ranked as is_ranked
             FROM table_mod
-            WHERE uid=%(mod_uid)s""", dict(mod_uid=mod_uid))
+            WHERE `uid`=%(mod_uid)s""", dict(mod_uid=mod_uid))
         result = cursor.fetchone()
         if not result:
             return {'errors': [{'title': 'No mod with this uid was found'}]}, 404
         schema = ModSchema()
-        serialized, errors = schema.dump(result)
-        if not errors:
-            return serialized
-        return {'errors': [
-            {'title': 'Integrity Error',
-             'detail': 'Database returned garbage'},
-            *errors
-        ]}, 500  # pragma: no cover
+        return schema.dump(result).data
 
 
 @app.route('/mods')
@@ -107,15 +100,7 @@ def mods():
         result = cursor.fetchall()
 
     schema = ModSchema()
-    result, errors = schema.dump(result, many=True)
-    print(result)
-    if errors:
-        return {'errors': [
-            {'title': 'Integrity Error',
-             'detail': 'Database returned garbage'},
-            *errors
-        ]}, 500  # pragma: no cover
-    return result
+    return schema.dump(result, many=True).data
 
 
 def file_allowed(filename):
