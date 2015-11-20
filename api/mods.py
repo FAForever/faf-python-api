@@ -86,8 +86,7 @@ def mods():
         cursor = db.connection.cursor(DictCursor)
         cursor.execute("""
             SELECT
-                id,
-                uid,
+                uid as id,
                 name,
                 description,
                 version,
