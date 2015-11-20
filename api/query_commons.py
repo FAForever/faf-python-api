@@ -95,17 +95,17 @@ def get_limit(page, limit):
     return 'LIMIT {}, {}'.format((page - 1) * limit, limit)
 
 
-def fetch_data(schema, table, select_expressions, max_page_size, request, where='', args=None, many=True):
+def fetch_data(schema, table, select_expression_dict, max_page_size, request, where='', args=None, many=True):
     fields = request.values.getlist('fields[{}]'.format(schema.Meta.type_))
     sorts = request.values.getlist('sort')
 
     # Sanitize fields
     if fields:
-        fields = [field for field in fields if field in select_expressions.keys()]
+        fields = [field for field in fields if field in select_expression_dict.keys()]
     else:
-        fields = select_expressions.keys()
+        fields = select_expression_dict.keys()
 
-    select_expressions = get_select_expressions(fields, select_expressions)
+    select_expressions = get_select_expressions(fields, select_expression_dict)
     order_by_expression = get_order_by(sorts, fields)
 
     page_size = int(request.values.get('page[size]', max_page_size))
