@@ -129,6 +129,6 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
             result = cursor.fetchone()
 
     if not result:
-        return {'data': []}, 200
+        return None
 
     return schema.dump(result, many=many).data
