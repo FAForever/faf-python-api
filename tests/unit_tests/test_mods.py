@@ -59,6 +59,23 @@ def test_mods_fields(test_client, mods):
         assert 'version' not in item['attributes']
 
 
+def test_mods_fields_two(test_client, mods):
+    response = test_client.get('/mods?fields[mod]=name,author')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'data' in result
+    assert len(result['data']) == 3
+    assert len(result['data'][0]['attributes']) == 2
+
+    for item in result['data']:
+        assert 'name' in item['attributes']
+        assert 'author' in item['attributes']
+        assert 'version' not in item['attributes']
+
+
 def test_mod(test_client, mods):
     response = test_client.get('/mods/mod-1')
     schema = ModSchema()

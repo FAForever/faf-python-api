@@ -41,7 +41,7 @@ def test_get_select_expressions_none_fields():
 
 
 def test_get_order_by():
-    sort_expressions = ['likes', '-timestamp']
+    sort_expressions = 'likes,-timestamp'
 
     result = get_order_by(sort_expressions, FIELD_EXPRESSION_DICT)
 
@@ -52,25 +52,25 @@ def test_get_order_by():
 
 
 def test_get_order_by_empty():
-    result = get_order_by([], FIELD_EXPRESSION_DICT)
+    result = get_order_by('', FIELD_EXPRESSION_DICT)
 
     assert result == ''
 
 
 def test_get_order_by_empty_minus_field():
-    result = get_order_by(['-'], FIELD_EXPRESSION_DICT)
+    result = get_order_by('-', FIELD_EXPRESSION_DICT)
 
     assert result == ''
 
 
 def test_get_order_by_partial_empty_fields():
-    result = get_order_by(['likes', ''], FIELD_EXPRESSION_DICT)
+    result = get_order_by('likes,', FIELD_EXPRESSION_DICT)
 
     assert result == 'ORDER BY likes ASC'
 
 
 def test_get_order_by_empty_fields():
-    result = get_order_by(['', ''], FIELD_EXPRESSION_DICT)
+    result = get_order_by(',,', FIELD_EXPRESSION_DICT)
 
     assert result == ''
 
