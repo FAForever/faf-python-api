@@ -8,6 +8,7 @@ python-geoip-geolite2
 marshmallow
 marshmallow_jsonapi
 geoip2
+statsd
 uritemplate.py
 requests
 pymysql
