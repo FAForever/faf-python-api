@@ -58,7 +58,7 @@ def mod(mod_uid):
             {'title': 'Integrity Error',
              'detail': 'Database returned garbage'},
             *errors
-        ]}, 500
+        ]}, 500  # pragma: no cover
 
 
 @app.route('/mods')
@@ -111,7 +111,11 @@ def mods():
     result, errors = schema.dump(result, many=True)
     print(result)
     if errors:
-        raise Exception('Integrity error: {}'.format(errors))
+        return {'errors': [
+            {'title': 'Integrity Error',
+             'detail': 'Database returned garbage'},
+            *errors
+        ]}, 500  # pragma: no cover
     return result
 
 
