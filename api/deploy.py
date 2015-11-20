@@ -5,15 +5,21 @@ import json
 import re
 
 from flask import request, render_template, url_for
+import shutil
 
 from api import *
 from api.oauth_handlers import *
 
 import hmac
-import subprocess
-import os
+from pathlib import Path
 
+from faf.tools.fa.mods import parse_mod_info
+from faf.tools.fa.build_mod import build_mod
 
+from .git import checkout_repo
+
+import logging
+logger = logging.getLogger(__name__)
 
 github_session = None
 
@@ -46,16 +52,18 @@ def github_hook():
         return dict(status="Invalid request"), 400
     event = request.headers['X-Github-Event']
     if event == 'push':
-        if body['repository']['name'] == 'api':
+        repo_name = body['repository']['name']
+        if repo_name in app.config['REPO_PATHS'].keys():
             head_commit = body['head_commit']
             if not head_commit['distinct']:
                 return dict(status="OK"), 200
             match = re.search('Deploy: ([\w\W]+)', head_commit['message'])
-            if match:
+            environment = match.group(1) if match else app.config['ENVIRONMENT']
+            if match or repo_name in app.config['AUTO_DEPLOY']:
                 resp = app.github.create_deployment(owner='FAForever',
-                                                    repo=body['repository']['name'],
+                                                    repo=repo_name,
                                                     ref=body['ref'],
-                                                    environment=match.group(1),
+                                                    environment=environment,
                                                     description=head_commit['message'])
                 if not resp.status_code == 201:
                     raise Exception(resp.content)
@@ -72,17 +80,51 @@ def github_hook():
                 repo=repo['name'],
                 id=deployment['id'],
                 state=status,
-                target_url=url_for('deployment',
-                                   repo=repo['name'],
-                                   id=deployment['id']),
-                description=description
-            )
-            return (dict(status=status,
-                        description=description),
-                   status_response.status_code)
+                description=description)
+            app.slack.send_message(username='deploybot',
+                                   text="Deployed {}:{} to {}".format(
+                                       repo['name'],
+                                       "{}@{}".format(deployment['ref'], deployment['sha']),
+                                       deployment['environment']))
+            if status_response.status_code == 201:
+                return (dict(status=status,
+                            description=description),
+                       201)
+            else:
+                return ((dict(status='error',
+                             description="Failure creating github deployment status: {}"
+                             .format(status_response.content))),
+                        status_response.status_code)
     return dict(status="OK"), 200
 
-def deploy(repository, clone_url, ref, sha):
+
+def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
+    checkout_repo(repo_path, remote_url, ref, sha)
+    restart_file = Path(repo_path, 'tmp/restart.txt')
+    restart_file.touch()
+    return 'success', 'Deployed'
+
+
+def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
+    checkout_repo(repo_path, remote_url, ref, sha)
+    mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))
+    faf_modname = mod_info['_faf_modname']
+    files = build_mod(repo_path)
+    logger.info("Build result: {}".format(files))
+    deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(mod_info['_faf_modname']))
+    logger.info("Deploying {} to {}".format(faf_modname, deploy_path))
+    for f in files:
+        destination = deploy_path / (f['filename'] + "." + faf_modname + "." + str(mod_info['version']) + f['sha1'][:6] + ".zip")
+        logger.info("Deploying {} to {}".format(f, destination))
+        shutil.copy2(str(f['path']), str(destination))
+        db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;'.format(faf_modname), (f['id'], mod_info['version']))
+        db.execute_sql('insert into updates_{}_files '
+                       '(fileId, version, md5, name) '
+                       'values (%s,%s,%s,%s)'.format(faf_modname),
+                       (f['id'], mod_info['version'], f['md5'], destination.name))
+    return 'success', 'Deployed'
+
+def deploy(repository, remote_url, ref, sha):
     """
     Perform deployment on this machine
     :param repository: the repository to deploy
@@ -90,29 +132,12 @@ def deploy(repository, clone_url, ref, sha):
     :param sha: hash to verify deployment with
     :return: (status: str, description: str)
     """
-    if repository not in ['api']:
-        return "error", "invalid repository"
-    repo_path = app.config.get('{}_PATH'.format(repository.upper()))
-    git_path = app.config.get('GIT_PATH', '/usr/bin/git')
-    fetch_exit_code = subprocess.call([git_path,
-                                       '-C',
-                                       repo_path,
-                                       'fetch',
-                                       clone_url,
-                                       ref])
-    if fetch_exit_code != 0:
-        return "error", "git fetch returned nonzero code: {}".format(fetch_exit_code)
-    subprocess.call([git_path,
-                    '-C', repo_path,
-                    'checkout',
-                    '-f',
-                    'FETCH_HEAD'])
-    checked_out = subprocess.check_output([git_path,
-                                    'rev-parse',
-                                    'HEAD']).strip().decode()
-    if not checked_out == sha:
-        return "error", "checked out hash {} doesn't match {}".format(checked_out, sha)
-    restart_file = repo_path + '/tmp/restart.txt'
-    with open(restart_file):
-        os.utime(restart_file, None)
-    return "success", "Deployed successfully"
+    try:
+        return {
+            'api': deploy_web,
+            'patchnotes': deploy_web,
+            'fa': deploy_game
+        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, ref, sha)
+    except Exception as e:
+        logger.exception(e)
+        return 'error', "{}: {}".format(type(e), e)

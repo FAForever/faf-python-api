@@ -3,13 +3,17 @@ Forged Alliance Forever API project
 
 Distributed under GPLv3, see license.txt
 """
+import sys
+import statsd
+import time
 from flask_jwt import JWT
+from flask import Flask, session, jsonify, request
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
+from flask_oauthlib.provider import OAuth2Provider
 from flask_login import LoginManager
 
 from api.jwt_user import JwtUser
 from api.user import User
-from api.invalid_usage import InvalidUsage
 
 __version__ = '0.1'
 __author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus, Michel Jung'
@@ -17,14 +21,24 @@ __contact__ = 'admin@faforever.com'
 __license__ = 'GPLv3'
 __copyright__ = 'Copyright (c) 2011-2015 ' + __author__
 
-import sys
-
 if sys.version_info.major != 3:
     raise RuntimeError(
         "FAForever API requires python 3.\n")
 
-from flask import Flask, session, jsonify
-from flask_oauthlib.provider import OAuth2Provider
+
+class InvalidUsage(Exception):
+    def __init__(self, message, status_code=None, payload=None):
+        Exception.__init__(self)
+        self.message = message
+        self.status_code = status_code or 400
+        self.payload = payload
+
+    def to_dict(self):
+        return {
+            **(self.payload or {}),
+            'message': self.message
+        }
+
 
 # ======== Init Flask ==========
 
@@ -33,6 +47,14 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 _make_response = app.make_response
+
+
+@app.errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    response.headers['content-type'] = 'application/vnd.api+json'
+    return response
 
 
 def jwt_identity(payload):
@@ -71,14 +93,6 @@ def make_response_json(rv):
 
 app.make_response = make_response_json
 
-
-@app.errorhandler(InvalidUsage)
-def handle_invalid_usage(error):
-    response = jsonify(error.to_dict())
-    response.status_code = error.status_code
-    return response
-
-
 # ======== Init Database =======
 
 import faf.db
@@ -94,10 +108,24 @@ def api_init():
     faf.db.init_db(app.config)
     app.github = github.make_session(app.config['GITHUB_USER'],
                                      app.config['GITHUB_TOKEN'])
+    app.slack = slack.make_session(app.config['SLACK_HOOK_URL'])
 
     app.secret_key = app.config['FLASK_LOGIN_SECRET_KEY']
     flask_jwt.init_app(app)
 
+
+    if app.config.get('STATSD_SERVER'):
+        host, port = app.config['STATSD_SERVER'].split(':')
+        stats = statsd.StatsClient(host, port)
+
+        @app.before_request
+        def before_req():
+            request._start_time = time.time()
+
+        @app.after_request
+        def after_req(response):
+            stats.timing('api.request', (time.time()-request._start_time)*1000)
+            return response
 
 
 # ======== Init OAuth =======
@@ -123,8 +151,10 @@ import api.auth
 import api.avatars
 import api.games
 import api.mods
+import api.maps
 import api.github
 import api.oauth_client
 import api.oauth_token
+import api.slack
 import api.achievements
 import api.events

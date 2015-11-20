@@ -21,6 +21,12 @@ REPO_PATHS = {
 
 GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'
 
+# FIXME set paths
+MOD_UPLOAD_PATH = '/opt/dev/www/content/faf/FIXME'
+MAP_UPLOAD_PATH = '/opt/dev/www/content/faf/FIXME'
+
+STATSD_SERVER = os.getenv('STATSD_SERVER', None)
+
 GITHUB_USER = 'some-user'
 GITHUB_TOKEN = 'some-token'
 
@@ -30,3 +36,4 @@ FLASK_LOGIN_SECRET_KEY = os.getenv("FLASK_LOGIN_SECRET_KEY", '1234')
 SECRET_KEY = os.getenv("SECRET_KEY", '1234')
 JWT_AUTH_URL_RULE = None
 JWT_AUTH_HEADER_PREFIX = "Bearer"
+SLACK_HOOK_URL = 'http://example.com'
