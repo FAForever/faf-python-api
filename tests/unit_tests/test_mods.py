@@ -55,8 +55,8 @@ def test_mods_fields(test_client, mods):
     assert len(result['data'][0]['attributes']) == 1
 
     for item in result['data']:
-        assert 'name' in item
-        assert 'version' not in item
+        assert 'name' in item['attributes']
+        assert 'version' not in item['attributes']
 
 
 def test_mod(test_client, mods):

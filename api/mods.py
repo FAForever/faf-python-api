@@ -1,14 +1,11 @@
 import os
 
+from faf.api import ModSchema
 from flask import request
-from pymysql.cursors import DictCursor
 from werkzeug.utils import secure_filename
 
-import faf.db as db
 from api import app, InvalidUsage
-from faf.api import ModSchema
-
-from api.query_commons import get_select_expressions, get_order_by, get_limit, fetch_data
+from api.query_commons import fetch_data
 
 ALLOWED_EXTENSIONS = {'zip'}
 MAX_PAGE_SIZE = 100
@@ -47,10 +44,12 @@ def mods_upload():
 @app.route('/mods/<mod_uid>')
 def mod(mod_uid):
     result = fetch_data(ModSchema(), 'table_mod', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
-                        where="WHERE uid = %s", args=mod_uid)
+                        where="WHERE uid = %s", args=mod_uid, many=False)
 
-    if not result['data']:
+    if not result:
         return {'errors': [{'title': 'No mod with this uid was found'}]}, 404
+
+    return result
 
 
 @app.route('/mods')

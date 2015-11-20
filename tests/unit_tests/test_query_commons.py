@@ -57,6 +57,12 @@ def test_get_order_by_empty():
     assert result == ''
 
 
+def test_get_order_by_empty_minus_field():
+    result = get_order_by(['-'], FIELD_EXPRESSION_DICT)
+
+    assert result == ''
+
+
 def test_get_order_by_partial_empty_fields():
     result = get_order_by(['likes', ''], FIELD_EXPRESSION_DICT)
 
