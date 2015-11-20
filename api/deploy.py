@@ -13,8 +13,8 @@ from api.oauth import *
 import hmac
 from pathlib import Path
 
-from faftools.fa.mods import parse_mod_info
-from faftools.fa.build_mod import build_mod
+from faf.tools.fa.mods import parse_mod_info
+from faf.tools.fa.build_mod import build_mod
 
 from .git import checkout_repo
 
