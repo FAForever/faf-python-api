@@ -108,7 +108,7 @@ def api_init():
 
         @app.after_request
         def after_req(response):
-            stats.timing('api.request', time.time()-request._start_time)
+            stats.timing('api.request', (time.time()-request._start_time)*1000)
             return response
 
 
