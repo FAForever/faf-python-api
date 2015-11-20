@@ -24,6 +24,8 @@ GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'
 MOD_UPLOAD_PATH = '/opt/dev/www/content/faf/FIXME'
 MAP_UPLOAD_PATH = '/opt/dev/www/content/faf/FIXME'
 
+STATSD_SERVER = os.getenv('STATSD_SERVER', None)
+
 GITHUB_USER = 'some-user'
 GITHUB_TOKEN = 'some-token'
 

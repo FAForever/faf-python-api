@@ -4,8 +4,9 @@ Forged Alliance Forever API project
 Distributed under GPLv3, see license.txt
 """
 import sys
-
-from flask import Flask, session, jsonify
+import statsd
+import time
+from flask import Flask, session, jsonify, request
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
 from flask_oauthlib.provider import OAuth2Provider
 from flask_login import LoginManager
@@ -96,6 +97,19 @@ def api_init():
                                      app.config['GITHUB_TOKEN'])
 
     app.secret_key = app.config['FLASK_LOGIN_SECRET_KEY']
+
+    if app.config.get('STATSD_SERVER'):
+        host, port = app.config['STATSD_SERVER'].split(':')
+        stats = statsd.StatsClient(host, port)
+
+        @app.before_request
+        def before_req():
+            request._start_time = time.time()
+
+        @app.after_request
+        def after_req(response):
+            stats.timing('api.request', time.time()-request._start_time)
+            return response
 
 
 # ======== Init OAuth =======
