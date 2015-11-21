@@ -7,6 +7,9 @@ import api
 def app():
     importlib.reload(api)
     importlib.reload(api.mods)
+    importlib.reload(api.maps)
+    importlib.reload(api.events)
+    importlib.reload(api.achievements)
 
     api.app.config.from_object('config')
     api.debug = True

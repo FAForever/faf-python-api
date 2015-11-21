@@ -1,5 +1,9 @@
 import datetime
 import importlib
+
+from faf.api.achievement_schema import AchievementSchema
+from faf.api.player_achievement_schema import PlayerAchievementSchema
+
 import api
 import json
 from api import User
@@ -36,36 +40,35 @@ class AchievementsTestCase(unittest.TestCase):
 
     def tearDown(self):
         db.connection.close()
-        pass
 
     def test_achievements_list(self):
-        response = self.app.get('/achievements')
+        response = self.app.get('/achievements?sort=order')
         self.assertEqual(200, response.status_code)
-        data = json.loads(response.get_data(as_text=True))
+        result, errors = AchievementSchema().loads(response.get_data(as_text=True), many=True)
 
-        self.assertEqual(57, len(data['items']))
-        self.assertEqual('c6e6039f-c543-424e-ab5f-b34df1336e81', data['items'][0]['id'])
-        self.assertEqual('Novice', data['items'][0]['name'])
-        self.assertEqual('Play 10 games', data['items'][0]['description'])
-        self.assertEqual('REVEALED', data['items'][0]['initial_state'])
-        self.assertEqual('INCREMENTAL', data['items'][0]['type'])
-        self.assertEqual(10, data['items'][0]['total_steps'])
-        self.assertEqual(None, data['items'][0]['revealed_icon_url'])
-        self.assertEqual(None, data['items'][0]['unlocked_icon_url'])
+        self.assertEqual(57, len(result))
+        self.assertEqual('c6e6039f-c543-424e-ab5f-b34df1336e81', result[0]['id'])
+        self.assertEqual('Novice', result[0]['name'])
+        self.assertEqual('Play 10 games', result[0]['description'])
+        self.assertEqual('REVEALED', result[0]['initial_state'])
+        self.assertEqual('INCREMENTAL', result[0]['type'])
+        self.assertEqual(10, result[0]['total_steps'])
+        self.assertEqual(None, result[0]['revealed_icon_url'])
+        self.assertEqual(None, result[0]['unlocked_icon_url'])
 
     def test_achievements_get(self):
         response = self.app.get('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81')
         self.assertEqual(200, response.status_code)
-        data = json.loads(response.get_data(as_text=True))
+        result, errors = AchievementSchema().loads(response.get_data(as_text=True))
 
-        self.assertEqual('c6e6039f-c543-424e-ab5f-b34df1336e81', data['id'])
-        self.assertEqual('Novice', data['name'])
-        self.assertEqual('Play 10 games', data['description'])
-        self.assertEqual('REVEALED', data['initial_state'])
-        self.assertEqual('INCREMENTAL', data['type'])
-        self.assertEqual(10, data['total_steps'])
-        self.assertEqual(None, data['revealed_icon_url'])
-        self.assertEqual(None, data['unlocked_icon_url'])
+        self.assertEqual('c6e6039f-c543-424e-ab5f-b34df1336e81', result['id'])
+        self.assertEqual('Novice', result['name'])
+        self.assertEqual('Play 10 games', result['description'])
+        self.assertEqual('REVEALED', result['initial_state'])
+        self.assertEqual('INCREMENTAL', result['type'])
+        self.assertEqual(10, result['total_steps'])
+        self.assertEqual(None, result['revealed_icon_url'])
+        self.assertEqual(None, result['unlocked_icon_url'])
 
     def test_achievements_increment_inserts_if_not_existing(self):
         response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(steps=5))
@@ -272,21 +275,21 @@ class AchievementsTestCase(unittest.TestCase):
 
         response = self.app.get('/players/1/achievements')
         self.assertEqual(200, response.status_code)
-        data = json.loads(response.get_data(as_text=True))
+        result, errors = PlayerAchievementSchema().loads(response.get_data(as_text=True), many=True)
 
-        self.assertEqual(2, len(data['items']))
+        self.assertEqual(2, len(result))
 
-        self.assertEqual("50260d04-90ff-45c8-816b-4ad8d7b97ecd", data['items'][0]['achievement_id'])
-        self.assertEqual("UNLOCKED", data['items'][0]['state'])
-        self.assertEqual(None, data['items'][0]['current_steps'])
-        self.assertTrue('create_time' in data['items'][0] and type(data['items'][0]['create_time']) is int)
-        self.assertTrue('update_time' in data['items'][0] and type(data['items'][0]['update_time']) is int)
+        self.assertEqual("50260d04-90ff-45c8-816b-4ad8d7b97ecd", result[0]['achievement_id'])
+        self.assertEqual("UNLOCKED", result[0]['state'])
+        self.assertEqual(None, result[0]['current_steps'])
+        self.assertTrue('create_time' in result[0])
+        self.assertTrue('update_time' in result[0])
 
-        self.assertEqual("5b7ec244-58c0-40ca-9d68-746b784f0cad", data['items'][1]['achievement_id'])
-        self.assertEqual("UNLOCKED", data['items'][1]['state'])
-        self.assertEqual(None, data['items'][1]['current_steps'])
-        self.assertTrue('create_time' in data['items'][1] and type(data['items'][1]['create_time']) is int)
-        self.assertTrue('update_time' in data['items'][1] and type(data['items'][1]['update_time']) is int)
+        self.assertEqual("5b7ec244-58c0-40ca-9d68-746b784f0cad", result[1]['achievement_id'])
+        self.assertEqual("UNLOCKED", result[1]['state'])
+        self.assertEqual(None, result[1]['current_steps'])
+        self.assertTrue('create_time' in result[1])
+        self.assertTrue('update_time' in result[1])
 
 
 if __name__ == '__main__':

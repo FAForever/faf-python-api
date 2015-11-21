@@ -44,7 +44,7 @@ def mods_upload():
 @app.route('/mods/<mod_uid>')
 def mod(mod_uid):
     result = fetch_data(ModSchema(), 'table_mod', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
-                        where="WHERE uid = %s", args=mod_uid, many=False)
+                        where="WHERE `uid` = %s", args=mod_uid, many=False)
 
     if 'id' not in result['data']:
         return {'errors': [{'title': 'No mod with this uid was found'}]}, 404

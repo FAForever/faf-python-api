@@ -12,6 +12,7 @@ from flask_oauthlib.contrib.oauth2 import bind_cache_grant
 from flask_oauthlib.provider import OAuth2Provider
 from flask_login import LoginManager
 
+from api.invalid_usage import InvalidUsage
 from api.jwt_user import JwtUser
 from api.user import User
 
@@ -24,20 +25,6 @@ __copyright__ = 'Copyright (c) 2011-2015 ' + __author__
 if sys.version_info.major != 3:
     raise RuntimeError(
         "FAForever API requires python 3.\n")
-
-
-class InvalidUsage(Exception):
-    def __init__(self, message, status_code=None, payload=None):
-        Exception.__init__(self)
-        self.message = message
-        self.status_code = status_code or 400
-        self.payload = payload
-
-    def to_dict(self):
-        return {
-            **(self.payload or {}),
-            'message': self.message
-        }
 
 
 # ======== Init Flask ==========
@@ -158,3 +145,4 @@ import api.oauth_token
 import api.slack
 import api.achievements
 import api.events
+import api.query_commons

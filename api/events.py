@@ -1,26 +1,30 @@
-from flask import request
+from faf.api.event_schema import EventSchema
 from flask_jwt import jwt_required, current_identity
-
 from api import *
 import faf.db as db
+from api.query_commons import fetch_data
 
-SELECT_EVENTS_QUERY = """SELECT
-                            events.id,
-                            events.image_url,
-                            events.type,
-                            COALESCE(name_langReg.value, name_lang.value, name_def.value) as name
-                        FROM event_definitions events
-                        LEFT OUTER JOIN messages name_langReg
-                            ON events.name_key = name_langReg.key
-                                AND name_langReg.language = %(language)s
-                                AND name_langReg.region = %(region)s
-                        LEFT OUTER JOIN messages name_lang
-                            ON events.name_key = name_lang.key
-                                AND name_lang.language = %(language)s
-                        LEFT OUTER JOIN messages name_def
-                            ON events.name_key = name_def.key
-                                AND name_def.language = 'en'
-                                AND name_def.region = 'US'"""
+MAX_PAGE_SIZE = 1000
+
+EVENTS_TABLE = """event_definitions events
+                    LEFT OUTER JOIN messages name_langReg
+                        ON events.name_key = name_langReg.key
+                            AND name_langReg.language = %(language)s
+                            AND name_langReg.region = %(region)s
+                    LEFT OUTER JOIN messages name_lang
+                        ON events.name_key = name_lang.key
+                            AND name_lang.language = %(language)s
+                    LEFT OUTER JOIN messages name_def
+                        ON events.name_key = name_def.key
+                            AND name_def.language = 'en'
+                            AND name_def.region = 'US'"""
+
+SELECT_EXPRESSIONS = {
+    'id': 'events.id',
+    'image_url': 'events.image_url',
+    'type': 'events.type',
+    'name': 'COALESCE(name_langReg.value, name_lang.value, name_def.value)'
+}
 
 
 @app.route('/events')
@@ -49,15 +53,8 @@ def events_list():
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
 
-    with db.connection:
-        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-        cursor.execute(SELECT_EVENTS_QUERY + " ORDER BY id ASC",
-                       {
-                           'language': language,
-                           'region': region,
-                       })
-
-    return dict(items=cursor.fetchall())
+    return fetch_data(EventSchema(), EVENTS_TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+                      args={'language': language, 'region': region})
 
 
 @app.route('/events/recordMultiple', methods=['POST'])

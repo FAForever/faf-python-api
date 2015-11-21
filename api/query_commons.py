@@ -34,7 +34,7 @@ def get_select_expressions(fields, field_expression_dict):
     field_selects = []
     for field in fields:
         if field in field_expression_dict:
-            field_selects.append("{} as {}".format(field_expression_dict[field], field))
+            field_selects.append("{} as `{}`".format(field_expression_dict[field], field))
 
     return ', '.join(field_selects)
 
@@ -83,7 +83,7 @@ def get_order_by(sort_expression, valid_fields):
         if column not in valid_fields:
             raise InvalidUsage("Invalid sort field")
 
-        order_bys.append('{} {}'.format(column, order))
+        order_bys.append('`{}` {}'.format(column, order))
 
     if not order_bys:
         return ''
@@ -107,8 +107,11 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
     else:
         fields = select_expression_dict.keys()
 
+    id_selected = True
     if 'id' not in fields:
+        # ID must always be selected
         fields.append('id')
+        id_selected = False
 
     select_expressions = get_select_expressions(fields, select_expression_dict)
     order_by_expression = get_order_by(sort, fields)
@@ -133,4 +136,16 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
         else:
             result = cursor.fetchone()
 
-    return schema.dump(result, many=many).data
+    data = schema.dump(result, many=many).data
+
+    # TODO `id` is treated specially, that means it's put into ['data'] and NOT into ['attributes']
+    # Schema().loads() however only returns ['attributes'] - and I found no way to either change that, or add 'id'
+    # to ['attributes']. If there really is no clean solution, we either can't use loads(), or we use this ugly code.
+    if id_selected:
+        if many:
+            for item in data['data']:
+                item['attributes']['id'] = item['id']
+        elif 'id' in data['data']:
+            data['data']['attributes']['id'] = data['data']['id']
+
+    return data

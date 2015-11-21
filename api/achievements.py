@@ -1,19 +1,13 @@
-from flask import request
+from faf.api.achievement_schema import AchievementSchema
+from faf.api.player_achievement_schema import PlayerAchievementSchema
 from flask_jwt import jwt_required, current_identity
 from api import *
 import faf.db as db
+from api.query_commons import fetch_data
 
-SELECT_ACHIEVEMENTS_QUERY = """SELECT
-                    ach.id,
-                    ach.type,
-                    ach.total_steps,
-                    ach.revealed_icon_url,
-                    ach.unlocked_icon_url,
-                    ach.initial_state,
-                    ach.experience_points,
-                    COALESCE(name_langReg.value, name_lang.value, name_def.value) as name,
-                    COALESCE(desc_langReg.value, desc_lang.value, desc_def.value) as description
-                FROM achievement_definitions ach
+MAX_PAGE_SIZE = 1000
+
+ACHIEVEMENTS_TABLE = """achievement_definitions ach
                 LEFT OUTER JOIN messages name_langReg
                     ON ach.name_key = name_langReg.key
                         AND name_langReg.language = %(language)s
@@ -36,6 +30,28 @@ SELECT_ACHIEVEMENTS_QUERY = """SELECT
                     ON ach.description_key = desc_def.key
                         AND desc_def.language = 'en'
                         AND desc_def.region = 'US'"""
+
+ACHIEVEMENT_SELECT_EXPRESSIONS = {
+    'id': 'ach.id',
+    'type': 'ach.type',
+    'order': 'ach.order',
+    'total_steps': 'ach.total_steps',
+    'revealed_icon_url': 'ach.revealed_icon_url',
+    'unlocked_icon_url': 'ach.unlocked_icon_url',
+    'experience_points': 'ach.experience_points',
+    'initial_state': 'ach.initial_state',
+    'name': 'COALESCE(name_langReg.value, name_lang.value, name_def.value)',
+    'description': 'COALESCE(desc_langReg.value, desc_lang.value, desc_def.value)',
+}
+
+PLAYER_ACHIEVEMENT_SELECT_EXPRESSIONS = {
+    'id': 'id',
+    'achievement_id': 'achievement_id',
+    'state': 'state',
+    'current_steps': 'current_steps',
+    'create_time': 'create_time',
+    'update_time': 'update_time'
+}
 
 
 @app.route('/achievements')
@@ -69,15 +85,8 @@ def achievements_list():
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
 
-    with db.connection:
-        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-        cursor.execute(SELECT_ACHIEVEMENTS_QUERY + " ORDER BY `order` ASC",
-                       {
-                           'language': language,
-                           'region': region
-                       })
-
-        return dict(items=cursor.fetchall())
+    return fetch_data(AchievementSchema(), ACHIEVEMENTS_TABLE, ACHIEVEMENT_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+                      args={'language': language, 'region': region})
 
 
 @app.route('/achievements/<achievement_id>')
@@ -109,16 +118,10 @@ def achievements_get(achievement_id):
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
 
-    with db.connection:
-        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-        cursor.execute(SELECT_ACHIEVEMENTS_QUERY + "WHERE ach.id = %(achievement_id)s",
-                       {
-                           'language': language,
-                           'region': region,
-                           'achievement_id': achievement_id
-                       })
-
-        return cursor.fetchone()
+    return fetch_data(AchievementSchema(), ACHIEVEMENTS_TABLE, ACHIEVEMENT_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+                      where='WHERE ach.id = %(id)s',
+                      args={'id': achievement_id, 'language': language, 'region': region},
+                      many=False)
 
 
 @app.route('/achievements/<achievement_id>/increment', methods=['POST'])
@@ -304,18 +307,8 @@ def achievements_list_player(player_id):
               ]
             }
     """
-    with db.connection:
-        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-        cursor.execute("""SELECT
-                            achievement_id,
-                            current_steps,
-                            state,
-                            UNIX_TIMESTAMP(create_time) as create_time,
-                            UNIX_TIMESTAMP(update_time) as update_time
-                        FROM player_achievements
-                        WHERE player_id = %s""", player_id)
-
-        return dict(items=cursor.fetchall())
+    return fetch_data(PlayerAchievementSchema(), 'player_achievements', PLAYER_ACHIEVEMENT_SELECT_EXPRESSIONS,
+                      MAX_PAGE_SIZE, request, where='WHERE player_id = %s', args=player_id)
 
 
 def increment_achievement(achievement_id, player_id, steps):
@@ -346,7 +339,7 @@ def update_steps(achievement_id, player_id, steps, steps_function):
               "newly_unlocked": boolean,
             }
     """
-    achievement = achievements_get(achievement_id)
+    achievement = achievements_get(achievement_id)['data']['attributes']
     if achievement['type'] != 'INCREMENTAL':
         raise InvalidUsage('Only incremental achievements can be incremented ({})'.format(achievement_id),
                            status_code=400)

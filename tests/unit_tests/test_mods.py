@@ -91,10 +91,11 @@ def test_mod(test_client, mods):
 def test_mod_not_found(test_client, mods):
     response = test_client.get('/mods/i_do_not_exist')
 
-    data = json.loads(response.data.decode('utf-8'))
-
     assert response.status_code == 404
     assert response.content_type == 'application/vnd.api+json'
+
+    data = json.loads(response.data.decode('utf-8'))
+
     assert 'errors' in data
 
 

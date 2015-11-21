@@ -1,6 +1,9 @@
 import datetime
 import importlib
 import json
+
+from faf.api.event_schema import EventSchema
+
 import api
 from api import User
 from api.oauth_token import OAuthToken
@@ -40,15 +43,15 @@ class EventsTestCase(unittest.TestCase):
         pass
 
     def test_events_list(self):
-        response = self.app.get('/events')
+        response = self.app.get('/events?sort=id')
         self.assertEqual(200, response.status_code)
-        data = json.loads(response.get_data(as_text=True))
+        result, errors = EventSchema().loads(response.get_data(as_text=True), many=True)
 
-        self.assertEqual(28, len(data['items']))
-        self.assertEqual('15b6c19a-6084-4e82-ada9-6c30e282191f', data['items'][0]['id'])
-        self.assertEqual('Seraphim wins', data['items'][0]['name'])
-        self.assertEqual('NUMERIC', data['items'][0]['type'])
-        self.assertEqual(None, data['items'][0]['image_url'])
+        self.assertEqual(28, len(result))
+        self.assertEqual('15b6c19a-6084-4e82-ada9-6c30e282191f', result[0]['id'])
+        self.assertEqual('Seraphim wins', result[0]['name'])
+        self.assertEqual('NUMERIC', result[0]['type'])
+        self.assertEqual(None, result[0]['image_url'])
 
     def test_events_record(self):
         response = self.app.post('/events/15b6c19a-6084-4e82-ada9-6c30e282191f/record', data=dict(count=5))
