@@ -145,9 +145,10 @@ def test_mods_download_url(test_client, mods):
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['data']) > 0
 
-    assert result['data'][0]['attributes']['download_url'] == 'http://content.faforever.com/vault/mod1.zip'
-    assert result['data'][1]['attributes']['download_url'] == 'http://content.faforever.com/vault/mod2.zip'
-    assert result['data'][2]['attributes']['download_url'] == 'http://content.faforever.com/vault/mod3.zip'
+    mod = result['data']
+    assert mod[0]['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/mod1.zip'
+    assert mod[1]['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/mod2.zip'
+    assert mod[2]['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/mod3.zip'
 
 
 def test_mods_thumbnail_url(test_client, mods):
@@ -159,9 +160,10 @@ def test_mods_thumbnail_url(test_client, mods):
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['data']) > 0
 
-    assert 'thumbnail_url' not in result['data'][0]['attributes']
-    assert result['data'][1]['attributes']['thumbnail_url'] == 'http://content.faforever.com/vault/mods_thumbs/mod2.png'
-    assert result['data'][2]['attributes']['thumbnail_url'] == 'http://content.faforever.com/vault/mods_thumbs/mod3.png'
+    mod = result['data']
+    assert 'thumbnail_url' not in mod[0]['attributes']
+    assert mod[1]['attributes']['thumbnail_url'] == 'http://content.faforever.com/faf/vault/mods_thumbs/mod2.png'
+    assert mod[2]['attributes']['thumbnail_url'] == 'http://content.faforever.com/faf/vault/mods_thumbs/mod3.png'
 
 
 def test_mods_sort_by_create_time(test_client, mods):

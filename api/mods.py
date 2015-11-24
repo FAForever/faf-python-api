@@ -68,10 +68,10 @@ def enrich_mod(mod):
         if not mod['thumbnail_url']:
             del mod['thumbnail_url']
         else:
-            mod['thumbnail_url'] = '{}/vault/mods_thumbs/{}'.format(app.config['CONTENT_URL'], mod['thumbnail_url'])
+            mod['thumbnail_url'] = '{}/faf/vault/mods_thumbs/{}'.format(app.config['CONTENT_URL'], mod['thumbnail_url'])
 
     if 'download_url' in mod:
-        mod['download_url'] = '{}/vault/{}'.format(app.config['CONTENT_URL'], urllib.parse.quote(mod['download_url']))
+        mod['download_url'] = '{}/faf/vault/{}'.format(app.config['CONTENT_URL'], urllib.parse.quote(mod['download_url']))
 
 
 def file_allowed(filename):
