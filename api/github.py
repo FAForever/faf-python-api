@@ -63,16 +63,16 @@ class Github:
                                   data=json.dumps({
                                       "ref": ref,
                                       "environment": environment,
-                                      "description": description
+                                      "description": description,
+                                      "auto_merge": False
                                   }))
 
-    def create_deployment_status(self, owner='FAForever', repo=None, id=None, state=None, target_url=None, description=None):
+    def create_deployment_status(self, owner='FAForever', repo=None, id=None, state=None, description=None):
         """
         :param owner:
         :param repo:
         :param id:
         :param state:
-        :param target_url:
         :param description:
         :return:
         """
@@ -83,6 +83,5 @@ class Github:
         return self._session.post(repo_url,
                                   data=json.dumps({
                                       "state": state,
-                                      "target_url": target_url,
                                       "description": description
                                   }))

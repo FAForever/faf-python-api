@@ -9,7 +9,7 @@ from api import app, InvalidUsage
 from api.query_commons import fetch_data
 
 ALLOWED_EXTENSIONS = {'zip'}
-MAX_PAGE_SIZE = 100
+MAX_PAGE_SIZE = 1000
 
 SELECT_EXPRESSIONS = {
     'id': 'uid',
@@ -49,7 +49,7 @@ def mod(mod_uid):
     result = fetch_data(ModSchema(), 'table_mod', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
                         where="WHERE uid = %s", args=mod_uid, many=False)
 
-    if not result:
+    if 'id' not in result['data']:
         return {'errors': [{'title': 'No mod with this uid was found'}]}, 404
 
     return result

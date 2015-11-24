@@ -8,10 +8,11 @@ python-geoip-geolite2
 marshmallow
 marshmallow_jsonapi
 geoip2
+statsd
 uritemplate.py
 requests
 pymysql
 pyflakes
 pytest-mock
 pytest-cov
-git+https://github.com/FAForever/faftools.git#egg=faftools
+git+https://github.com/FAForever/faftools.git@develop#egg=faftools

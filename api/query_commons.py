@@ -39,12 +39,12 @@ def get_select_expressions(fields, field_expression_dict):
     return ', '.join(field_selects)
 
 
-def get_order_by(sort_expressions, valid_fields):
+def get_order_by(sort_expression, valid_fields):
     """
     Converts the `sort_expression` into an "order by" if all fields are in `field_expression_dict`
     Example usage::
 
-        sort_expression = ['likes', '-timestamp']
+        sort_expression = 'likes,-timestamp'
         field_expression_dict = {
             'id': 'map.uid',
             'timestamp': 'UNIX_TIMESTAMP(t.date)',
@@ -57,13 +57,15 @@ def get_order_by(sort_expressions, valid_fields):
 
         "ORDER BY likes ASC, timestamp DESC"
 
-    :param sort_expressions: a list of json-api conform sort expressions (see example above)
+    :param sort_expression: a json-api conform sort expression (see example above)
     :param valid_fields: a list of valid sort fields
     :return: an MySQL conform ORDER BY string (see example above) or an empty string if `sort_expression` is None or
     empty
     """
-    if not sort_expressions:
+    if not sort_expression:
         return ''
+
+    sort_expressions = sort_expression.split(',')
 
     order_bys = []
 
@@ -95,18 +97,21 @@ def get_limit(page, limit):
     return 'LIMIT {}, {}'.format((page - 1) * limit, limit)
 
 
-def fetch_data(schema, table, select_expressions, max_page_size, request, where='', args=None, many=True):
-    fields = request.values.getlist('fields[{}]'.format(schema.Meta.type_))
-    sorts = request.values.getlist('sort')
+def fetch_data(schema, table, select_expression_dict, max_page_size, request, where='', args=None, many=True):
+    requested_fields = request.values.get('fields[{}]'.format(schema.Meta.type_))
+    sort = request.values.get('sort')
 
     # Sanitize fields
-    if fields:
-        fields = [field for field in fields if field in select_expressions.keys()]
+    if requested_fields:
+        fields = [field for field in requested_fields.split(',') if field in select_expression_dict.keys()]
     else:
-        fields = select_expressions.keys()
+        fields = select_expression_dict.keys()
 
-    select_expressions = get_select_expressions(fields, select_expressions)
-    order_by_expression = get_order_by(sorts, fields)
+    if 'id' not in fields:
+        fields.append('id')
+
+    select_expressions = get_select_expressions(fields, select_expression_dict)
+    order_by_expression = get_order_by(sort, fields)
 
     page_size = int(request.values.get('page[size]', max_page_size))
     if page_size > max_page_size:
@@ -127,8 +132,5 @@ def fetch_data(schema, table, select_expressions, max_page_size, request, where=
             result = cursor.fetchall()
         else:
             result = cursor.fetchone()
-
-    if not result:
-        return None
 
     return schema.dump(result, many=many).data

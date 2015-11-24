@@ -45,6 +45,39 @@ def test_maps(test_client, maps):
         assert 'type' in item
 
 
+def test_maps_fields(test_client, maps):
+    response = test_client.get('/maps?fields[map]=name')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'data' in result
+    assert len(result['data']) == 3
+    assert len(result['data'][0]['attributes']) == 1
+
+    for item in result['data']:
+        assert 'name' in item['attributes']
+        assert 'version' not in item['attributes']
+
+
+def test_maps_fields_two(test_client, maps):
+    response = test_client.get('/maps?fields[map]=name,max_players')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'data' in result
+    assert len(result['data']) == 3
+    assert len(result['data'][0]['attributes']) == 2
+
+    for item in result['data']:
+        assert 'name' in item['attributes']
+        assert 'max_players' in item['attributes']
+        assert 'version' not in item['attributes']
+
+
 def test_maps_page_size(test_client, maps):
     response = test_client.get('/maps?page[size]=1')
 
