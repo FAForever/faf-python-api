@@ -1,13 +1,56 @@
 """
 Holds the authorization url routes
 """
+import base64
+import json
 from functools import wraps
 from hashlib import sha256
 from urllib.parse import urlparse
 import re
+
+import jwt
 from flask import request, redirect, url_for, render_template, abort, g
+from flask_jwt import JWTError
 from flask_login import login_user, current_user
-from api.oauth import *
+from requests.packages.urllib3.packages import six
+from api.oauth_handlers import *
+from api import flask_jwt
+
+
+def _to_bytes(value, encoding='ascii'):
+    """Converts a string value to bytes, if necessary.
+
+    Unfortunately, ``six.b`` is insufficient for this task since in
+    Python2 it does not modify ``unicode`` objects.
+
+    Args:
+        value: The string/bytes value to be converted.
+        encoding: The encoding to use to convert unicode to bytes. Defaults
+                  to "ascii", which will not allow any characters from ordinals
+                  larger than 127. Other useful values are "latin-1", which
+                  which will only allows byte ordinals (up to 255) and "utf-8",
+                  which will encode any unicode that needs to be.
+
+    Returns:
+        The original value converted to bytes (if unicode) or as passed in
+        if it started out as bytes.
+
+    Raises:
+        ValueError if the value could not be converted to bytes.
+    """
+    result = (value.encode(encoding)
+              if isinstance(value, six.text_type) else value)
+    if isinstance(result, six.binary_type):
+        return result
+    else:
+        raise ValueError('%r could not be converted to bytes' % (value,))
+
+
+def _urlsafe_b64decode(b64string):
+    # Guard against unicode strings, which base64 can't handle.
+    b64string = _to_bytes(b64string)
+    padded = b64string + b'=' * (4 - len(b64string) % 4)
+    return base64.urlsafe_b64decode(padded)
 
 
 @app.before_request
@@ -28,6 +71,25 @@ def require_login(function):
 @login_manager.user_loader
 def load_user(user_id):
     return User.get_by_id(int(user_id))
+
+
+@app.route('/jwt/auth', methods=['GET', 'POST'])
+def jwt_auth():
+    assertion = request.values.get('assertion')
+    segments = assertion.split('.')
+
+    payload = json.loads(_urlsafe_b64decode(segments[1]).decode('utf-8'))
+    service_account = JwtUser.get(payload['iss'])
+
+    if not service_account:
+        raise JWTError('Bad Request', 'Invalid service account')
+
+    jwt.decode(assertion, service_account.public_key, algorithms=['RS256'], options=dict(verify_aud=False))
+
+    identity = User.get_by_id(payload['sub'])
+
+    access_token = flask_jwt.jwt_encode_callback(identity)
+    return flask_jwt.auth_response_callback(access_token, identity)
 
 
 @app.route('/oauth/authorize', methods=['GET', 'POST'])
@@ -61,6 +123,7 @@ def access_token():
 @app.route('/login', methods=['GET', 'POST'])
 def login(*args, **kwargs):
     if request.method == 'GET':
+        kwargs['next'] = request.values.get('next')
         return render_template('login.html', **kwargs)
 
     username = request.form.get('username')
@@ -70,11 +133,12 @@ def login(*args, **kwargs):
     user = User.get_by_username(username)
 
     if user is None or user.password != sha256(password).hexdigest():
+        kwargs['next'] = request.values.get('next')
         return render_template('login.html', **kwargs)
 
     login_user(user, remember=True)
 
-    redirect_url = request.form.get('next')
+    redirect_url = request.values.get('next')
 
     if not redirect_url_is_valid(redirect_url):
         return abort(400)

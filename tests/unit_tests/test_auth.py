@@ -1,4 +1,5 @@
 from hashlib import sha256
+import importlib
 import json
 import re
 import unittest
@@ -9,12 +10,15 @@ import api
 
 class OAuthTestCase(unittest.TestCase):
     def setUp(self):
+        importlib.reload(api)
+        importlib.reload(api.oauth_handlers)
+        importlib.reload(api.auth)
+
         api.app.config.from_object('config')
         api.api_init()
-
         api.app.debug = True
+
         self.app = api.app.test_client()
-        db.init_db(api.app.config)
 
         with db.connection:
             cursor = db.connection.cursor()
@@ -29,7 +33,7 @@ class OAuthTestCase(unittest.TestCase):
     def insert_oauth_client(self, client_id, name, secret, redirect_uris, default_scopes):
         cursor = db.connection.cursor()
         cursor.execute("""INSERT INTO oauth_clients
-            (id, name, client_secret, redirect_uris, default_redirect_uri, default_scopes)
+            (id, name, client_secret, redirect_uris, default_redirect_uri, default_scope)
             VALUES (%s, %s, %s, %s, %s, %s)""", (
             client_id, name, secret, redirect_uris, '', default_scopes
         ))

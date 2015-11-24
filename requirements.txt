@@ -1,6 +1,7 @@
 Flask >= 0.10.1
 Flask-OAuthlib
 Flask-Login
+Flask-JWT
 coveralls
 peewee >= 2.4.2
 lupa >= 1.0.1
@@ -16,3 +17,4 @@ pyflakes
 pytest-mock
 pytest-cov
 git+https://github.com/FAForever/faftools.git@develop#egg=faftools
+PyJWT

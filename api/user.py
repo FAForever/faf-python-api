@@ -6,7 +6,7 @@ import faf.db as db
 class User(UserMixin):
     def __init__(self, **kwargs):
         self.id = kwargs.get('id')
-        self.username = kwargs.get('username')
+        self.username = kwargs.get('login')
         self.password = kwargs.get('password')
 
     @classmethod

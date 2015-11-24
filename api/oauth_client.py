@@ -1,3 +1,4 @@
+from oauthlib.oauth2.rfc6749 import utils
 import faf.db as db
 
 
@@ -9,19 +10,15 @@ class OAuthClient(object):
         self.client_type = kwargs.get('client_type')
         self._redirect_uris = kwargs.get('_redirect_uris')
         self.default_redirect_uri = kwargs.get('default_redirect_uri')
-        self._default_scopes = kwargs.get('_default_scopes')
+        self.default_scope = kwargs.get('default_scope')
 
     @property
     def redirect_uris(self):
-        if self._redirect_uris:
-            return self._redirect_uris.split()
-        return []
+        return self._redirect_uris.split()
 
     @property
     def default_scopes(self):
-        if self._default_scopes:
-            return self._default_scopes.split()
-        return []
+        return utils.scope_to_list(self.default_scope)
 
     @property
     def client_id(self):
@@ -39,7 +36,7 @@ class OAuthClient(object):
                 client_type,
                 redirect_uris as _redirect_uris,
                 default_redirect_uri,
-                default_scopes as _default_scopes
+                default_scope
             FROM oauth_clients
             WHERE id = %s""", client_id)
 
