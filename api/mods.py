@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 
 from faf.api import ModSchema
 from flask import request
@@ -21,9 +22,11 @@ SELECT_EXPRESSIONS = {
     'downloads': 'downloads',
     'likes': 'likes',
     'times_played': 'played',
-    'filename': 'filename',
-    'icon_filename': 'icon',
     'is_ranked': 'ranked',
+    # download_url will be URL encoded and made absolute in enrich_mod
+    'download_url': 'filename',
+    # thumbnail_url will be URL encoded and made absolute in enrich_mod
+    'thumbnail_url': 'icon'
 }
 
 
@@ -54,7 +57,21 @@ def mod(mod_uid):
 
 @app.route('/mods')
 def mods():
-    return fetch_data(ModSchema(), 'table_mod', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request)
+    results = fetch_data(ModSchema(), 'table_mod', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request)
+    for mod in results['data']:
+        enrich_mod(mod['attributes'])
+    return results
+
+
+def enrich_mod(mod):
+    if 'thumbnail_url' in mod:
+        if not mod['thumbnail_url']:
+            del mod['thumbnail_url']
+        else:
+            mod['thumbnail_url'] = '{}/vault/mods_thumbs/{}'.format(app.config['CONTENT_URL'], mod['thumbnail_url'])
+
+    if 'download_url' in mod:
+        mod['download_url'] = '{}/vault/{}'.format(app.config['CONTENT_URL'], urllib.parse.quote(mod['download_url']))
 
 
 def file_allowed(filename):

@@ -20,9 +20,9 @@ REPO_PATHS = {
 }
 
 GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'
-# FIXME set paths
-MOD_UPLOAD_PATH = '/opt/dev/www/content/faf/FIXME'
-MAP_UPLOAD_PATH = '/opt/dev/www/content/faf/FIXME'
+MOD_UPLOAD_PATH = '/mods'
+MAP_UPLOAD_PATH = '/maps'
+CONTENT_URL = 'http://content.faforever.com'
 
 GITHUB_USER = 'some-user'
 GITHUB_TOKEN = 'some-token'

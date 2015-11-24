@@ -1,11 +1,11 @@
 import json
-from datetime import date, datetime
 from io import BytesIO
 
 import marshmallow
 import pytest
 import sys
 
+from api import app
 from faf import db
 from faf.api import ModSchema
 
@@ -17,7 +17,7 @@ def mods(request):
         cursor.execute("TRUNCATE TABLE table_mod")
         cursor.execute("""INSERT INTO table_mod
         (uid, name, version, author, ui, date, description, filename, icon, likes, likers) VALUES
-        ('mod-1', 'a', '1', 'author1', 0, FROM_UNIXTIME(1), '', 'mod1.zip', 'mod1.png', 100, x'00'),
+        ('mod-1', 'a', '1', 'author1', 0, FROM_UNIXTIME(1), '', 'mod1.zip', '', 100, x'00'),
         ('mod-2', 'b', '2', 'author2', 0, FROM_UNIXTIME(2), '', 'mod2.zip', 'mod2.png', 200, x'00'),
         ('mod-3', 'c', '3', 'author3', 0, FROM_UNIXTIME(3), '', 'mod3.zip', 'mod3.png', 300, x'00')""")
 
@@ -44,6 +44,7 @@ def test_mods(test_client, mods):
 
 
 def test_mods_fields(test_client, mods):
+    app.debug = True
     response = test_client.get('/mods?fields[mod]=name')
 
     assert response.status_code == 200
@@ -116,6 +117,34 @@ def test_mods_invalid_page(test_client, mods):
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page number'
+
+
+def test_mods_download_url(test_client, mods):
+    response = test_client.get('/mods?sort=name')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['data']) > 0
+
+    assert result['data'][0]['attributes']['download_url'] == 'http://content.faforever.com/vault/mod1.zip'
+    assert result['data'][1]['attributes']['download_url'] == 'http://content.faforever.com/vault/mod2.zip'
+    assert result['data'][2]['attributes']['download_url'] == 'http://content.faforever.com/vault/mod3.zip'
+
+
+def test_mods_thumbnail_url(test_client, mods):
+    response = test_client.get('/mods?sort=name')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['data']) > 0
+
+    assert 'thumbnail_url' not in result['data'][0]['attributes']
+    assert result['data'][1]['attributes']['thumbnail_url'] == 'http://content.faforever.com/vault/mods_thumbs/mod2.png'
+    assert result['data'][2]['attributes']['thumbnail_url'] == 'http://content.faforever.com/vault/mods_thumbs/mod3.png'
 
 
 def test_mods_sort_by_create_time(test_client, mods):
