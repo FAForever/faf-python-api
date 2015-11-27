@@ -298,6 +298,7 @@ def achievements_list_player(player_id):
             {
               "items": [
                 {
+                  "id": string,
                   "achievement_id": string,
                   "state": string,
                   "current_steps": integer,
