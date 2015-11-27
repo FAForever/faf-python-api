@@ -119,7 +119,7 @@ def achievements_get(achievement_id):
     region = request.args.get('region', 'US')
 
     return fetch_data(AchievementSchema(), ACHIEVEMENTS_TABLE, ACHIEVEMENT_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
-                      where='WHERE ach.id = %(id)s',
+                      where='ach.id = %(id)s',
                       args={'id': achievement_id, 'language': language, 'region': region},
                       many=False)
 
@@ -309,7 +309,7 @@ def achievements_list_player(player_id):
             }
     """
     return fetch_data(PlayerAchievementSchema(), 'player_achievements', PLAYER_ACHIEVEMENT_SELECT_EXPRESSIONS,
-                      MAX_PAGE_SIZE, request, where='WHERE player_id = %s', args=player_id)
+                      MAX_PAGE_SIZE, request, where='player_id = %s', args=player_id)
 
 
 def increment_achievement(achievement_id, player_id, steps):

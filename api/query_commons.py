@@ -98,6 +98,17 @@ def get_limit(page, limit):
 
 
 def fetch_data(schema, table, select_expression_dict, max_page_size, request, where='', args=None, many=True):
+    """ Fetches data in an JSON-API conforming way.
+
+    :param schema: the marshmallow schema to use for serialization
+    :param table: the table to select the data from (or any FROM expression, without the FROM)
+    :param select_expression_dict: a dictionary that maps API field names to select expressions
+    :param max_page_size: max number of items per page
+    :param request: the flask HTTP request
+    :param where: additional WHERE clauses, without the WHERE
+    :param args: arguments to use when building the SQL query (e.g. ``where="id = %(id)s", args=dict(id=id)``
+    :param many: ``True`` for selecting many entries, ``False`` for single entries
+    """
     requested_fields = request.values.get('fields[{}]'.format(schema.Meta.type_))
     sort = request.values.get('sort')
 
@@ -124,6 +135,9 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
     if page < 1:
         raise InvalidUsage("Invalid page number")
     limit_expression = get_limit(page, page_size)
+
+    if where:
+        where = "WHERE {}".format(where)
 
     with db.connection:
         cursor = db.connection.cursor(DictCursor)

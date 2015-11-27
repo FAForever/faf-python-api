@@ -1,3 +1,5 @@
+from copy import copy
+from faf.api import PlayerEventSchema
 from faf.api.event_schema import EventSchema
 from flask_jwt import jwt_required, current_identity
 from api import *
@@ -19,11 +21,18 @@ EVENTS_TABLE = """event_definitions events
                             AND name_def.language = 'en'
                             AND name_def.region = 'US'"""
 
-SELECT_EXPRESSIONS = {
+EVENTS_SELECT_EXPRESSIONS = {
     'id': 'events.id',
     'image_url': 'events.image_url',
     'type': 'events.type',
     'name': 'COALESCE(name_langReg.value, name_lang.value, name_def.value)'
+}
+
+PLAYER_EVENTS_SELECT_EXPRESSIONS = {
+    'id': 'id',
+    'player_id': 'player_id',
+    'event_id': 'event_id',
+    'count': 'count',
 }
 
 
@@ -53,7 +62,7 @@ def events_list():
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
 
-    return fetch_data(EventSchema(), EVENTS_TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+    return fetch_data(EventSchema(), EVENTS_TABLE, EVENTS_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
                       args={'language': language, 'region': region})
 
 
@@ -87,6 +96,46 @@ def events_record_multiple():
             }
     """
     return record_multiple(request.oauth.user.id, request.json['updates'])
+
+
+@app.route('/players/<int:player_id>/events')
+@oauth.require_oauth('read_events')
+def events_list_player(player_id):
+    """Lists the events for a player.
+
+    :param player_id: ID of the player.
+
+    :return:
+        If successful, this method returns a response body with the following structure::
+
+            {
+              "data": [
+                {
+                  "id": string,
+                  "attributes": {
+                      "event_id": string,
+                      "count": integer,
+                      "create_time": long,
+                      "update_time": long
+                  }
+                }
+              ]
+            }
+    """
+    select_expressions = copy(PLAYER_EVENTS_SELECT_EXPRESSIONS)
+    del select_expressions['player_id']
+
+    where = 'player_id = %s'
+    args = tuple([player_id])
+
+    id_filter = request.values.get('filter[event_id]')
+    if id_filter:
+        ids = id_filter.split(',')
+        where += ' AND event_id IN ({})'.format(','.join(['%s'] * len(ids)))
+        args += tuple(ids)
+
+    return fetch_data(PlayerEventSchema(), 'player_events', select_expressions,
+                      MAX_PAGE_SIZE, request, where=where, args=args)
 
 
 @app.route('/jwt/events/recordMultiple', methods=['POST'])
