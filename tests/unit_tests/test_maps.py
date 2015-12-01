@@ -1,9 +1,7 @@
 import json
 from io import BytesIO
-
 import pytest
 import sys
-
 from faf import db
 
 
@@ -16,10 +14,10 @@ def maps(request, app):
         cursor.execute("TRUNCATE TABLE table_map")
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
         cursor.execute("""INSERT INTO table_map
-        (mapuid, max_players, name, hidden) VALUES
-        (111, 4, 'a', 0),
-        (222, 8, 'b', 0),
-        (333, 12, 'c', 0)""")
+        (mapuid, max_players, name, filename, hidden) VALUES
+        (111, 4, 'a', 'maps/a.v0001.zip', 0),
+        (222, 8, 'b', 'maps/b.v0001.zip', 0),
+        (333, 12, 'c', 'maps/c.v0001.zip', 0)""")
 
     def finalizer():
         with db.connection:
@@ -177,3 +175,20 @@ def test_maps_upload_txt_results_400(test_client, app, tmpdir):
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid file extension'
+
+
+def test_map_by_name(test_client, app, maps):
+    response = test_client.get('/maps?filter%5Bfilename%5D=b.v0001')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'data' in result
+    assert result['data']['id'] == 222
+    assert result['data']['attributes']['name'] == 'b'
+    assert result['data']['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/maps/b.v0001.zip'
+    assert result['data']['attributes']['thumbnail_url_small'] == 'http://content.faforever.com/faf/vault' \
+                                                                  '/map_previews/small/maps/b.v0001.zip'
+    assert result['data']['attributes']['thumbnail_url_large'] == 'http://content.faforever.com/faf/vault' \
+                                                                  '/map_previews/large/maps/b.v0001.zip'
