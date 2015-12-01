@@ -11,7 +11,7 @@ MAX_PAGE_SIZE = 1000
 
 SELECT_EXPRESSIONS = {
     'id': 'map.mapuid',
-    'name': 'map.name',
+    'display_name': 'map.name',
     'description': 'map.description',
     'max_players': 'COALESCE(map.max_players, 0)',
     'map_type': 'map.map_type',

@@ -44,7 +44,7 @@ def test_maps(test_client, maps):
 
 
 def test_maps_fields(test_client, maps):
-    response = test_client.get('/maps?fields[map]=name')
+    response = test_client.get('/maps?fields[map]=display_name')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -55,12 +55,12 @@ def test_maps_fields(test_client, maps):
     assert len(result['data'][0]['attributes']) == 1
 
     for item in result['data']:
-        assert 'name' in item['attributes']
+        assert 'display_name' in item['attributes']
         assert 'version' not in item['attributes']
 
 
 def test_maps_fields_two(test_client, maps):
-    response = test_client.get('/maps?fields[map]=name,max_players')
+    response = test_client.get('/maps?fields[map]=display_name,max_players')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -71,7 +71,7 @@ def test_maps_fields_two(test_client, maps):
     assert len(result['data'][0]['attributes']) == 2
 
     for item in result['data']:
-        assert 'name' in item['attributes']
+        assert 'display_name' in item['attributes']
         assert 'max_players' in item['attributes']
         assert 'version' not in item['attributes']
 
@@ -103,7 +103,7 @@ def test_maps_page(test_client, maps):
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
     assert len(result['data']) == 1
-    assert result['data'][0]['attributes']['name'] == 'b'
+    assert result['data'][0]['attributes']['display_name'] == 'b'
 
 
 def test_maps_invalid_page(test_client, maps):
@@ -186,7 +186,7 @@ def test_map_by_name(test_client, app, maps):
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
     assert result['data']['id'] == 222
-    assert result['data']['attributes']['name'] == 'b'
+    assert result['data']['attributes']['display_name'] == 'b'
     assert result['data']['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/maps/b.v0001.zip'
     assert result['data']['attributes']['thumbnail_url_small'] == 'http://content.faforever.com/faf/vault' \
                                                                   '/map_previews/small/maps/b.v0001.zip'
