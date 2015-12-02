@@ -36,6 +36,11 @@ SELECT_PLAYER_EXPRESSIONS = {
 @app.route('/replays')
 def replays():
     result = fetch_data(GameStatsSchema(), 'game_stats', SELECT_REPLAY_EXPRESSIONS, MAX_PAGE_SIZE, request)
+
+    # This should never happened unless something very bad happened
+    if len(result['data']) == 0:
+        return {'errors': [{'title': 'No replays were found'}]}, 404
+
     return result
 
 

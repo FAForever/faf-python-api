@@ -44,7 +44,6 @@ def test_mods(test_client, mods):
 
 
 def test_mods_fields(test_client, mods):
-    app.debug = True
     response = test_client.get('/mods?fields[mod]=name')
 
     assert response.status_code == 200
