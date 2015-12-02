@@ -120,7 +120,7 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
     if requested_fields:
         fields = [field for field in requested_fields.split(',') if field in select_expression_dict.keys()]
     else:
-        fields = select_expression_dict.keys()
+        fields = list(select_expression_dict.keys())
 
     id_selected = True
     if 'id' not in fields:
@@ -173,9 +173,10 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
     if id_selected:
         if many:
             for item in data['data']:
+                if 'attributes' not in item:
+                    break
                 item['attributes']['id'] = item['id']
-        elif 'id' in data['data']:
-            if id_selected:
-                data['data']['attributes']['id'] = data['data']['id']
+        elif 'id' in data['data'] and 'attributes' in data['data']:
+            data['data']['attributes']['id'] = data['data']['id']
 
     return data

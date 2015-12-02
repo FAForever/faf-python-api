@@ -1,5 +1,6 @@
 .idea
 *.pyc
 *.egg-info
+*.sh
 
 config.py
