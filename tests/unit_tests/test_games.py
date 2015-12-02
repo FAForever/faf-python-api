@@ -1,5 +1,4 @@
 import json
-from pprint import pprint
 
 import pytest
 from faf import db
@@ -8,7 +7,7 @@ testGameName = 'testGame'
 testGame2Name = 'testGame2'
 
 @pytest.fixture
-def replays(request):
+def games(request):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute("TRUNCATE TABLE game_stats")
@@ -26,7 +25,7 @@ def replays(request):
 
 
 @pytest.fixture
-def replay_players(request):
+def game_players(request):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute("TRUNCATE TABLE game_player_stats")
@@ -45,9 +44,8 @@ def replay_players(request):
     request.addfinalizer(finalizer)
 
 
-def test_replays(test_client, replays):
-    response = test_client.get('/replays')
-    pprint(response)
+def test_games(test_client, games):
+    response = test_client.get('/games')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -62,8 +60,8 @@ def test_replays(test_client, replays):
         assert item['type'] == 'game_stats'
 
 
-def test_replays_no_replays(test_client):
-    response = test_client.get('/replays')
+def test_games_no_games(test_client):
+    response = test_client.get('/games')
 
     assert response.status_code == 404
     assert response.content_type == 'application/vnd.api+json'
@@ -73,8 +71,8 @@ def test_replays_no_replays(test_client):
     assert 'errors' in data
 
 
-def test_replay_id_no_players(test_client, replays):
-    response = test_client.get('/replays/235')
+def test_game_id_no_players(test_client, games):
+    response = test_client.get('/games/235')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -86,8 +84,8 @@ def test_replay_id_no_players(test_client, replays):
     assert result['data']['attributes']['game_name'] == testGame2Name
 
 
-def test_replay_id_four_players(test_client, replays, replay_players):
-    response = test_client.get('/replays/234')
+def test_game_id_four_players(test_client, games, game_players):
+    response = test_client.get('/games/234')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -104,8 +102,8 @@ def test_replay_id_four_players(test_client, replays, replay_players):
         assert item['type'] == 'game_player_stats'
 
 
-def test_replay_id_no_replay(test_client, replays, replay_players):
-    response = test_client.get('/replays/0')
+def test_game_id_no_game(test_client, games, game_players):
+    response = test_client.get('/games/0')
 
     assert response.status_code == 404
     assert response.content_type == 'application/vnd.api+json'
@@ -115,8 +113,8 @@ def test_replay_id_no_replay(test_client, replays, replay_players):
     assert 'errors' in data
 
 
-def test_replay_id_players_relationship_four_players(test_client, replays, replay_players):
-    response = test_client.get('/replays/234/players')
+def test_game_id_players_relationship_four_players(test_client, games, game_players):
+    response = test_client.get('/games/234/players')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -136,8 +134,8 @@ def test_replay_id_players_relationship_four_players(test_client, replays, repla
         assert item['type'] == 'game_player_stats'
 
 
-def test_replay_id_players_relationship_no_game(test_client, replays, replay_players):
-    response = test_client.get('/replays/0/players')
+def test_game_id_players_relationship_no_game(test_client, games, game_players):
+    response = test_client.get('/games/0/players')
 
     assert response.status_code == 404
     assert response.content_type == 'application/vnd.api+json'
@@ -147,8 +145,8 @@ def test_replay_id_players_relationship_no_game(test_client, replays, replay_pla
     assert 'errors' in data
 
 
-def test_replays_page_size(test_client, replays):
-    response = test_client.get('/replays?page[size]=1')
+def test_games_page_size(test_client, games):
+    response = test_client.get('/games?page[size]=1')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -159,15 +157,15 @@ def test_replays_page_size(test_client, replays):
     assert result['data'][0]['attributes']['game_name'] == testGameName
 
 
-def test_replays_invalid_page_size(test_client, replays):
-    response = test_client.get('/replays?page[size]=1001')
+def test_games_invalid_page_size(test_client, games):
+    response = test_client.get('/games?page[size]=1001')
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page size'
 
 
-def test_mods_invalid_page(test_client, replays):
-    response = test_client.get('/replays?page[number]=-1')
+def test_mods_invalid_page(test_client, games):
+    response = test_client.get('/games?page[number]=-1')
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page number'

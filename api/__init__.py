@@ -146,5 +146,5 @@ import api.slack
 import api.achievements
 import api.events
 import api.query_commons
+import api.games
 import api.leaderboards
-import api.replays

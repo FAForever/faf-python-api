@@ -1,23 +1,71 @@
+from faf.api.game_schema import *
+from flask import request
+from api import app
+from api.query_commons import fetch_data
 
-from api import *
+MAX_PAGE_SIZE = 1000
 
-@app.route('/games/<int:id>')
-@app.route('/games/<int:id>/<resource>')
-def games_get(id, resource='info'):
+SELECT_GAME_EXPRESSIONS = {
+    'id': 'id',
+    'game_name': 'gameName',
+    'mapId': 'mapId',
+    'game_type': 'gameType',
+    'game_mod': 'gameMod',
+    'host': 'host',
+    'start_time': 'startTime',
+    'validity': 'validity'
+}
 
-    if resource == 'info':
-        return dict(
-            id=1,
-            Title = 'Test',
-            GameState = 'Pre-Lobby',
-            PlayerOption = dict(),
-            GameOption = {},
-            GameMods = [],
-            Host = dict(username='Eximius', ip='127.0.0.1', port=1234)
-        )
+SELECT_PLAYER_EXPRESSIONS = {
+    'id': 'id',
+    'player_id': 'playerId',
+    'team': 'team',
+    'faction': 'faction',
+    'color': 'color',
+    'ai': 'ai',
+    'place': 'place',
+    'mean': 'mean',
+    'deviation': 'deviation',
+    'after_mean': 'after_mean',
+    'after_deviation': 'after_deviation',
+    'score': 'score',
+    'score_time': 'scoreTime'
+}
 
-@app.route('/games/current')
-def games_current():
-    return dict(
-        games=[games_get(0)]
-    )
+
+@app.route('/games')
+def games():
+    result = fetch_data(GameStatsSchema(), 'game_stats', SELECT_GAME_EXPRESSIONS, MAX_PAGE_SIZE, request)
+
+    # This should never happened unless something very bad happened
+    if len(result['data']) == 0:
+        return {'errors': [{'title': 'No games were found'}]}, 404
+
+    return result
+
+
+@app.route('/games/<game_id>')
+def game(game_id):
+    game_result = fetch_data(GameStatsSchema(), 'game_stats', SELECT_GAME_EXPRESSIONS, MAX_PAGE_SIZE, request,
+                               where="id = %s", args=game_id, many=False)
+
+    if 'id' not in game_result['data']:
+        return {'errors': [{'title': 'No game with this game id was found'}]}, 404
+
+    player_results = fetch_data(GamePlayerStatsSchema(), 'game_player_stats', dict(id="id"), MAX_PAGE_SIZE,
+                                request, where="gameId = %s", args=game_id)
+
+    game_result['relationships'] = dict(players=player_results)
+
+    return game_result
+
+
+@app.route('/games/<game_id>/players')
+def game_players(game_id):
+    player_results = fetch_data(GamePlayerStatsSchema(), 'game_player_stats', SELECT_PLAYER_EXPRESSIONS, MAX_PAGE_SIZE,
+                                request, where="gameId = %s", args=game_id)
+
+    if not player_results['data']:
+        return {'errors': [{'title': 'No players for this game id was found'}]}, 404
+
+    return player_results
