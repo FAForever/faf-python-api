@@ -147,3 +147,4 @@ import api.achievements
 import api.events
 import api.query_commons
 import api.leaderboards
+import api.replays
