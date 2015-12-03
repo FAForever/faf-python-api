@@ -31,10 +31,10 @@ def game_players(request):
         cursor.execute("TRUNCATE TABLE game_player_stats")
         cursor.execute("""INSERT INTO game_player_stats (id, gameId, playerId, AI, faction, color, team, place,
         mean, deviation, after_mean, after_deviation, score, scoreTime) VALUES
-        (146315, 234, 146315, 0, 1, 1, 1, 1, 1, 1, 2, 2, 500, now()),
-        (146316, 234, 146316, 0, 1, 1, 1, 1, 1, 1, 2, 2, 500, now()),
-        (146317, 234, 146317, 0, 1, 1, 1, 1, 1, 1, 2, 2, 500, now()),
-        (146318, 234, 146318, 0, 1, 1, 1, 1, 1, 1, 2, 2, 500, now())""")
+        (146315, 234, 146315, 0, 1, 1, 1, 1, 1, 1, 2, 2, 50, now()),
+        (146316, 234, 146316, 0, 1, 1, 1, 1, 1, 1, 2, 2, 50, now()),
+        (146317, 234, 146317, 0, 1, 1, 1, 1, 1, 1, 2, 2, 50, now()),
+        (146318, 234, 146318, 0, 1, 1, 1, 1, 1, 1, 2, 2, 50, now())""")
 
     def finalizer():
         with db.connection:
