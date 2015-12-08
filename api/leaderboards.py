@@ -1,7 +1,7 @@
 from faf.api.leaderboard_schema import LeaderboardSchema
 from flask import request
 
-from api import app
+from api import app, InvalidUsage
 from api.query_commons import fetch_data
 
 ALLOWED_EXTENSIONS = {'zip'}
@@ -19,20 +19,32 @@ SELECT_EXPRESSIONS = {
     'ranking': '@rownum:=@rownum+1'
 }
 
-TABLE = 'ladder1v1_rating r JOIN login l on r.id = l.id, (SELECT @rownum:=0) n'
+TABLE = 'ladder1v1_rating r JOIN login l on r.id = l.id, (SELECT @rownum:=%(rownum)s) n'
 
 
 @app.route('/leaderboards')
 def leaderboards():
-    return fetch_data(LeaderboardSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='ranking')
+    if request.values.get('sort'):
+        raise InvalidUsage('Sorting is not supported for leaderboards')
+
+    page = int(request.values.get('page[number]', 1))
+    page_size = int(request.values.get('page[size]', MAX_PAGE_SIZE))
+    first_rank = (page - 1) * page_size
+
+    return fetch_data(LeaderboardSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='ranking',
+                      args=dict(rownum=first_rank-1))
 
 
-@app.route('/leaderboards/<int:id>')
-def leaderboard(id):
+@app.route('/leaderboards/<int:player_id>')
+def leaderboard(player_id):
+    SELECT_EXPRESSIONS['ranking'] = """(SELECT count(*) FROM ladder1v1_rating
+                                        WHERE ROUND(mean - 3 * deviation) >= ROUND(r.mean - 3 * r.deviation))"""
+
     result = fetch_data(LeaderboardSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
-                        many=False, where='r.id=%s', args=id)
+                        many=False, where='r.id=%(id)s', args=dict(id=player_id, rownum=0))
 
     if 'id' not in result['data']:
         return {'errors': [{'title': 'No entry with this id was found'}]}, 404
 
     return result
+

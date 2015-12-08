@@ -22,8 +22,8 @@ def leaderboards(request, app):
         cursor.execute("""INSERT INTO ladder1v1_rating
         (id, mean, deviation, numGames, winGames, is_active) VALUES
         (1, 1000, 300, 10, 5, 0),
-        (2, 1500, 200, 20, 9, 1),
-        (3, 2000, 100, 30, 17, 1)""")
+        (2, 2000, 200, 20, 9, 1),
+        (3, 1500, 100, 30, 17, 1)""")
 
     def finalizer():
         with db.connection:
@@ -48,7 +48,7 @@ def test_leaderboards(test_client, leaderboards):
 
 
 def test_leaderboard(test_client, leaderboards):
-    response = test_client.get('/leaderboards/1')
+    response = test_client.get('/leaderboards/3')
     schema = LeaderboardSchema()
 
     result, errors = schema.loads(response.data.decode('utf-8'))
@@ -56,7 +56,8 @@ def test_leaderboard(test_client, leaderboards):
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
     assert not errors
-    assert result['login'] == 'a'
+    assert result['login'] == 'c'
+    assert result['ranking'] == 2
 
 
 def test_leaderboard_not_found(test_client, leaderboards):
@@ -98,10 +99,19 @@ def test_leaderboards_page(test_client, leaderboards):
     assert 'data' in result
     assert len(result['data']) == 1
     assert result['data'][0]['attributes']['login'] == 'b'
+    assert result['data'][0]['attributes']['ranking'] == 2
 
 
-def test_leaderboards_invalid_page(test_client, leaderboards):
+def test_leaderboards_invalid_page(test_client):
     response = test_client.get('/leaderboards?page[number]=-1')
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page number'
+
+
+def test_leaderboards_sort_disallowed(test_client):
+    response = test_client.get('/leaderboards?sort=mean')
+
+    assert response.status_code == 400
+    assert json.loads(response.get_data(as_text=True))['message'] == 'Sorting is not supported for leaderboards'
+
