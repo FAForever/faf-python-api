@@ -19,7 +19,7 @@ SELECT_EXPRESSIONS = {
     'ranking': '@rownum:=@rownum+1'
 }
 
-TABLE = 'ladder1v1_rating r JOIN login l on r.id = l.id, (SELECT @rownum:=%(rownum)s) n'
+TABLE = 'ladder1v1_rating r JOIN login l on r.id = l.id, (SELECT @rownum:=%(row_num)s) n'
 
 
 @app.route('/leaderboards')
@@ -29,10 +29,10 @@ def leaderboards():
 
     page = int(request.values.get('page[number]', 1))
     page_size = int(request.values.get('page[size]', MAX_PAGE_SIZE))
-    first_rank = (page - 1) * page_size
+    row_num = (page - 1) * page_size
 
-    return fetch_data(LeaderboardSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='ranking',
-                      args=dict(rownum=first_rank-1))
+    return fetch_data(LeaderboardSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-rating',
+                      args=dict(row_num=row_num))
 
 
 @app.route('/leaderboards/<int:player_id>')
@@ -41,7 +41,7 @@ def leaderboard(player_id):
                                         WHERE ROUND(mean - 3 * deviation) >= ROUND(r.mean - 3 * r.deviation))"""
 
     result = fetch_data(LeaderboardSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
-                        many=False, where='r.id=%(id)s', args=dict(id=player_id, rownum=0))
+                        many=False, where='r.id=%(id)s', args=dict(id=player_id, row_num=0))
 
     if 'id' not in result['data']:
         return {'errors': [{'title': 'No entry with this id was found'}]}, 404

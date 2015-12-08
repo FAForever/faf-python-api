@@ -1,5 +1,4 @@
 import json
-import sys
 
 import pytest
 from faf.api import LeaderboardSchema
@@ -98,7 +97,7 @@ def test_leaderboards_page(test_client, leaderboards):
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
     assert len(result['data']) == 1
-    assert result['data'][0]['attributes']['login'] == 'b'
+    assert result['data'][0]['attributes']['login'] == 'c'
     assert result['data'][0]['attributes']['ranking'] == 2
 
 
