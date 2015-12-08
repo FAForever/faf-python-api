@@ -98,7 +98,7 @@ def get_limit(page, limit):
 
 
 def fetch_data(schema, table, select_expression_dict, max_page_size, request, where='', args=None, many=True,
-               enricher=None):
+               enricher=None, sort=None):
     """ Fetches data in an JSON-API conforming way.
 
     :param schema: the marshmallow schema to use for serialization
@@ -112,7 +112,9 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
     :param enricher: an option function to apply to each item BEFORE it's dumped using the schema
     """
     requested_fields = request.values.get('fields[{}]'.format(schema.Meta.type_))
-    sort = request.values.get('sort')
+
+    if not sort:
+        sort = request.values.get('sort')
 
     # Sanitize fields
     if requested_fields:

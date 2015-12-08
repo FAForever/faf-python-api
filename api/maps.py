@@ -16,8 +16,8 @@ SELECT_EXPRESSIONS = {
     'max_players': 'COALESCE(map.max_players, 0)',
     'map_type': 'map.map_type',
     'battle_type': 'map.battle_type',
-    'map_size_x': 'COALESCE(map.map_sizeX, 0)',
-    'map_size_y': 'COALESCE(map.map_sizeY, 0)',
+    'size_x': 'COALESCE(map.map_sizeX, 0)',
+    'size_y': 'COALESCE(map.map_sizeY, 0)',
     'version': 'map.version',
     # download_url will be URL encoded and made absolute in enrich_mod
     'download_url': "map.filename",

@@ -10,6 +10,7 @@ def app():
     importlib.reload(api.maps)
     importlib.reload(api.events)
     importlib.reload(api.achievements)
+    importlib.reload(api.leaderboards)
 
     api.app.config.from_object('config')
     api.debug = True
