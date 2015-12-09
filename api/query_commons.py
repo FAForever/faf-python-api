@@ -150,7 +150,7 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
     with db.connection:
         cursor = db.connection.cursor(DictCursor)
         cursor.execute("SELECT {} FROM {} {} {} {}"
-                       .format(select_expressions, table, order_by_expression, where, limit_expression),
+                       .format(select_expressions, table, where, order_by_expression, limit_expression),
                        args)
 
         if many:

@@ -114,3 +114,28 @@ def test_leaderboards_sort_disallowed(test_client):
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True))['message'] == 'Sorting is not supported for leaderboards'
 
+
+def test_leaderboards_filter_active(test_client, leaderboards):
+    response = test_client.get('/leaderboards?filter[is_active]=true')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'data' in result
+    assert len(result['data']) == 2
+
+    for item in result['data']:
+        assert item['attributes']['is_active'] == True
+
+
+def test_leaderboards_filter_inactive(test_client, leaderboards):
+    response = test_client.get('/leaderboards?filter[is_active]=false')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'data' in result
+    assert len(result['data']) == 1
+    assert result['data'][0]['attributes']['is_active'] == 0

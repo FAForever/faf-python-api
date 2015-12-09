@@ -31,8 +31,13 @@ def leaderboards():
     page_size = int(request.values.get('page[size]', MAX_PAGE_SIZE))
     row_num = (page - 1) * page_size
 
+    where = ''
+    active_filter = request.values.get('filter[is_active]')
+    if active_filter:
+        where += 'is_active = ' + ('1' if active_filter.lower() == 'true' else '0')
+
     return fetch_data(LeaderboardSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-rating',
-                      args=dict(row_num=row_num))
+                      args=dict(row_num=row_num), where=where)
 
 
 @app.route('/leaderboards/<int:player_id>')
@@ -47,4 +52,3 @@ def leaderboard(player_id):
         return {'errors': [{'title': 'No entry with this id was found'}]}, 404
 
     return result
-
