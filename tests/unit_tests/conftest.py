@@ -11,7 +11,7 @@ def app():
     importlib.reload(api.events)
     importlib.reload(api.achievements)
     importlib.reload(api.games)
-    importlib.reload(api.leaderboards)
+    importlib.reload(api.ranked1v1)
 
     api.app.config.from_object('config')
     api.debug = True
