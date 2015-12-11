@@ -66,7 +66,7 @@ def stats_rating_distribution_1v1():
             FLOOR(((mean-3*deviation)+50)/100) * 100 AS `rating`,
             count(*) as count
         FROM ladder1v1_rating
-        WHERE `is_active` = 1
+        WHERE `is_active` = 1 AND FLOOR(((mean-3*deviation)+50)/100) * 100 BETWEEN 0 AND 3000
         GROUP BY `rating`
         ORDER BY CAST(`rating` as SIGNED) ASC;
         """)
