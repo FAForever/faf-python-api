@@ -178,7 +178,7 @@ def test_maps_upload_txt_results_400(test_client, app, tmpdir):
 
 
 def test_map_by_name(test_client, app, maps):
-    response = test_client.get('/maps?filter%5Bfilename%5D=b.v0001')
+    response = test_client.get('/maps?filter%5Btechnical_name%5D=b.v0001')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'

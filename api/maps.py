@@ -55,7 +55,7 @@ def maps():
     args = None
     many = True
 
-    filename_filter = request.values.get('filter[filename]')
+    filename_filter = request.values.get('filter[technical_name]')
     if filename_filter:
         where = ' filename = %s'
         args = 'maps/' + filename_filter + '.zip'
