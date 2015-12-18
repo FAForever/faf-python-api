@@ -150,4 +150,4 @@ def test_ranked1v1_stats(test_client, ranked1v1_ratings):
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
-    assert result['data']['attributes']['rating_distribution'] == {'1200': 1, '1400': 2}
+    assert result['data']['attributes']['rating_distribution'] == {'1500': 1, '1700': 1, '2000': 1}
