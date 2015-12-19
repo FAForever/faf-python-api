@@ -1,28 +1,30 @@
-from faf.api.game_schema import *
+from faf.api.game_stats_schema import GameStatsSchema, GamePlayerStatsSchema
+from faf.game_validity import GameValidity
+from faf.victory_condition import VictoryCondition
 from flask import request
 from api import app
 from api.query_commons import fetch_data
 
 MAX_PAGE_SIZE = 1000
 
-SELECT_GAME_EXPRESSIONS = {
+GAME_SELECT_EXPRESSIONS = {
     'id': 'id',
     'game_name': 'gameName',
-    'mapId': 'mapId',
-    'game_type': 'gameType',
+    'map_id': 'mapId',
+    'victory_condition': 'gameType',
     'game_mod': 'gameMod',
     'host': 'host',
     'start_time': 'startTime',
     'validity': 'validity'
 }
 
-SELECT_PLAYER_EXPRESSIONS = {
+PLAYER_SELECT_EXPRESSIONS = {
     'id': 'id',
     'player_id': 'playerId',
     'team': 'team',
     'faction': 'faction',
     'color': 'color',
-    'ai': 'ai',
+    'has_ai': 'AI',
     'place': 'place',
     'mean': 'mean',
     'deviation': 'deviation',
@@ -32,28 +34,26 @@ SELECT_PLAYER_EXPRESSIONS = {
     'score_time': 'scoreTime'
 }
 
+GAME_STATS_TABLE = 'game_stats'
+GAME_PLAYER_STATS_TABLE = 'game_player_stats'
+
 
 @app.route('/games')
 def games():
-    result = fetch_data(GameStatsSchema(), 'game_stats', SELECT_GAME_EXPRESSIONS, MAX_PAGE_SIZE, request)
-
-    # This should never happened unless something very bad happened
-    if len(result['data']) == 0:
-        return {'errors': [{'title': 'No games were found'}]}, 404
-
-    return result
+    return fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+                      enricher=enricher)
 
 
 @app.route('/games/<game_id>')
 def game(game_id):
-    game_result = fetch_data(GameStatsSchema(), 'game_stats', SELECT_GAME_EXPRESSIONS, MAX_PAGE_SIZE, request,
-                               where="id = %s", args=game_id, many=False)
+    game_result = fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+                             where='id = %s', args=game_id, many=False, enricher=enricher)
 
     if 'id' not in game_result['data']:
-        return {'errors': [{'title': 'No game with this game id was found'}]}, 404
+        return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
 
-    player_results = fetch_data(GamePlayerStatsSchema(), 'game_player_stats', dict(id="id"), MAX_PAGE_SIZE,
-                                request, where="gameId = %s", args=game_id)
+    player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE, dict(id='id'), MAX_PAGE_SIZE,
+                                request, where='gameId = %s', args=game_id)
 
     game_result['relationships'] = dict(players=player_results)
 
@@ -62,10 +62,24 @@ def game(game_id):
 
 @app.route('/games/<game_id>/players')
 def game_players(game_id):
-    player_results = fetch_data(GamePlayerStatsSchema(), 'game_player_stats', SELECT_PLAYER_EXPRESSIONS, MAX_PAGE_SIZE,
-                                request, where="gameId = %s", args=game_id)
+    player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE, PLAYER_SELECT_EXPRESSIONS,
+                                MAX_PAGE_SIZE, request, where='gameId = %s', args=game_id)
 
     if not player_results['data']:
-        return {'errors': [{'title': 'No players for this game id was found'}]}, 404
+        return {'errors': [{'title': 'No players for this game ID were found'}]}, 404
 
     return player_results
+
+
+def enricher(game):
+    if 'victory_condition' in game:
+        if not game['victory_condition']:
+            del game['victory_condition']
+        else:
+            game['victory_condition'] = VictoryCondition(int(game['victory_condition'])).name
+
+    if 'validity' in game:
+        if not game['validity']:
+            del game['validity']
+        else:
+            game['validity'] = GameValidity(int(game['validity'])).name

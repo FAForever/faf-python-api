@@ -1,6 +1,8 @@
 import json
 
 import pytest
+
+from api import app
 from faf import db
 
 testGameName = 'testGame'
@@ -13,8 +15,8 @@ def games(request):
         cursor.execute("TRUNCATE TABLE game_stats")
         cursor.execute("""INSERT INTO game_stats
         (id, startTime, gameType, gameMod, host, mapId, gameName, validity) VALUES
-        (234, now(), 'faf', 2, 146315, 5092, 'testGame', 1),
-        (235, now(), 'faf', 2, 146315, 5092, 'testGame2', 1)""")
+        (234, now(), '1', 2, 146315, 5092, 'testGame', 1),
+        (235, now(), '2', 2, 146315, 5092, 'testGame2', 1)""")
 
     def finalizer():
         with db.connection:
@@ -44,7 +46,8 @@ def game_players(request):
     request.addfinalizer(finalizer)
 
 
-def test_games(test_client, games):
+def test_games(test_client, games, app):
+    app.debug = True
     response = test_client.get('/games')
 
     assert response.status_code == 200
@@ -57,18 +60,25 @@ def test_games(test_client, games):
     for item in result['data']:
         assert 'id' in item
         assert 'type' in item
+        assert 'game_name' in item['attributes']
+        assert 'map_id' in item['attributes']
+        assert 'victory_condition' in item['attributes']
+        assert 'game_mod' in item['attributes']
+        assert 'host' in item['attributes']
+        assert 'start_time' in item['attributes']
+        assert 'validity' in item['attributes']
         assert item['type'] == 'game_stats'
 
 
 def test_games_no_games(test_client):
     response = test_client.get('/games')
 
-    assert response.status_code == 404
+    assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
 
-    data = json.loads(response.data.decode('utf-8'))
+    result = json.loads(response.data.decode('utf-8'))
 
-    assert 'errors' in data
+    assert len(result['data']) == 0
 
 
 def test_game_id_no_players(test_client, games):
@@ -82,6 +92,8 @@ def test_game_id_no_players(test_client, games):
     assert len(result['relationships']['players']['data']) == 0
     assert result['data']['id'] == '235'
     assert result['data']['attributes']['game_name'] == testGame2Name
+    assert result['data']['attributes']['validity'] == 'TOO_MANY_DESYNCS'
+    assert result['data']['attributes']['victory_condition'] == 'ERADICATION'
 
 
 def test_game_id_four_players(test_client, games, game_players):
