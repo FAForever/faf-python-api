@@ -39,11 +39,8 @@ TABLE_MAP_TABLE = 'table_map'
 LOGIN_TABLE = 'login'
 LADDER1V1_RATING_TABLE = 'ladder1v1_rating'
 
-HEADER_EXPRESSION = 'game_stats gs JOIN game_player_stats gps ON gps.gameId = gs.id JOIN ' \
-                    '(SELECT gps.gameId FROM game_player_stats gps ' \
-                    'INNER JOIN game_stats gs ON gs.id = gps.gameId'
-FOOTER_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {}) ' \
-                    'd ON gps.gameId = d.gameId'
+HEADER_EXPRESSION = 'game_player_stats gps INNER JOIN game_stats gs ON gs.id = gps.gameId'
+FOOTER_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {}'
 
 LOGIN_JOIN = ' INNER JOIN login l ON l.id = gps.playerId'
 MAP_JOIN = ' INNER JOIN table_map tm ON tm.id = gs.mapId'
@@ -75,8 +72,8 @@ def games():
     modified_game_select_expression = copy(GAME_SELECT_EXPRESSIONS)
     modified_game_select_expression['id'] = "gs.id"
 
-    return fetch_data(GameStatsSchema(), select_expression, modified_game_select_expression, MAX_PAGE_SIZE,
-                      request, args=args, enricher=enricher)
+    return fetch_data(GameStatsSchema(), select_expression, modified_game_select_expression, MAX_PAGE_SIZE, request,
+                      args=args, enricher=enricher)
 
 
 @app.route('/games/<game_id>')
@@ -148,8 +145,8 @@ def build_query(game_type=None, map_name=None, max_rating=None, min_rating=None,
         first, where_expression = append_where_expression(first, where_expression, MAP_NAME_WHERE_EXPRESSION)
 
     if game_type:
-            args.append(game_type)
-            first, where_expression = append_where_expression(first, where_expression, GAME_TYPE_WHERE_EXPRESSION)
+        args.append(game_type)
+        first, where_expression = append_where_expression(first, where_expression, GAME_TYPE_WHERE_EXPRESSION)
 
     where_expression += FOOTER_EXPRESSION.format(len(players) - 1)
     return table_expression + where_expression, args
