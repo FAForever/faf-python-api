@@ -357,8 +357,49 @@ def test_games_invalid_page_size(test_client, games):
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page size'
 
 
-def test_mods_invalid_page(test_client, games):
-    response = test_client.get('/games?page[number]=-1')
+def test_games_query_players_sql_injection(test_client):
+    response = test_client.get("/games?filter[players]=' or%201=1; --")
+
+    assert response.status_code == 200
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['data']) == 0
+
+
+def test_games_query_map_name_sql_injection(test_client):
+    response = test_client.get("/games?filter[map_exclude]=true&filter[map_name]=' or%201=1; --")
+
+    assert response.status_code == 200
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['data']) == 0
+
+
+def test_games_query_max_rating_sql_injection(test_client):
+    response = test_client.get("/games?filter[max_rating]=' or%201=1; --&filter[rating_type]=hey")
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page number'
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'message' in result
+
+
+def test_games_query_min_rating_sql_injection(test_client):
+    response = test_client.get("/games?filter[min_rating]=' or%201=1; --&filter[rating_type]=hey")
+
+    assert response.status_code == 400
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'message' in result
+
+
+def test_games_query_game_type_sql_injection(test_client):
+    response = test_client.get("/games?filter[game_type]=' or%201=1;")
+
+    assert response.status_code == 200
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['data']) == 0
+
+
+def test_games_query_invalid_map_exclude(test_client):
+    response = test_client.get('/games?filter[map_exclude]=hey&filter[map_name]=hey')
+
+    assert response.status_code == 400
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'message' in result
