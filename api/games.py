@@ -1,9 +1,11 @@
+import distutils.util
+
 from copy import copy
 from faf.api.game_stats_schema import GameStatsSchema, GamePlayerStatsSchema
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
 from flask import request
-from api import app
+from api import app, InvalidUsage
 from api.query_commons import fetch_data
 
 MAX_PAGE_SIZE = 1000
@@ -35,9 +37,7 @@ PLAYER_SELECT_EXPRESSIONS = {
 
 GAME_STATS_TABLE = 'game_stats'
 GAME_PLAYER_STATS_TABLE = 'game_player_stats'
-TABLE_MAP_TABLE = 'table_map'
 LOGIN_TABLE = 'login'
-LADDER1V1_RATING_TABLE = 'ladder1v1_rating'
 
 HEADER_EXPRESSION = 'game_player_stats gps INNER JOIN game_stats gs ON gs.id = gps.gameId'
 FOOTER_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {}'
@@ -48,26 +48,34 @@ LADDER1V1_JOIN = ' INNER JOIN ladder1v1_rating lr ON lr.id = gps.playerId'
 
 MAX_RATING_WHERE_EXPRESSION = '%s >= ROUND({}.mean - 3 * {}.deviation)'
 MIN_RATING_WHERE_EXPRESSION = '%s <= ROUND({}.mean - 3 * {}.deviation)'
-MAP_NAME_WHERE_EXPRESSION = 'tm.name = %s'
+MAP_NAME_WHERE_EXPRESSION = '{} tm.name = %s'
 GAME_TYPE_WHERE_EXPRESSION = 'gs.gameType = %s'
 AND = ' AND '
 WHERE = ' WHERE '
+NOT = 'NOT'
 
 
 @app.route('/games')
 def games():
-    if len(request.args) == 0:
-        return fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
-                          enricher=enricher)
-
     player_list = request.args.get('filter[players]')
     map_name = request.args.get('filter[map_name]')
+    map_exclusive = request.args.get('filter[map_exclusive]')
     max_rating = request.args.get('filter[max_rating]')
     min_rating = request.args.get('filter[min_rating]')
     game_type = request.args.get('filter[game_type]')
     rating_type = request.args.get('filter[rating_type]')
 
-    select_expression, args = build_query(game_type, map_name, max_rating, min_rating, player_list, rating_type)
+    if (rating_type and not (max_rating or min_rating)) or ((max_rating or min_rating) and not rating_type):
+        return {'errors': [{'title': 'missing rating_type or max/min_rating parameters'}]}, 422
+
+    if not (player_list or map_name or max_rating or min_rating or game_type):
+        return fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+                          enricher=enricher)
+    if not map_exclusive:
+        map_exclusive = 'True'
+
+    select_expression, args = build_query(game_type, map_name, map_exclusive, max_rating, min_rating, player_list,
+                                          rating_type)
 
     modified_game_select_expression = copy(GAME_SELECT_EXPRESSIONS)
     modified_game_select_expression['id'] = "gs.id"
@@ -117,7 +125,7 @@ def enricher(game):
             game['validity'] = GameValidity(int(game['validity'])).name
 
 
-def build_query(game_type=None, map_name=None, max_rating=None, min_rating=None, player_list=None, rating_type=None):
+def build_query(game_type, map_name, map_inclusive, max_rating, min_rating, player_list, rating_type):
     table_expression = HEADER_EXPRESSION
     where_expression = ''
     args = list()
@@ -142,13 +150,25 @@ def build_query(game_type=None, map_name=None, max_rating=None, min_rating=None,
     if map_name:
         table_expression += MAP_JOIN
         args.append(map_name)
-        first, where_expression = append_where_expression(first, where_expression, MAP_NAME_WHERE_EXPRESSION)
+        try:
+            map_inclusive = distutils.util.strtobool(map_inclusive)
+        except ValueError:
+            throw_malformed_query_error('map_name')
+        if map_inclusive:
+            first, where_expression = append_where_expression(first, where_expression,
+                                                              MAP_NAME_WHERE_EXPRESSION.format(NOT))
+        else:
+            first, where_expression = append_where_expression(first, where_expression,
+                                                              MAP_NAME_WHERE_EXPRESSION.format(''))
 
     if game_type:
         args.append(game_type)
         first, where_expression = append_where_expression(first, where_expression, GAME_TYPE_WHERE_EXPRESSION)
 
-    where_expression += FOOTER_EXPRESSION.format(len(players) - 1)
+    if players:
+        where_expression += FOOTER_EXPRESSION.format(len(players) - 1)
+    else:
+        where_expression += FOOTER_EXPRESSION.format(0)
     return table_expression + where_expression, args
 
 
@@ -158,7 +178,7 @@ def build_rating_expression(rating, first, rating_type, table_expression,
         try:
             rating = int(rating)
         except ValueError:
-            return table_expression, where_expression, first
+            throw_malformed_query_error('rating_field')
 
         if rating_type == 'ladder':
             if LADDER1V1_JOIN not in table_expression:
@@ -179,3 +199,7 @@ def append_where_expression(first, where_expression, format_expression):
     else:
         where_expression += AND + format_expression
     return first, where_expression
+
+
+def throw_malformed_query_error(field):
+    raise InvalidUsage('Invalid ' + field)
