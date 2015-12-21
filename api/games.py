@@ -59,7 +59,7 @@ NOT = 'NOT'
 def games():
     player_list = request.args.get('filter[players]')
     map_name = request.args.get('filter[map_name]')
-    map_exclusive = request.args.get('filter[map_exclusive]')
+    map_exclude = request.args.get('filter[map_exclude]')
     max_rating = request.args.get('filter[max_rating]')
     min_rating = request.args.get('filter[min_rating]')
     game_type = request.args.get('filter[game_type]')
@@ -71,10 +71,10 @@ def games():
     if not (player_list or map_name or max_rating or min_rating or game_type):
         return fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
                           enricher=enricher)
-    if not map_exclusive:
-        map_exclusive = 'True'
+    if not map_exclude:
+        map_exclude = 'False'
 
-    select_expression, args = build_query(game_type, map_name, map_exclusive, max_rating, min_rating, player_list,
+    select_expression, args = build_query(game_type, map_name, map_exclude, max_rating, min_rating, player_list,
                                           rating_type)
 
     modified_game_select_expression = copy(GAME_SELECT_EXPRESSIONS)
@@ -125,7 +125,7 @@ def enricher(game):
             game['validity'] = GameValidity(int(game['validity'])).name
 
 
-def build_query(game_type, map_name, map_inclusive, max_rating, min_rating, player_list, rating_type):
+def build_query(game_type, map_name, map_exclude, max_rating, min_rating, player_list, rating_type):
     table_expression = HEADER_EXPRESSION
     where_expression = ''
     args = list()
@@ -151,10 +151,10 @@ def build_query(game_type, map_name, map_inclusive, max_rating, min_rating, play
         table_expression += MAP_JOIN
         args.append(map_name)
         try:
-            map_inclusive = distutils.util.strtobool(map_inclusive)
+            map_exclude = distutils.util.strtobool(map_exclude)
         except ValueError:
             throw_malformed_query_error('map_name')
-        if map_inclusive:
+        if map_exclude:
             first, where_expression = append_where_expression(first, where_expression,
                                                               MAP_NAME_WHERE_EXPRESSION.format(NOT))
         else:
