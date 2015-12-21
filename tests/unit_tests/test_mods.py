@@ -213,7 +213,7 @@ def test_mods_sort_by_likes_desc(test_client, mods):
 
 
 def test_mods_inject_sql_order(test_client):
-    response = test_client.get('/mods?sort=or%201=1')
+    response = test_client.get("/mods?sort=' or%201=1; --")
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid sort field'
