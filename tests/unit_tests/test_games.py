@@ -85,6 +85,25 @@ def login(request):
     request.addfinalizer(finalizer)
 
 
+@pytest.fixture
+def ladder(request):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute("TRUNCATE TABLE ladder1v1_rating")
+        cursor.execute("""INSERT INTO ladder1v1_rating (id, mean, deviation, numGames, winGames, is_active) VALUES
+        (146315, 2000, 0, 0, 0, 0),
+        (146316, 1500, 0, 0, 0, 0),
+        (146317, 500, 0, 0, 0, 0),
+        (146318, 700, 0, 0, 0, 0)""")
+
+    def finalizer():
+        with db.connection:
+            cursor = db.connection.cursor()
+            cursor.execute("TRUNCATE TABLE ladder1v1_rating")
+
+    request.addfinalizer(finalizer)
+
+
 def test_games(test_client, games):
     response = test_client.get('/games')
 
@@ -237,6 +256,18 @@ def test_games_query_rating_type_and_no_rating(test_client, games, game_players)
     result = json.loads(response.data.decode('utf-8'))
 
     assert 'errors' in result
+
+
+def test_games_query_min_and_max_rating_ladder(test_client, games, game_players, ladder):
+    response = test_client.get('/games?filter[max_rating]=800&filter[min_rating]=500&filter[rating_type]=ladder')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    assert len(result['data']) == 1
+    assert result['data'][0]['id'] == '234'
 
 
 def test_games_query_game_type(test_client, games, game_players):
