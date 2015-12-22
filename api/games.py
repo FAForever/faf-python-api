@@ -36,7 +36,7 @@ PLAYER_SELECT_EXPRESSIONS = {
 }
 
 GAME_STATS_TABLE = 'game_stats gs'
-GAME_PLAYER_STATS_TABLE = 'game_player_stats'
+GAME_PLAYER_STATS_TABLE = 'game_player_stats gps'
 LOGIN_TABLE = 'login'
 
 GAME_STATS_HEADER_EXPRESSION = 'game_player_stats gps INNER JOIN game_stats gs ON gs.id = gps.gameId'
@@ -104,7 +104,8 @@ def game(game_id):
     if 'id' not in game_result['data']:
         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
 
-    player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE, PLAYER_SELECT_EXPRESSIONS,
+    player_select_expression = GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN
+    player_results = fetch_data(GamePlayerStatsSchema(), player_select_expression, PLAYER_SELECT_EXPRESSIONS,
                                 MAX_PAGE_SIZE,
                                 request, where='gameId = %s', args=game_id)
 
