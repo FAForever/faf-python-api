@@ -10,7 +10,7 @@ from api.query_commons import fetch_data
 MAX_PAGE_SIZE = 1000
 
 GAME_SELECT_EXPRESSIONS = {
-    'id': 'id',
+    'id': 'gs.id',
     'game_name': 'gameName',
     'map_id': 'mapId',
     'victory_condition': 'gameType',
@@ -21,7 +21,7 @@ GAME_SELECT_EXPRESSIONS = {
 }
 
 PLAYER_SELECT_EXPRESSIONS = {
-    'id': 'id',
+    'id': 'gps.id',
     'game_id': 'gameId',
     'player_id': 'playerId',
     'team': 'team',
@@ -29,27 +29,28 @@ PLAYER_SELECT_EXPRESSIONS = {
     'color': 'color',
     'has_ai': 'AI',
     'place': 'place',
-    'mean': 'mean',
-    'deviation': 'deviation',
+    'mean': 'r.mean',
+    'deviation': 'r.deviation',
     'score': 'score',
     'score_time': 'scoreTime'
 }
 
-GAME_STATS_TABLE = 'game_stats'
+GAME_STATS_TABLE = 'game_stats gs'
 GAME_PLAYER_STATS_TABLE = 'game_player_stats'
 LOGIN_TABLE = 'login'
 
 GAME_STATS_HEADER_EXPRESSION = 'game_player_stats gps INNER JOIN game_stats gs ON gs.id = gps.gameId'
 GAME_STATS_FOOTER_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {}'
-GAME_PLAYER_STATS_HEADER_EXPRESSION = 'game_player_stats gps WHERE gameId IN ( SELECT gameId FROM '
+GAME_PLAYER_STATS_HEADER_EXPRESSION = 'game_player_stats gps {} WHERE gameId IN( SELECT gameId FROM '
 GAME_PLAYER_STATS_FOOTER_EXPRESSION = ')'
 
 LOGIN_JOIN = ' INNER JOIN login l ON l.id = gps.playerId'
 MAP_JOIN = ' INNER JOIN table_map tm ON tm.id = gs.mapId'
-LADDER1V1_JOIN = ' INNER JOIN ladder1v1_rating lr ON lr.id = gps.playerId'
+GLOBAL_JOIN = ' INNER JOIN global_rating r ON r.id = gps.playerId'
+LADDER1V1_JOIN = ' INNER JOIN ladder1v1_rating r ON r.id = gps.playerId'
 
-MAX_RATING_WHERE_EXPRESSION = '%s >= ROUND({}.mean - 3 * {}.deviation)'
-MIN_RATING_WHERE_EXPRESSION = '%s <= ROUND({}.mean - 3 * {}.deviation)'
+MAX_RATING_WHERE_EXPRESSION = '%s >= ROUND(r.mean - 3 * r.deviation)'
+MIN_RATING_WHERE_EXPRESSION = '%s <= ROUND(r.mean - 3 * r.deviation)'
 MAP_NAME_WHERE_EXPRESSION = '{} tm.name = %s'
 GAME_TYPE_WHERE_EXPRESSION = 'gs.gameType = %s'
 AND = ' AND '
@@ -80,11 +81,9 @@ def games():
         game_stats_select_expression, args = build_game_stats_query(game_type, map_name, map_exclude, max_rating,
                                                                     min_rating, player_list,
                                                                     rating_type)
-        game_player_stats_select_expression = build_game_player_stats_query(game_stats_select_expression)
-        modified_game_select_expression = copy(GAME_SELECT_EXPRESSIONS)
-        modified_game_select_expression['id'] = "gs.id"
+        game_player_stats_select_expression = build_game_player_stats_query(game_stats_select_expression, rating_type)
 
-        game_results = fetch_data(GameStatsSchema(), game_stats_select_expression, modified_game_select_expression,
+        game_results = fetch_data(GameStatsSchema(), game_stats_select_expression, GAME_SELECT_EXPRESSIONS,
                                   MAX_PAGE_SIZE, request,
                                   args=args, enricher=enricher, sort='-id')
         player_results = fetch_data(GamePlayerStatsSchema(), game_player_stats_select_expression,
@@ -92,8 +91,8 @@ def games():
     else:
         game_results = fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
                                   enricher=enricher, sort='-id')
-        player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE, PLAYER_SELECT_EXPRESSIONS,
-                                    MAX_PAGE_SIZE, request, sort='-game_id')
+        player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN,
+                                    PLAYER_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-game_id')
     return join_game_and_player_results(game_results, player_results)
 
 
@@ -176,22 +175,22 @@ def build_game_stats_query(game_type, map_name, map_exclude, max_rating, min_rat
 
 
 def build_rating_expression(rating, first, rating_type, table_expression,
-                            where_expression, format_expression, args):
+                            where_expression, rating_where_expression, args):
     if rating:
         try:
             rating = int(rating)
         except ValueError:
-            throw_malformed_query_error('rating_field')
+            throw_malformed_query_error('rating field')
 
         if rating_type == 'ladder':
             if LADDER1V1_JOIN not in table_expression:
                 table_expression += LADDER1V1_JOIN
-            rating_expression = format_expression.format('lr', 'lr')
         else:
-            rating_expression = format_expression.format('gps', 'gps')
+            if GLOBAL_JOIN not in table_expression:
+                table_expression += GLOBAL_JOIN
 
         args.append(rating)
-        first, where_expression = append_where_expression(first, where_expression, rating_expression)
+        first, where_expression = append_where_expression(first, where_expression, rating_where_expression)
     return table_expression, where_expression, args, first
 
 
@@ -204,8 +203,12 @@ def append_where_expression(first, where_expression, format_expression):
     return first, where_expression
 
 
-def build_game_player_stats_query(game_stats_expression):
-    return GAME_PLAYER_STATS_HEADER_EXPRESSION + game_stats_expression + GAME_PLAYER_STATS_FOOTER_EXPRESSION
+def build_game_player_stats_query(game_stats_expression, rating_type):
+    if rating_type == 'ladder':
+        table_expression = GAME_PLAYER_STATS_HEADER_EXPRESSION.format(LADDER1V1_JOIN)
+    else:
+        table_expression = GAME_PLAYER_STATS_HEADER_EXPRESSION.format(GLOBAL_JOIN)
+    return table_expression + game_stats_expression + GAME_PLAYER_STATS_FOOTER_EXPRESSION
 
 
 def join_game_and_player_results(game_results, player_results):
@@ -213,7 +216,7 @@ def join_game_and_player_results(game_results, player_results):
     for player in player_results['data']:
         id = player['attributes']['game_id']
         if id not in game_player:
-             game_player[id] = list()
+            game_player[id] = list()
         game_player[id].append(player)
     for game in game_results['data']:
         if game['id'] not in game_player:
