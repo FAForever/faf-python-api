@@ -94,7 +94,6 @@ def games():
                                   enricher=enricher, sort='-id')
         player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE, PLAYER_SELECT_EXPRESSIONS,
                                     MAX_PAGE_SIZE, request, sort='-game_id')
-
     return join_game_and_player_results(game_results, player_results)
 
 
@@ -110,7 +109,7 @@ def game(game_id):
                                 MAX_PAGE_SIZE,
                                 request, where='gameId = %s', args=game_id)
 
-    game_result['relationships'] = dict(players=player_results)
+    game_result['data']['relationships'] = dict(players=player_results)
 
     return game_result
 
@@ -217,7 +216,10 @@ def join_game_and_player_results(game_results, player_results):
              game_player[id] = list()
         game_player[id].append(player)
     for game in game_results['data']:
-        game['relationships'] = dict(players=dict(data=game_player[game['id']]))
+        if game['id'] not in game_player:
+            game['relationships'] = dict(players=dict(data=list()))
+        else:
+            game['relationships'] = dict(players=dict(data=list(game_player[game['id']])))
 
     return game_results
 
