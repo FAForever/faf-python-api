@@ -1,5 +1,4 @@
 import distutils.util
-from copy import copy
 from faf.api.game_stats_schema import GameStatsSchema, GamePlayerStatsSchema
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
@@ -24,6 +23,7 @@ PLAYER_SELECT_EXPRESSIONS = {
     'id': 'gps.id',
     'game_id': 'gameId',
     'player_id': 'playerId',
+    'login': 'l.login',
     'team': 'team',
     'faction': 'faction',
     'color': 'color',
@@ -41,7 +41,7 @@ LOGIN_TABLE = 'login'
 
 GAME_STATS_HEADER_EXPRESSION = 'game_player_stats gps INNER JOIN game_stats gs ON gs.id = gps.gameId'
 GAME_STATS_FOOTER_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {}'
-GAME_PLAYER_STATS_HEADER_EXPRESSION = 'game_player_stats gps {} WHERE gameId IN( SELECT gameId FROM '
+GAME_PLAYER_STATS_HEADER_EXPRESSION = 'game_player_stats gps {} {} WHERE gameId IN( SELECT gameId FROM '
 GAME_PLAYER_STATS_FOOTER_EXPRESSION = ')'
 
 LOGIN_JOIN = ' INNER JOIN login l ON l.id = gps.playerId'
@@ -91,7 +91,7 @@ def games():
     else:
         game_results = fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
                                   enricher=enricher, sort='-id')
-        player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN,
+        player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN + LOGIN_JOIN,
                                     PLAYER_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-game_id')
     return join_game_and_player_results(game_results, player_results)
 
@@ -129,7 +129,7 @@ def enricher(game):
 
 
 def build_game_stats_query(game_type, map_name, map_exclude, max_rating, min_rating, player_list, rating_type):
-    table_expression = GAME_STATS_HEADER_EXPRESSION
+    table_expression = GAME_STATS_HEADER_EXPRESSION + LOGIN_JOIN
     where_expression = ''
     args = list()
     first = True
@@ -139,7 +139,6 @@ def build_game_stats_query(game_type, map_name, map_exclude, max_rating, min_rat
         players = player_list.split(',')
         player_expression = LOGIN_TABLE + ' IN ({})'.format(','.join(['%s'] * len(players)))
         args += players
-        table_expression += LOGIN_JOIN
         first, where_expression = append_where_expression(first, where_expression, player_expression)
 
     table_expression, where_expression, args, first = build_rating_expression(max_rating, first, rating_type,
@@ -206,9 +205,9 @@ def append_where_expression(first, where_expression, format_expression):
 
 def build_game_player_stats_query(game_stats_expression, rating_type):
     if rating_type == 'ladder':
-        table_expression = GAME_PLAYER_STATS_HEADER_EXPRESSION.format(LADDER1V1_JOIN)
+        table_expression = GAME_PLAYER_STATS_HEADER_EXPRESSION.format(LADDER1V1_JOIN, LOGIN_JOIN)
     else:
-        table_expression = GAME_PLAYER_STATS_HEADER_EXPRESSION.format(GLOBAL_JOIN)
+        table_expression = GAME_PLAYER_STATS_HEADER_EXPRESSION.format(GLOBAL_JOIN, LOGIN_JOIN)
     return table_expression + game_stats_expression + GAME_PLAYER_STATS_FOOTER_EXPRESSION
 
 
