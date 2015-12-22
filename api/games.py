@@ -65,8 +65,8 @@ def games():
     game_type = request.args.get('filter[game_type]')
     rating_type = request.args.get('filter[rating_type]')
 
-    if (rating_type and not (max_rating or min_rating)) or ((max_rating or min_rating) and not rating_type):
-        return {'errors': [{'title': 'missing rating_type or max/min_rating parameters'}]}, 422
+    if rating_type and not (max_rating or min_rating):
+        return {'errors': [{'title': 'missing max/min_rating parameters'}]}, 422
 
     if map_exclude and not map_name:
         return {'errors': [{'title': 'missing map_name parameter'}]}, 422

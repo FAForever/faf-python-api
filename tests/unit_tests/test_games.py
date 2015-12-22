@@ -192,7 +192,7 @@ def test_games_query_map_exclude(test_client):
 
 
 def test_games_query_max_rating(test_client, games, game_players):
-    response = test_client.get('/games?filter[max_rating]=1000&filter[rating_type]=global')
+    response = test_client.get('/games?filter[max_rating]=1000')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -205,7 +205,7 @@ def test_games_query_max_rating(test_client, games, game_players):
 
 
 def test_games_query_min_rating(test_client, games, game_players):
-    response = test_client.get('/games?filter[min_rating]=1100&filter[rating_type]=global')
+    response = test_client.get('/games?filter[min_rating]=1100')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -217,7 +217,7 @@ def test_games_query_min_rating(test_client, games, game_players):
 
 
 def test_games_query_max_and_min_rating(test_client, games, game_players):
-    response = test_client.get('/games?filter[max_rating]=800&filter[min_rating]=500&filter[rating_type]=global')
+    response = test_client.get('/games?filter[max_rating]=800&filter[min_rating]=500')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -226,17 +226,6 @@ def test_games_query_max_and_min_rating(test_client, games, game_players):
 
     assert len(result['data']) == 1
     assert result['data'][0]['id'] == '234'
-
-
-def test_games_query_rating_and_no_rating_type(test_client, games, game_players):
-    response = test_client.get('/games?filter[max_rating]=800')
-
-    assert response.status_code == 422
-    assert response.content_type == 'application/vnd.api+json'
-
-    result = json.loads(response.data.decode('utf-8'))
-
-    assert 'errors' in result
 
 
 def test_games_query_rating_type_and_no_rating(test_client, games, game_players):
