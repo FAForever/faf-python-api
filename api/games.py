@@ -1,5 +1,4 @@
 import distutils.util
-
 from copy import copy
 from faf.api.game_stats_schema import GameStatsSchema, GamePlayerStatsSchema
 from faf.game_validity import GameValidity
@@ -23,6 +22,7 @@ GAME_SELECT_EXPRESSIONS = {
 
 PLAYER_SELECT_EXPRESSIONS = {
     'id': 'id',
+    'game_id': 'gameId',
     'player_id': 'playerId',
     'team': 'team',
     'faction': 'faction',
@@ -39,8 +39,10 @@ GAME_STATS_TABLE = 'game_stats'
 GAME_PLAYER_STATS_TABLE = 'game_player_stats'
 LOGIN_TABLE = 'login'
 
-HEADER_EXPRESSION = 'game_player_stats gps INNER JOIN game_stats gs ON gs.id = gps.gameId'
-FOOTER_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {}'
+GAME_STATS_HEADER_EXPRESSION = 'game_player_stats gps INNER JOIN game_stats gs ON gs.id = gps.gameId'
+GAME_STATS_FOOTER_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {}'
+GAME_PLAYER_STATS_HEADER_EXPRESSION = 'game_player_stats gps WHERE gameId IN ( SELECT gameId FROM '
+GAME_PLAYER_STATS_FOOTER_EXPRESSION = ')'
 
 LOGIN_JOIN = ' INNER JOIN login l ON l.id = gps.playerId'
 MAP_JOIN = ' INNER JOIN table_map tm ON tm.id = gs.mapId'
@@ -71,20 +73,29 @@ def games():
     if map_exclude and not map_name:
         return {'errors': [{'title': 'missing map_name parameter'}]}, 422
 
-    if not (player_list or map_name or max_rating or min_rating or game_type):
-        return fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
-                          enricher=enricher)
-    if not map_exclude:
-        map_exclude = 'False'
+    if player_list or map_name or max_rating or min_rating or game_type:
+        if not map_exclude:
+            map_exclude = 'False'
 
-    select_expression, args = build_query(game_type, map_name, map_exclude, max_rating, min_rating, player_list,
-                                          rating_type)
+        game_stats_select_expression, args = build_game_stats_query(game_type, map_name, map_exclude, max_rating,
+                                                                    min_rating, player_list,
+                                                                    rating_type)
+        game_player_stats_select_expression = build_game_player_stats_query(game_stats_select_expression)
+        modified_game_select_expression = copy(GAME_SELECT_EXPRESSIONS)
+        modified_game_select_expression['id'] = "gs.id"
 
-    modified_game_select_expression = copy(GAME_SELECT_EXPRESSIONS)
-    modified_game_select_expression['id'] = "gs.id"
+        game_results = fetch_data(GameStatsSchema(), game_stats_select_expression, modified_game_select_expression,
+                                  MAX_PAGE_SIZE, request,
+                                  args=args, enricher=enricher, sort='-id')
+        player_results = fetch_data(GamePlayerStatsSchema(), game_player_stats_select_expression,
+                                    PLAYER_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, args=args, sort='-game_id')
+    else:
+        game_results = fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+                                  enricher=enricher, sort='-id')
+        player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE, PLAYER_SELECT_EXPRESSIONS,
+                                    MAX_PAGE_SIZE, request, sort='-game_id')
 
-    return fetch_data(GameStatsSchema(), select_expression, modified_game_select_expression, MAX_PAGE_SIZE, request,
-                      args=args, enricher=enricher)
+    return join_game_and_player_results(game_results, player_results)
 
 
 @app.route('/games/<game_id>')
@@ -95,23 +106,13 @@ def game(game_id):
     if 'id' not in game_result['data']:
         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
 
-    player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE, dict(id='id'), MAX_PAGE_SIZE,
+    player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE, PLAYER_SELECT_EXPRESSIONS,
+                                MAX_PAGE_SIZE,
                                 request, where='gameId = %s', args=game_id)
 
     game_result['relationships'] = dict(players=player_results)
 
     return game_result
-
-
-@app.route('/games/<game_id>/players')
-def game_players(game_id):
-    player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE, PLAYER_SELECT_EXPRESSIONS,
-                                MAX_PAGE_SIZE, request, where='gameId = %s', args=game_id)
-
-    if not player_results['data']:
-        return {'errors': [{'title': 'No players for this game ID were found'}]}, 404
-
-    return player_results
 
 
 def enricher(game):
@@ -128,8 +129,8 @@ def enricher(game):
             game['validity'] = GameValidity(int(game['validity'])).name
 
 
-def build_query(game_type, map_name, map_exclude, max_rating, min_rating, player_list, rating_type):
-    table_expression = HEADER_EXPRESSION
+def build_game_stats_query(game_type, map_name, map_exclude, max_rating, min_rating, player_list, rating_type):
+    table_expression = GAME_STATS_HEADER_EXPRESSION
     where_expression = ''
     args = list()
     first = True
@@ -169,9 +170,9 @@ def build_query(game_type, map_name, map_exclude, max_rating, min_rating, player
         first, where_expression = append_where_expression(first, where_expression, GAME_TYPE_WHERE_EXPRESSION)
 
     if players:
-        where_expression += FOOTER_EXPRESSION.format(len(players) - 1)
+        where_expression += GAME_STATS_FOOTER_EXPRESSION.format(len(players) - 1)
     else:
-        where_expression += FOOTER_EXPRESSION.format(0)
+        where_expression += GAME_STATS_FOOTER_EXPRESSION.format(0)
     return table_expression + where_expression, args
 
 
@@ -202,6 +203,23 @@ def append_where_expression(first, where_expression, format_expression):
     else:
         where_expression += AND + format_expression
     return first, where_expression
+
+
+def build_game_player_stats_query(game_stats_expression):
+    return GAME_PLAYER_STATS_HEADER_EXPRESSION + game_stats_expression + GAME_PLAYER_STATS_FOOTER_EXPRESSION
+
+
+def join_game_and_player_results(game_results, player_results):
+    game_player = dict()
+    for player in player_results['data']:
+        id = player['attributes']['game_id']
+        if id not in game_player:
+             game_player[id] = list()
+        game_player[id].append(player)
+    for game in game_results['data']:
+        game['relationships'] = dict(players=dict(data=game_player[game['id']]))
+
+    return game_results
 
 
 def throw_malformed_query_error(field):
