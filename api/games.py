@@ -6,7 +6,8 @@ from flask import request
 from api import app, InvalidUsage
 from api.query_commons import fetch_data
 
-MAX_PAGE_SIZE = 1000
+MAX_GAME_PAGE_SIZE = 1000
+MAX_PLAYER_PAGE_SIZE = MAX_GAME_PAGE_SIZE * 12
 
 GAME_SELECT_EXPRESSIONS = {
     'id': 'gs.id',
@@ -69,10 +70,10 @@ def games():
     rating_type = request.args.get('filter[rating_type]')
 
     if rating_type and not (max_rating or min_rating):
-        return {'errors': [{'title': 'missing max/min_rating parameters'}]}, 422
+        return {'errors': [{'title': 'Missing max/min_rating parameters'}]}, 422
 
     if map_exclude and not map_name:
-        return {'errors': [{'title': 'missing map_name parameter'}]}, 422
+        return {'errors': [{'title': 'Missing map_name parameter'}]}, 422
 
     if player_list or map_name or max_rating or min_rating or game_type:
         if not map_exclude:
@@ -84,21 +85,21 @@ def games():
         game_player_stats_select_expression = build_game_player_stats_query(game_stats_select_expression, rating_type)
 
         game_results = fetch_data(GameStatsSchema(), game_stats_select_expression, GAME_SELECT_EXPRESSIONS,
-                                  MAX_PAGE_SIZE, request,
+                                  MAX_GAME_PAGE_SIZE, request,
                                   args=args, enricher=enricher, sort='-id')
         player_results = fetch_data(GamePlayerStatsSchema(), game_player_stats_select_expression,
-                                    PLAYER_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, args=args, sort='-game_id')
+                                    PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-game_id')
     else:
-        game_results = fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+        game_results = fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
                                   enricher=enricher, sort='-id')
         player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN + LOGIN_JOIN,
-                                    PLAYER_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-game_id')
+                                    PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-game_id')
     return join_game_and_player_results(game_results, player_results)
 
 
 @app.route('/games/<game_id>')
 def game(game_id):
-    game_result = fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+    game_result = fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
                              where='id = %s', args=game_id, many=False, enricher=enricher)
 
     if 'id' not in game_result['data']:
@@ -106,7 +107,7 @@ def game(game_id):
 
     player_select_expression = GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN + LOGIN_JOIN
     player_results = fetch_data(GamePlayerStatsSchema(), player_select_expression, PLAYER_SELECT_EXPRESSIONS,
-                                MAX_PAGE_SIZE,
+                                MAX_GAME_PAGE_SIZE,
                                 request, where='gameId = %s', args=game_id)
 
     game_result['data']['relationships'] = dict(players=player_results)
