@@ -1,5 +1,4 @@
 import json
-from pprint import pprint
 
 import pytest
 from faf import db
@@ -188,7 +187,6 @@ def test_games_query_multiple_players(test_client, game_stats, game_player_stats
     results_data = result['data']
     assert len(results_data) == 1
     assert results_data[0]['id'] == '234'
-    pprint(results_data)
     assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
 
 
@@ -327,6 +325,28 @@ def test_games_query_game_type(test_client, game_stats, game_player_stats, globa
     assert len(results_data) == 1
     assert results_data[0]['id'] == '234'
     assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+
+
+def test_games_query_all_parameters(test_client, maps, game_stats, game_player_stats, ladder, login, global_rating):
+    response = test_client.get('/games?filter[players]=testUser1,testUser3&filter[map_name]=testMap2'
+                               '&filter[max_rating]=2000&filter[min_rating]=500&filter[game_type]=1'
+                               '&filter[rating_type]=ladder&filter[map_exclude]=true')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    results_data = result['data'][0]
+    assert 'data' in result
+    assert len(result['data'])
+    player_data = results_data['relationships']['players']['data']
+    assert len(player_data) == 4
+    assert results_data['id'] == '234'
+    assert results_data['attributes']['game_name'] == testGameName
+    assert results_data['attributes']['validity'] == 'TOO_MANY_DESYNCS'
+    assert results_data['attributes']['victory_condition'] == 'DOMINATION'
+    assert player_data[0]['attributes']['game_id'] == '234'
+    assert 'testUser' in player_data[0]['attributes']['login']
 
 
 def test_game_id_no_players(test_client, game_stats, global_rating, login):

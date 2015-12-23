@@ -141,13 +141,15 @@ def build_game_stats_query(game_type, map_name, map_exclude, max_rating, min_rat
         args += players
         first, where_expression = append_where_expression(first, where_expression, player_expression)
 
-    table_expression, where_expression, args, first = build_rating_expression(max_rating, first, rating_type,
-                                                                              table_expression, where_expression,
-                                                                              MAX_RATING_WHERE_EXPRESSION, args)
+    if max_rating:
+        table_expression, where_expression, args, first = build_rating_expression(max_rating, first, rating_type,
+                                                                                  table_expression, where_expression,
+                                                                                  MAX_RATING_WHERE_EXPRESSION, args)
 
-    table_expression, where_expression, args, first = build_rating_expression(min_rating, first, rating_type,
-                                                                              table_expression, where_expression,
-                                                                              MIN_RATING_WHERE_EXPRESSION, args)
+    if min_rating:
+        table_expression, where_expression, args, first = build_rating_expression(min_rating, first, rating_type,
+                                                                                  table_expression, where_expression,
+                                                                                  MIN_RATING_WHERE_EXPRESSION, args)
 
     if map_name:
         table_expression += MAP_JOIN
@@ -176,21 +178,20 @@ def build_game_stats_query(game_type, map_name, map_exclude, max_rating, min_rat
 
 def build_rating_expression(rating, first, rating_type, table_expression,
                             where_expression, rating_where_expression, args):
-    if rating:
-        try:
-            rating = int(rating)
-        except ValueError:
-            throw_malformed_query_error('rating field')
+    try:
+        rating = int(rating)
+    except ValueError:
+        throw_malformed_query_error('rating field')
 
-        if rating_type == 'ladder':
-            if LADDER1V1_JOIN not in table_expression:
-                table_expression += LADDER1V1_JOIN
-        else:
-            if GLOBAL_JOIN not in table_expression:
-                table_expression += GLOBAL_JOIN
+    if rating_type == 'ladder':
+        if LADDER1V1_JOIN not in table_expression:
+            table_expression += LADDER1V1_JOIN
+    else:
+        if GLOBAL_JOIN not in table_expression:
+            table_expression += GLOBAL_JOIN
 
-        args.append(rating)
-        first, where_expression = append_where_expression(first, where_expression, rating_where_expression)
+    args.append(rating)
+    first, where_expression = append_where_expression(first, where_expression, rating_where_expression)
     return table_expression, where_expression, args, first
 
 
