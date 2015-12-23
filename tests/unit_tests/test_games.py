@@ -203,7 +203,7 @@ def test_games_query_player_no_result(test_client, game_stats, game_player_stats
     assert len(result['data']) == 0
 
 
-def test_games_query_map_name(test_client, maps, game_player_stats, game_stats, global_rating):
+def test_games_query_map_name(test_client, maps, game_player_stats, game_stats, global_rating, login):
     response = test_client.get('/games?filter[map_name]=testMap1')
 
     assert response.status_code == 200
@@ -217,7 +217,7 @@ def test_games_query_map_name(test_client, maps, game_player_stats, game_stats, 
     assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
 
 
-def test_games_query_map_name_exclude(test_client, maps, game_player_stats, game_stats, global_rating):
+def test_games_query_map_name_exclude(test_client, maps, game_player_stats, game_stats, global_rating, login):
     response = test_client.get('/games?filter[map_name]=testMap1&filter[map_exclude]=true')
 
     assert response.status_code == 200
@@ -244,7 +244,7 @@ def test_games_query_map_exclude(test_client):
     assert 'errors' in result
 
 
-def test_games_query_max_rating(test_client, game_stats, game_player_stats, global_rating):
+def test_games_query_max_rating(test_client, game_stats, game_player_stats, global_rating,login):
     response = test_client.get('/games?filter[max_rating]=1000')
 
     assert response.status_code == 200
@@ -260,7 +260,7 @@ def test_games_query_max_rating(test_client, game_stats, game_player_stats, glob
     assert player_data[0]['attributes']['game_id'] == '234'
 
 
-def test_games_query_min_rating(test_client, game_stats, game_player_stats, global_rating):
+def test_games_query_min_rating(test_client, game_stats, game_player_stats, global_rating, login):
     response = test_client.get('/games?filter[min_rating]=1100')
 
     assert response.status_code == 200
@@ -276,7 +276,7 @@ def test_games_query_min_rating(test_client, game_stats, game_player_stats, glob
     assert results_data[1]['relationships']['players']['data'][1]['attributes']['game_id'] == '234'
 
 
-def test_games_query_max_and_min_rating(test_client, game_stats, game_player_stats, global_rating):
+def test_games_query_max_and_min_rating(test_client, game_stats, game_player_stats, global_rating, login):
     response = test_client.get('/games?filter[max_rating]=800&filter[min_rating]=500')
 
     assert response.status_code == 200
@@ -301,7 +301,7 @@ def test_games_query_rating_type_and_no_rating(test_client, game_stats, game_pla
     assert 'errors' in result
 
 
-def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_player_stats, ladder):
+def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_player_stats, ladder, login):
     response = test_client.get('/games?filter[max_rating]=800&filter[min_rating]=500&filter[rating_type]=ladder')
 
     assert response.status_code == 200
@@ -315,7 +315,7 @@ def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_pla
     assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
 
 
-def test_games_query_game_type(test_client, game_stats, game_player_stats, global_rating):
+def test_games_query_game_type(test_client, game_stats, game_player_stats, global_rating, login):
     response = test_client.get('/games?filter[game_type]=1')
 
     assert response.status_code == 200
@@ -329,7 +329,7 @@ def test_games_query_game_type(test_client, game_stats, game_player_stats, globa
     assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
 
 
-def test_game_id_no_players(test_client, game_stats, global_rating):
+def test_game_id_no_players(test_client, game_stats, global_rating, login):
     response = test_client.get('/games/235')
 
     assert response.status_code == 200
@@ -347,7 +347,7 @@ def test_game_id_no_players(test_client, game_stats, global_rating):
     assert len(player_data) == 0
 
 
-def test_game_id_four_players(test_client, game_stats, game_player_stats, global_rating):
+def test_game_id_four_players(test_client, game_stats, game_player_stats, global_rating, login):
     response = test_client.get('/games/234')
 
     assert response.status_code == 200

@@ -104,7 +104,7 @@ def game(game_id):
     if 'id' not in game_result['data']:
         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
 
-    player_select_expression = GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN
+    player_select_expression = GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN + LOGIN_JOIN
     player_results = fetch_data(GamePlayerStatsSchema(), player_select_expression, PLAYER_SELECT_EXPRESSIONS,
                                 MAX_PAGE_SIZE,
                                 request, where='gameId = %s', args=game_id)
