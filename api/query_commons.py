@@ -34,7 +34,7 @@ def get_select_expressions(fields, field_expression_dict):
     field_selects = []
     for field in fields:
         if field in field_expression_dict:
-            field_selects.append("{} as `{}`".format(field_expression_dict[field], field))
+            field_selects.append("{} AS `{}`".format(field_expression_dict[field], field))
 
     return ', '.join(field_selects)
 

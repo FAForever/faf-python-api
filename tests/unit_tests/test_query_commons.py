@@ -15,7 +15,7 @@ def test_get_select_expressions():
 
     result = get_select_expressions(fields, FIELD_EXPRESSION_DICT)
 
-    assert result == 'map.uid as `id`, UNIX_TIMESTAMP(t.date) as `timestamp`'
+    assert result == 'map.uid AS `id`, UNIX_TIMESTAMP(t.date) AS `timestamp`'
 
 
 def test_get_select_expressions_empty_fields():
@@ -24,9 +24,9 @@ def test_get_select_expressions_empty_fields():
     result = get_select_expressions(fields, FIELD_EXPRESSION_DICT)
 
     assert result.count(',') == 2
-    assert 'map.uid as `id`' in result
-    assert 'UNIX_TIMESTAMP(t.date) as `timestamp`' in result
-    assert 'feature.likes as `likes`' in result
+    assert 'map.uid AS `id`' in result
+    assert 'UNIX_TIMESTAMP(t.date) AS `timestamp`' in result
+    assert 'feature.likes AS `likes`' in result
 
 
 def test_get_select_expressions_none_fields():
@@ -35,9 +35,9 @@ def test_get_select_expressions_none_fields():
     result = get_select_expressions(fields, FIELD_EXPRESSION_DICT)
 
     assert result.count(',') == 2
-    assert 'map.uid as `id`' in result
-    assert 'UNIX_TIMESTAMP(t.date) as `timestamp`' in result
-    assert 'feature.likes as `likes`' in result
+    assert 'map.uid AS `id`' in result
+    assert 'UNIX_TIMESTAMP(t.date) AS `timestamp`' in result
+    assert 'feature.likes AS `likes`' in result
 
 
 def test_get_order_by():
