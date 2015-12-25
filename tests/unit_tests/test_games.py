@@ -6,6 +6,7 @@ from faf import db
 testGameName = 'testGame'
 testGame2Name = 'testGame2'
 testGame3Name = 'testGame3'
+testGame4Name = 'testGame4'
 
 
 @pytest.fixture
@@ -17,7 +18,8 @@ def game_stats(request):
         (id, startTime, gameType, gameMod, host, mapId, gameName, validity) VALUES
         (234, now(), '1', 2, 146315, 5091, 'testGame', 1),
         (235, now(), '2', 2, 146315, 5092, 'testGame2', 1),
-        (236, now(), '3', 1, 146315, 5092, 'testGame3', 1)""")
+        (236, now(), '3', 1, 146315, 5092, 'testGame3', 1),
+        (237, now(), '4', 2, 146315, 5093, 'testGame4', 1)""")
 
     def finalizer():
         with db.connection:
@@ -39,7 +41,9 @@ def game_player_stats(request):
         (3, 234, 146317, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
         (4, 234, 146318, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
         (7, 236, 146315, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
-        (8, 236, 146316, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now())""")
+        (8, 236, 146316, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
+        (9, 237, 146317, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
+        (10, 237, 146318, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now())""")
 
     def finalizer():
         with db.connection:
@@ -56,7 +60,8 @@ def maps(request):
         cursor.execute("DELETE FROM table_map")
         cursor.execute("""INSERT INTO table_map(id, name, mapuid) VALUES
         (5091,'testMap1',1),
-        (5092,'testMap2',1)""")
+        (5092,'testMap2',1),
+        (5093,'testMap3',1)""")
 
     def finalizer():
         with db.connection:
@@ -123,7 +128,7 @@ def global_rating(request):
     request.addfinalizer(finalizer)
 
 
-def test_games(test_client, game_stats, game_player_stats, global_rating):
+def test_games(test_client, game_stats, game_player_stats, global_rating, maps):
     response = test_client.get('/games')
 
     assert response.status_code == 200
@@ -131,13 +136,13 @@ def test_games(test_client, game_stats, game_player_stats, global_rating):
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    assert len(result['data']) == 3
+    assert len(result['data']) == 4
 
     for item in result['data']:
         assert 'id' in item
         assert 'type' in item
         assert 'game_name' in item['attributes']
-        assert 'map_id' in item['attributes']
+        assert 'map_name' in item['attributes']
         assert 'victory_condition' in item['attributes']
         assert 'game_mod' in item['attributes']
         assert 'host' in item['attributes']
@@ -157,7 +162,7 @@ def test_games_no_games(test_client):
     assert len(result['data']) == 0
 
 
-def test_games_query_one_player(test_client, game_stats, game_player_stats, login, global_rating):
+def test_games_query_one_player(test_client, game_stats, game_player_stats, login, global_rating, maps):
     response = test_client.get('/games?filter[players]=testUser2')
 
     assert response.status_code == 200
@@ -176,7 +181,7 @@ def test_games_query_one_player(test_client, game_stats, game_player_stats, logi
     assert player_data_2[0]['attributes']['game_id'] == '234'
 
 
-def test_games_query_multiple_players(test_client, game_stats, game_player_stats, login, global_rating):
+def test_games_query_multiple_players(test_client, game_stats, game_player_stats, login, global_rating, maps):
     response = test_client.get('/games?filter[players]=testUser1,testUser3')
 
     assert response.status_code == 200
@@ -224,11 +229,11 @@ def test_games_query_map_name_exclude(test_client, maps, game_player_stats, game
     result = json.loads(response.data.decode('utf-8'))
 
     results_data = result['data']
-    assert len(results_data) == 1
-    assert results_data[0]['id'] == '236'
+    assert len(results_data) == 2
+    assert results_data[0]['id'] == '237'
     player_data_1 = results_data[0]['relationships']['players']['data']
     assert len(player_data_1) == 2
-    assert player_data_1[0]['attributes']['game_id'] == '236'
+    assert player_data_1[0]['attributes']['game_id'] == '237'
 
 
 def test_games_query_map_exclude(test_client):
@@ -242,7 +247,7 @@ def test_games_query_map_exclude(test_client):
     assert 'errors' in result
 
 
-def test_games_query_max_rating(test_client, game_stats, game_player_stats, global_rating,login):
+def test_games_query_max_rating(test_client, game_stats, game_player_stats, global_rating,login, maps):
     response = test_client.get('/games?filter[max_rating]=1000')
 
     assert response.status_code == 200
@@ -252,13 +257,13 @@ def test_games_query_max_rating(test_client, game_stats, game_player_stats, glob
 
     results_data = result['data']
     assert len(results_data) == 1
-    assert results_data[0]['id'] == '234'
+    assert results_data[0]['id'] == '237'
     player_data = results_data[0]['relationships']['players']['data']
-    assert len(player_data) == 4
-    assert player_data[0]['attributes']['game_id'] == '234'
+    assert len(player_data) == 2
+    assert player_data[0]['attributes']['game_id'] == '237'
 
 
-def test_games_query_min_rating(test_client, game_stats, game_player_stats, global_rating, login):
+def test_games_query_min_rating(test_client, game_stats, game_player_stats, global_rating, login, maps):
     response = test_client.get('/games?filter[min_rating]=1100')
 
     assert response.status_code == 200
@@ -267,15 +272,13 @@ def test_games_query_min_rating(test_client, game_stats, game_player_stats, glob
     result = json.loads(response.data.decode('utf-8'))
 
     results_data = result['data']
-    assert len(results_data) == 2
+    assert len(results_data) == 1
     assert results_data[0]['id'] == '236'
-    assert results_data[1]['id'] == '234'
     assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '236'
-    assert results_data[1]['relationships']['players']['data'][1]['attributes']['game_id'] == '234'
 
 
-def test_games_query_max_and_min_rating(test_client, game_stats, game_player_stats, global_rating, login):
-    response = test_client.get('/games?filter[max_rating]=800&filter[min_rating]=500')
+def test_games_query_max_and_min_rating(test_client, game_stats, game_player_stats, global_rating, login, maps):
+    response = test_client.get('/games?filter[max_rating]=2000&filter[min_rating]=500')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -284,8 +287,8 @@ def test_games_query_max_and_min_rating(test_client, game_stats, game_player_sta
 
     results_data = result['data']
     assert len(results_data) == 1
-    assert results_data[0]['id'] == '234'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+    assert results_data[0]['id'] == '237'
+    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '237'
 
 
 def test_games_query_rating_type_and_no_rating(test_client, game_stats, game_player_stats):
@@ -299,8 +302,26 @@ def test_games_query_rating_type_and_no_rating(test_client, game_stats, game_pla
     assert 'errors' in result
 
 
-def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_player_stats, ladder, login):
-    response = test_client.get('/games?filter[max_rating]=800&filter[min_rating]=500&filter[rating_type]=ladder')
+def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_player_stats, ladder, login, maps):
+    response = test_client.get('/games?filter[max_rating]=2000&filter[min_rating]=500&filter[rating_type]=ladder')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    results_data = result['data']
+    assert len(results_data) == 3
+    assert results_data[0]['id'] == '237'
+    assert results_data[1]['id'] == '236'
+    assert results_data[2]['id'] == '234'
+    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '237'
+    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '236'
+    assert results_data[2]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+
+
+def test_games_query_victory_condition(test_client, game_stats, game_player_stats, global_rating, login, maps):
+    response = test_client.get('/games?filter[victory_condition]=domination')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -313,24 +334,44 @@ def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_pla
     assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
 
 
-def test_games_query_game_type(test_client, game_stats, game_player_stats, global_rating, login):
-    response = test_client.get('/games?filter[game_type]=1')
+def test_games_malformed_query_victory_condition(test_client):
+    response = test_client.get('/games?filter[victory_condition]=test')
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    assert 'message' in result
+
+
+def test_games_query_max_player_count(test_client, maps, game_stats, game_player_stats, login, global_rating):
+    response = test_client.get('/games?filter[max_player_count]=2')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
+    results_data = result['data']
+    assert len(results_data) == 2
 
+
+def test_games_query_min_player_count(test_client, maps, game_stats, game_player_stats, login, global_rating):
+    response = test_client.get('/games?filter[min_player_count]=4')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
     results_data = result['data']
     assert len(results_data) == 1
-    assert results_data[0]['id'] == '234'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
 
 
-def test_games_query_all_parameters(test_client, maps, game_stats, game_player_stats, ladder, login, global_rating):
+def test_games_query_all_parameters(test_client, maps, game_stats, game_player_stats, ladder, login):
     response = test_client.get('/games?filter[players]=testUser1,testUser3&filter[map_name]=testMap2'
                                '&filter[max_rating]=2000&filter[min_rating]=500&filter[game_type]=1'
-                               '&filter[rating_type]=ladder&filter[map_exclude]=true')
+                               '&filter[rating_type]=ladder&filter[map_exclude]=true&filter[max_player_count]=4'
+                               '&filter[min_player_count]=3')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -349,7 +390,7 @@ def test_games_query_all_parameters(test_client, maps, game_stats, game_player_s
     assert 'testUser' in player_data[0]['attributes']['login']
 
 
-def test_game_id_no_players(test_client, game_stats, global_rating, login):
+def test_game_id_no_players(test_client, game_stats, global_rating, login, maps):
     response = test_client.get('/games/235')
 
     assert response.status_code == 200
@@ -367,7 +408,7 @@ def test_game_id_no_players(test_client, game_stats, global_rating, login):
     assert len(player_data) == 0
 
 
-def test_game_id_four_players(test_client, game_stats, game_player_stats, global_rating, login):
+def test_game_id_four_players(test_client, game_stats, game_player_stats, global_rating, login, maps):
     response = test_client.get('/games/234')
 
     assert response.status_code == 200
@@ -397,7 +438,7 @@ def test_game_id_no_game(test_client, game_stats, game_player_stats):
     assert 'errors' in data
 
 
-def test_games_page_size(test_client, game_stats, game_player_stats):
+def test_games_page_size(test_client, game_stats, game_player_stats, maps):
     response = test_client.get('/games?page[size]=1')
 
     assert response.status_code == 200
@@ -406,7 +447,7 @@ def test_games_page_size(test_client, game_stats, game_player_stats):
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
     assert len(result['data']) == 1
-    assert result['data'][0]['attributes']['game_name'] == testGame3Name
+    assert result['data'][0]['attributes']['game_name'] == testGame4Name
 
 
 def test_games_invalid_page_size(test_client, game_stats):
