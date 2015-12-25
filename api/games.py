@@ -97,8 +97,7 @@ def games():
                                               rating_type, max_players, min_players)
 
         game_stats_select_expression = GAME_STATS_HEADER_EXPRESSION + select_expression + FOOTER_EXPRESSION
-        game_player_stats_select_expression = build_game_player_stats_query(select_expression,
-                                                                            rating_type) + FOOTER_EXPRESSION
+        game_player_stats_select_expression = build_game_player_stats_query(select_expression, rating_type)
         game_results = fetch_data(GameStatsSchema(), game_stats_select_expression, GAME_SELECT_EXPRESSIONS,
                                   MAX_GAME_PAGE_SIZE, request,
                                   args=args, enricher=enricher, sort='-id')
@@ -106,9 +105,8 @@ def games():
                                     PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, args=args,
                                     sort='-game_id')
     else:
-        game_results = fetch_data(GameStatsSchema(), GAME_STATS_TABLE + MAP_JOIN, GAME_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE,
-                                  request,
-                                  enricher=enricher, sort='-id')
+        game_results = fetch_data(GameStatsSchema(), GAME_STATS_TABLE + MAP_JOIN, GAME_SELECT_EXPRESSIONS,
+                                  MAX_GAME_PAGE_SIZE, request, enricher=enricher, sort='-id')
         player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN + LOGIN_JOIN,
                                     PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-game_id')
     return join_game_and_player_results(game_results, player_results)
@@ -116,8 +114,8 @@ def games():
 
 @app.route('/games/<game_id>')
 def game(game_id):
-    game_result = fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
-                             where='id = %s', args=game_id, many=False, enricher=enricher)
+    game_result = fetch_data(GameStatsSchema(), GAME_STATS_TABLE + MAP_JOIN, GAME_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
+                             where='gs.id = %s', args=game_id, many=False, enricher=enricher)
 
     if 'id' not in game_result['data']:
         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
@@ -266,7 +264,7 @@ def build_game_player_stats_query(select_expression, rating_type):
         table_expression = GAME_PLAYER_STATS_HEADER_EXPRESSION.format(LADDER1V1_JOIN, LOGIN_JOIN)
     else:
         table_expression = GAME_PLAYER_STATS_HEADER_EXPRESSION.format(GLOBAL_JOIN, LOGIN_JOIN)
-    return table_expression + select_expression
+    return table_expression + select_expression + FOOTER_EXPRESSION
 
 
 def join_game_and_player_results(game_results, player_results):
