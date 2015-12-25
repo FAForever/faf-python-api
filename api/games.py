@@ -88,7 +88,7 @@ def games():
     if map_exclude and not map_name:
         return {'errors': [{'title': 'Missing map_name parameter'}]}, 422
 
-    if player_list or map_name or max_rating or min_rating or victory_condition:
+    if player_list or map_name or max_rating or min_rating or victory_condition or max_players or min_players:
         if not map_exclude:
             map_exclude = 'False'
 
@@ -106,7 +106,7 @@ def games():
                                     PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, args=args,
                                     sort='-game_id')
     else:
-        game_results = fetch_data(GameStatsSchema(), GAME_STATS_TABLE, GAME_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE,
+        game_results = fetch_data(GameStatsSchema(), GAME_STATS_TABLE + MAP_JOIN, GAME_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE,
                                   request,
                                   enricher=enricher, sort='-id')
         player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN + LOGIN_JOIN,
