@@ -334,10 +334,44 @@ def test_games_query_victory_condition(test_client, game_stats, game_player_stat
     assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
 
 
-def test_games_query_all_parameters(test_client, maps, game_stats, game_player_stats, ladder, login, global_rating):
+def test_games_malformed_query_victory_condition(test_client):
+    response = test_client.get('/games?filter[victory_condition]=test')
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    assert 'message' in result
+
+
+def test_games_query_max_player_count(test_client, maps, game_stats, game_player_stats, login, global_rating):
+    response = test_client.get('/games?filter[max_player_count]=2')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    results_data = result['data']
+    assert len(results_data) == 2
+
+
+def test_games_query_min_player_count(test_client, maps, game_stats, game_player_stats, login, global_rating):
+    response = test_client.get('/games?filter[min_player_count]=4')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    results_data = result['data']
+    assert len(results_data) == 1
+
+
+def test_games_query_all_parameters(test_client, maps, game_stats, game_player_stats, ladder, login):
     response = test_client.get('/games?filter[players]=testUser1,testUser3&filter[map_name]=testMap2'
                                '&filter[max_rating]=2000&filter[min_rating]=500&filter[game_type]=1'
-                               '&filter[rating_type]=ladder&filter[map_exclude]=true')
+                               '&filter[rating_type]=ladder&filter[map_exclude]=true&filter[max_player_count]=4'
+                               '&filter[min_player_count]=3')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
