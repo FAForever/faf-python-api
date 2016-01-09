@@ -1,10 +1,11 @@
 import distutils.util
+
 from faf.api.game_stats_schema import GameStatsAndGamePLayerStatsSchema
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
 from flask import request
 from api import app, InvalidUsage
-from api.query_commons import fetch_data
+from api.query_commons import fetch_data, get_page_attributes, get_limit
 
 MAX_GAME_PAGE_SIZE = 1000
 MAX_PLAYER_PAGE_SIZE = MAX_GAME_PAGE_SIZE * 12
@@ -18,16 +19,16 @@ LOGIN_JOIN = ' INNER JOIN login l ON l.id = gps.playerId'
 GLOBAL_JOIN = ' INNER JOIN global_rating r ON r.id = gps.playerId'
 LADDER1V1_JOIN = ' INNER JOIN ladder1v1_rating r ON r.id = gps.playerId'
 
-GAMES_NO_FILTER_EXPRESSION = GAME_PLAYER_STATS_TABLE + ' INNER JOIN (SELECT * FROM ' + GAME_STATS_TABLE + 'LIMIT) AS gs ON' \
-                                'gs.id = gps.gameId' + LOGIN_JOIN + MAP_JOIN + GLOBAL_JOIN
+GAMES_NO_FILTER_EXPRESSION = GAME_PLAYER_STATS_TABLE + ' INNER JOIN (SELECT * FROM ' + GAME_STATS_TABLE + ' {})' \
+                                                                                                          ' AS gs ON gs.id = gps.gameId' + LOGIN_JOIN + MAP_JOIN + GLOBAL_JOIN
 
 PLAYER_COUNT_EXPRESSION = '(SELECT COUNT(*) FROM ' + GAME_PLAYER_STATS_TABLE + ' WHERE gs.id = gps.gameId)'
 RATING_EXPRESSION = '(ROUND(r.mean-3*r.deviation)) FROM ' + GAME_PLAYER_STATS_TABLE + ' {} WHERE gps.gameId=gs.id)'
 MIN_RATING_HEADER_EXPRESSION = '(SELECT MIN'
 MAX_RATING_HEADER_EXPRESSION = '(SELECT MAX'
 HEADER = GAME_STATS_TABLE + GAME_PLAYER_STATS_JOIN + LOGIN_JOIN + MAP_JOIN + '{}'
-SUBQUERY_HEADER = ' WHERE gs.id IN (SELECT {} FROM '
-SUBQUERY_FOOTER = ')'
+SUBQUERY_HEADER = ' WHERE gs.id IN (SELECT * FROM (SELECT {} FROM '
+SUBQUERY_FOOTER = '{}) as games)'
 
 GROUP_BY_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {} '
 MAP_NAME_WHERE_EXPRESSION = '{} tm.name = %s'
@@ -37,6 +38,7 @@ VICTORY_CONDITION_WHERE_EXPRESSION = 'gs.gameType = %s'
 MAX_RATING_HAVING_EXPRESSION = 'max_rating <= %s'
 MIN_RATING_HAVING_EXPRESSION = 'min_rating >= %s'
 
+LIMIT = ' LIMIT '
 AND = ' AND '
 WHERE = ' WHERE '
 HAVING = ' HAVING '
@@ -81,6 +83,9 @@ def games():
     max_players = request.args.get('filter[max_player_count]')
     min_players = request.args.get('filter[min_player_count]')
 
+    page, page_size = get_page_attributes(MAX_GAME_PAGE_SIZE, request)
+    limit_expression = get_limit(page, page_size)
+
     if rating_type and not (max_rating or min_rating):
         return {'errors': [{'title': 'Missing max/min_rating parameters'}]}, 422
 
@@ -93,39 +98,33 @@ def games():
 
     if player_list or map_name or max_rating or min_rating or victory_condition or max_players or min_players:
         select_expression, args = build_query(victory_condition, map_name, map_exclude, max_rating, min_rating,
-                                              player_list,
-                                              rating_type, max_players, min_players)
+                                              player_list, rating_type, max_players, min_players, limit_expression)
 
         game_player_joined_maps = GAME_AND_PLAYER_SELECT_EXPRESSIONS
         game_player_joined_maps['max_rating'] = build_rating_selector(rating_type, MAX_RATING_HEADER_EXPRESSION)
         game_player_joined_maps['min_rating'] = build_rating_selector(rating_type, MIN_RATING_HEADER_EXPRESSION)
 
         result = fetch_data(GameStatsAndGamePLayerStatsSchema(), select_expression, game_player_joined_maps,
-                            MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id')
+                            MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id', enricher=enricher)
     else:
-        result = fetch_data(GameStatsAndGamePLayerStatsSchema(), GAMES_NO_FILTER_EXPRESSION,
-                            GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id')
+        result = fetch_data(GameStatsAndGamePLayerStatsSchema(), GAMES_NO_FILTER_EXPRESSION.format(limit_expression),
+                            GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id',
+                            enricher=enricher)
 
     return result
 
 
 @app.route('/games/<game_id>')
 def game(game_id):
-    game_result = fetch_data(GameStatsAndGamePLayerStatsSchema(), GAME_STATS_TABLE + MAP_JOIN, GAME_SELECT_EXPRESSIONS,
-                             MAX_GAME_PAGE_SIZE, request,
-                             where='gs.id = %s', args=game_id, many=False, enricher=enricher)
+    result = fetch_data(GameStatsAndGamePLayerStatsSchema(),
+                        GAME_STATS_TABLE + MAP_JOIN + GAME_PLAYER_STATS_JOIN + GLOBAL_JOIN + LOGIN_JOIN,
+                        GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
+                        where='gs.id = %s', args=game_id, enricher=enricher)
 
-    if 'id' not in game_result['data']:
+    if len(result['data']) == 0:
         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
 
-    player_results = fetch_data(GameStatsAndGamePLayerStatsSchema(), GAME_PLAYER_STATS_TABLE,
-                                GAMES_NO_FILTER_EXPRESSION,
-                                MAX_GAME_PAGE_SIZE,
-                                request, where='gameId = %s', args=game_id)
-
-    game_result['data']['relationships'] = dict(players=player_results)
-
-    return game_result
+    return result
 
 
 def enricher(game):
@@ -143,10 +142,10 @@ def enricher(game):
 
 
 def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating, player_list, rating_type, max_players,
-                min_players):
+                min_players, limit_expression):
     table_expression = HEADER
     having_expression = ''
-    subquery_expression, args = build_subquery(victory_condition, map_name, map_exclude, player_list)
+    subquery_expression, args = build_subquery(victory_condition, map_name, map_exclude, player_list, limit_expression)
     first = True
 
     table_expression = format_with_rating(rating_type, table_expression)
@@ -177,7 +176,7 @@ def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating
     return table_expression + subquery_expression + having_expression, args
 
 
-def build_subquery(victory_condition, map_name, map_exclude, player_list):
+def build_subquery(victory_condition, map_name, map_exclude, player_list, limit_expression):
     table_expression = SUBQUERY_HEADER
     where_expression = ''
     args = list()
@@ -229,7 +228,7 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list):
     else:
         where_expression += GROUP_BY_EXPRESSION.format(0)
 
-    table_expression += where_expression + SUBQUERY_FOOTER
+    table_expression += where_expression + SUBQUERY_FOOTER.format(limit_expression)
 
     return table_expression, args
 

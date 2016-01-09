@@ -131,19 +131,7 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
     select_expressions = get_select_expressions(fields, select_expression_dict)
 
     if many:
-        try:
-            page_size = int(request.values.get('page[size]', max_page_size))
-            if page_size > max_page_size:
-                raise InvalidUsage("Invalid page size")
-        except ValueError:
-                raise InvalidUsage("Invalid page size")
-
-        try:
-            page = int(request.values.get('page[number]', 1))
-            if page < 1:
-                raise InvalidUsage("Invalid page number")
-        except ValueError:
-            raise InvalidUsage("Invalid page number")
+        page, page_size = get_page_attributes(max_page_size, request)
 
         limit_expression = get_limit(page, page_size)
         order_by_expression = get_order_by(sort, fields)
@@ -187,3 +175,19 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
             data['data']['attributes']['id'] = data['data']['id']
 
     return data
+
+
+def get_page_attributes(max_page_size, request):
+    try:
+        page_size = int(request.values.get('page[size]', max_page_size))
+        if page_size > max_page_size:
+            raise InvalidUsage("Invalid page size")
+    except ValueError:
+        raise InvalidUsage("Invalid page size")
+    try:
+        page = int(request.values.get('page[number]', 1))
+        if page < 1:
+            raise InvalidUsage("Invalid page number")
+    except ValueError:
+        raise InvalidUsage("Invalid page number")
+    return page, page_size
