@@ -131,13 +131,20 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
     select_expressions = get_select_expressions(fields, select_expression_dict)
 
     if many:
-        page_size = int(request.values.get('page[size]', max_page_size))
-        if page_size > max_page_size:
-            raise InvalidUsage("Invalid page size")
+        try:
+            page_size = int(request.values.get('page[size]', max_page_size))
+            if page_size > max_page_size:
+                raise InvalidUsage("Invalid page size")
+        except ValueError:
+                raise InvalidUsage("Invalid page size")
 
-        page = int(request.values.get('page[number]', 1))
-        if page < 1:
+        try:
+            page = int(request.values.get('page[number]', 1))
+            if page < 1:
+                raise InvalidUsage("Invalid page number")
+        except ValueError:
             raise InvalidUsage("Invalid page number")
+
         limit_expression = get_limit(page, page_size)
         order_by_expression = get_order_by(sort, fields)
     else:
