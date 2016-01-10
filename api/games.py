@@ -1,5 +1,4 @@
 import distutils.util
-
 from faf.api.game_stats_schema import GameStatsAndGamePLayerStatsSchema
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
@@ -44,7 +43,7 @@ WHERE = ' WHERE '
 HAVING = ' HAVING '
 NOT = ' NOT'
 
-GAME_AND_PLAYER_SELECT_EXPRESSIONS = {
+GAME_SELECT_EXPRESSIONS = {
     'id': 'gs.id',
     'game_name': 'gameName',
     'map_name': 'tm.name',
@@ -53,8 +52,10 @@ GAME_AND_PLAYER_SELECT_EXPRESSIONS = {
     'host': 'host',
     'start_time': 'startTime',
     'validity': 'validity',
-    'player_count': PLAYER_COUNT_EXPRESSION,
+    'player_count': PLAYER_COUNT_EXPRESSION
+}
 
+PLAYER_SELECT_EXPRESSIONS = {
     'game_player_stats_id': 'gps.id',
     'game_id': 'gameId',
     'player_id': 'playerId',
@@ -69,6 +70,8 @@ GAME_AND_PLAYER_SELECT_EXPRESSIONS = {
     'score': 'score',
     'score_time': 'scoreTime'
 }
+
+GAME_AND_PLAYER_SELECT_EXPRESSIONS = {**GAME_SELECT_EXPRESSIONS, **PLAYER_SELECT_EXPRESSIONS}
 
 
 @app.route('/games')
@@ -111,7 +114,7 @@ def games():
                             GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id',
                             enricher=enricher)
 
-    return result
+    return sort_player_game_results(result)
 
 
 @app.route('/games/<game_id>')
@@ -124,7 +127,7 @@ def game(game_id):
     if len(result['data']) == 0:
         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
 
-    return result
+    return sort_player_game_results(result)
 
 
 def enricher(game):
@@ -280,21 +283,37 @@ def append_filter_expression(prefix, first, where_expression, format_expression)
     return first, where_expression
 
 
-def join_game_and_player_results(game_results, player_results):
-    game_player = dict()
-    for player in player_results['data']:
-        id = player['attributes']['game_id']
-        if id not in game_player:
-            game_player[id] = list()
-        game_player[id].append(player)
-    for game in game_results['data']:
-        if game['id'] not in game_player:
-            game['relationships'] = dict(players=dict(data=list()))
-        else:
-            game['relationships'] = dict(players=dict(data=list(game_player[game['id']])))
+def sort_player_game_results(results):
+    game_player = dict(data=CustomList())
+    data = game_player['data']
 
-    return game_results
+    current_relationships = None
+    for game_player_object in results['data']:
+        id = game_player_object['id']
+        game_player_attributes = game_player_object['attributes']
+        if id not in data:
+            type = game_player_object['type']
+            attributes = {key: game_player_attributes[key] for key in GAME_SELECT_EXPRESSIONS.keys() if key in game_player_attributes}
+            current_relationships = dict(players=dict(data=list()))
+            data.append(dict(id=id, type=type, attributes=attributes, relationships=current_relationships))
+        player_dict = {key: game_player_attributes[key] for key in PLAYER_SELECT_EXPRESSIONS.keys() if key in game_player_attributes}
+
+        player_object = dict(attributes=player_dict)
+        current_relationships['players']['data'].append(player_object)
+        player_object['type'] = 'game_player_stats'
+
+        #TODO when id is removed from attributes for all other routes fix this line
+        player_object['id'] = player_dict.pop('game_player_stats_id')
+    return game_player
 
 
 def throw_malformed_query_error(field):
     raise InvalidUsage('Invalid ' + field)
+
+
+class CustomList(list):
+    def __contains__(self, item):
+        for list_item in self:
+            if list_item['id'] == item:
+                return True
+        return False
