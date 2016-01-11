@@ -124,20 +124,13 @@ class OAuthTestCase(unittest.TestCase):
         with db.connection:
             self.insert_user('User', '321')
 
-        encoded_redirect_uri = 'http%3A%2F%2Flocalhost%3A1234'
         # Dummy URL as we don't have an actual URL in this unit test
         authorize_url = 'http://localhost/oauth/authorize'
-
-        response = self.app.get('/login?next=' + encoded_redirect_uri, follow_redirects=True)
-
-        # Expect login screen
-        self.assertEqual(200, response.status_code)
-        self.assertRegex(response.data.decode("utf-8"), ".*<title>Log-in</title>.*")
 
         # Post login data
         response = self.app.post('/login', data=dict(username='User', password=sha256('321'.encode('utf-8')).hexdigest(), next=authorize_url))
 
-        self.assertEqual(200, response.status_code)
+        self.assertEqual(302, response.status_code)
 
     def test_login_invalid_redirect_uri(self):
         with db.connection:

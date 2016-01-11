@@ -128,11 +128,11 @@ def login(*args, **kwargs):
 
     username = request.form.get('username')
     # TODO implement salt as soon as available
-    password = request.form.get('password').encode('utf-8')
+    password = request.form.get('password')
 
     user = User.get_by_username(username)
 
-    hashed_password = password if len(password) == 64 else sha256(password).hexdigest()
+    hashed_password = password if len(password) == 64 else sha256(password.encode()).hexdigest()
 
     if user is None or user.password != hashed_password:
         kwargs['next'] = request.values.get('next')
