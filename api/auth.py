@@ -132,7 +132,9 @@ def login(*args, **kwargs):
 
     user = User.get_by_username(username)
 
-    if user is None or user.password != sha256(password).hexdigest():
+    hashed_password = password if len(password) == 64 else sha256(password).hexdigest()
+
+    if user is None or user.password != hashed_password:
         kwargs['next'] = request.values.get('next')
         return render_template('login.html', **kwargs)
 
