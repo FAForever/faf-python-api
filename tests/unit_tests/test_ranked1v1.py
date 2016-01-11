@@ -84,7 +84,7 @@ def test_ranked1v1_page_size(test_client, ranked1v1_ratings):
 
 
 def test_ranked1v1_invalid_page_size(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1?page[size]=1001')
+    response = test_client.get('/ranked1v1?page[size]=5001')
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page size'

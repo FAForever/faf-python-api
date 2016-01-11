@@ -8,7 +8,7 @@ from api.query_commons import fetch_data
 from faf import db
 
 ALLOWED_EXTENSIONS = {'zip'}
-MAX_PAGE_SIZE = 1000
+MAX_PAGE_SIZE = 5000
 
 SELECT_EXPRESSIONS = {
     'id': 'r.id',
@@ -37,7 +37,7 @@ def ranked1v1():
     where = ''
     active_filter = request.values.get('filter[is_active]')
     if active_filter:
-        where += 'is_active = ' + ('1' if active_filter.lower() == 'true' else '0')
+        where += 'is_active = ' + ('1' if active_filter.lower() == 'true' else '0') + ' AND r.numGames > 0'
 
     return fetch_data(Ranked1v1Schema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-rating',
                       args=dict(row_num=row_num), where=where)
