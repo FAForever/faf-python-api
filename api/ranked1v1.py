@@ -45,13 +45,14 @@ def ranked1v1():
 
 @app.route('/ranked1v1/<int:player_id>')
 def ranked1v1_get(player_id):
-    SELECT_EXPRESSIONS['ranking'] = """(SELECT count(*) FROM ladder1v1_rating
+    select_expressions = SELECT_EXPRESSIONS.copy()
+    select_expressions['ranking'] = """(SELECT count(*) FROM ladder1v1_rating
                                         WHERE ROUND(mean - 3 * deviation) >= ROUND(r.mean - 3 * r.deviation)
                                         AND is_active = 1
                                         AND numGames > 0)
                                         """
 
-    result = fetch_data(Ranked1v1Schema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+    result = fetch_data(Ranked1v1Schema(), TABLE, select_expressions, MAX_PAGE_SIZE, request,
                         many=False, where='r.id=%(id)s', args=dict(id=player_id, row_num=0))
 
     if 'id' not in result['data']:
