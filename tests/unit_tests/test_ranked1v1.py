@@ -24,7 +24,7 @@ def ranked1v1_ratings(request, app):
         (1, 1000, 300, 10, 5, 0),
         (2, 2000, 200, 20, 9, 1),
         (3, 1720, 100, 13, 7, 1),
-        (4, 1500, 100, 30, 17, 1)""")
+        (4, 1500, 99, 30, 17, 1)""")
 
     def finalizer():
         with db.connection:
@@ -49,7 +49,7 @@ def test_ranked1v1(test_client, ranked1v1_ratings):
 
 
 def test_ranked1v1(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1/2')
+    response = test_client.get('/ranked1v1/4')
     schema = Ranked1v1Schema()
 
     result, errors = schema.loads(response.data.decode('utf-8'))
@@ -57,8 +57,8 @@ def test_ranked1v1(test_client, ranked1v1_ratings):
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
     assert not errors
-    assert result['login'] == 'b'
-    assert result['ranking'] == 2
+    assert result['login'] == 'd'
+    assert result['ranking'] == 3
 
 
 def test_ranked1v1_not_found(test_client, ranked1v1_ratings):
