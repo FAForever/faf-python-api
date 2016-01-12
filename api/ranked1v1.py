@@ -63,12 +63,13 @@ def stats_rating_distribution_1v1():
         cursor = db.connection.cursor(DictCursor)
         cursor.execute("""
         SELECT
-            FLOOR(mean/100) * 100 AS `rating`,
+            FLOOR((mean - 3 * deviation)/100) * 100 AS `rating`,
             count(*) as count
         FROM ladder1v1_rating
         WHERE `is_active` = 1
-            AND FLOOR(mean/100) * 100 BETWEEN 0 AND 3000
+            AND mean BETWEEN 0 AND 3000
             AND deviation <= 250
+            AND numGames > 0
         GROUP BY `rating`
         ORDER BY CAST(`rating` as SIGNED) ASC;
         """)
