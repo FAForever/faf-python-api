@@ -1,4 +1,3 @@
-import distutils.util
 from faf.api.game_stats_schema import GameStatsAndGamePLayerStatsSchema
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
@@ -214,12 +213,6 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list, limit_
 
     if map_name:
         table_expression += MAP_JOIN
-        # if not map_exclude:
-        #     map_exclude = 'False'
-        # try:
-        #     map_exclude = distutils.util.strtobool(map_exclude)
-        # except ValueError:
-        #     throw_malformed_query_error('map_name')
         if map_exclude:
             first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
                                                                      MAP_NAME_WHERE_EXPRESSION.format(NOT), map_name,
@@ -239,8 +232,6 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list, limit_
 
     if players:
         where_expression += GROUP_BY_EXPRESSION.format(len(players) - 1)
-    else:
-        where_expression += GROUP_BY_EXPRESSION.format(0)
 
     table_expression += where_expression + SUBQUERY_FOOTER.format(limit_expression)
 
