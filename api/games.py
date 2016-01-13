@@ -36,6 +36,8 @@ MIN_PLAYER_WHERE_EXPRESSION = 'playerCount.playerCount >= %s'
 VICTORY_CONDITION_WHERE_EXPRESSION = 'gs.gameType = %s'
 MAX_RATING_HAVING_EXPRESSION = 'max_rating <= %s'
 MIN_RATING_HAVING_EXPRESSION = 'min_rating >= %s'
+MAX_DATE_HAVING_EXPRESSION = 'startTime <= %s'
+MIN_DATE_HAVING_EXPRESSION = 'startTime >= %s'
 
 LIMIT = ' LIMIT '
 AND = ' AND '
@@ -85,6 +87,8 @@ def games():
     rating_type = request.args.get('filter[rating_type]')
     max_players = request.args.get('filter[max_player_count]')
     min_players = request.args.get('filter[min_player_count]')
+    max_datetime = request.args.get('filter[max_datetime]')
+    min_datetime = request.args.get('filter[min_datetime]')
 
     page, page_size = get_page_attributes(MAX_GAME_PAGE_SIZE, request)
     limit_expression = get_limit(page, page_size)
@@ -95,13 +99,11 @@ def games():
     if map_exclude and not map_name:
         return {'errors': [{'title': 'Missing map_name parameter'}]}, 422
 
-    if player_list or map_name or max_rating or min_rating or victory_condition or max_players or min_players:
-        if not map_exclude:
-            map_exclude = 'False'
-
-    if player_list or map_name or max_rating or min_rating or victory_condition or max_players or min_players:
+    if player_list or map_name or max_rating or min_rating or victory_condition or max_players or min_players \
+            or max_datetime or min_datetime:
         select_expression, args = build_query(victory_condition, map_name, map_exclude, max_rating, min_rating,
-                                              player_list, rating_type, max_players, min_players, limit_expression)
+                                              player_list, rating_type, max_players, min_players, max_datetime,
+                                              min_datetime, limit_expression)
 
         game_player_joined_maps = GAME_AND_PLAYER_SELECT_EXPRESSIONS
         game_player_joined_maps['max_rating'] = build_rating_selector(rating_type, MAX_RATING_HEADER_EXPRESSION)
@@ -145,7 +147,7 @@ def enricher(game):
 
 
 def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating, player_list, rating_type, max_players,
-                min_players, limit_expression):
+                min_players, max_datetime, min_datetime, limit_expression):
     table_expression = HEADER
     having_expression = ''
     subquery_expression, args = build_subquery(victory_condition, map_name, map_exclude, player_list, limit_expression)
@@ -175,6 +177,13 @@ def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating
     if min_players:
         having_expression, args, first = build_player_count_expression(min_players, first, having_expression,
                                                                        MIN_PLAYER_WHERE_EXPRESSION, args)
+    if max_datetime:
+        first, table_expression, args = append_filter_expression(HAVING, first, table_expression,
+                                                                 MAX_DATE_HAVING_EXPRESSION, max_datetime, args)
+
+    if min_datetime:
+        first, table_expression, args = append_filter_expression(HAVING, first, table_expression,
+                                                                 MIN_DATE_HAVING_EXPRESSION, min_datetime, args)
 
     return table_expression + subquery_expression + having_expression, args
 
@@ -200,29 +209,31 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list, limit_
         table_expression += LOGIN_JOIN
         players = player_list.split(',')
         player_expression = 'l.login IN ({})'.format(','.join(['%s'] * len(players)))
-        args += players
-        first, where_expression = append_filter_expression(WHERE, first, where_expression, player_expression)
+        first, where_expression, args = append_filter_expression(WHERE, first, where_expression, player_expression,
+                                                                 players, args)
 
     if map_name:
         table_expression += MAP_JOIN
-        args.append(map_name)
-        try:
-            map_exclude = distutils.util.strtobool(map_exclude)
-        except ValueError:
-            throw_malformed_query_error('map_name')
+        # if not map_exclude:
+        #     map_exclude = 'False'
+        # try:
+        #     map_exclude = distutils.util.strtobool(map_exclude)
+        # except ValueError:
+        #     throw_malformed_query_error('map_name')
         if map_exclude:
-            first, where_expression = append_filter_expression(WHERE, first, where_expression,
-                                                               MAP_NAME_WHERE_EXPRESSION.format(NOT))
+            first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
+                                                                     MAP_NAME_WHERE_EXPRESSION.format(NOT), map_name,
+                                                                     args)
         else:
-            first, where_expression = append_filter_expression(WHERE, first, where_expression,
-                                                               MAP_NAME_WHERE_EXPRESSION.format(''))
+            first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
+                                                                     MAP_NAME_WHERE_EXPRESSION.format(''), map_name,
+                                                                     args)
     if victory_condition:
         condition = VictoryCondition.from_gpgnet_string(victory_condition)
-        # Returns false regardless if enum is assigned when "if condition"
         if condition is not None:
-            args.append(str(condition.value))
-            first, where_expression = append_filter_expression(WHERE, first, where_expression,
-                                                               VICTORY_CONDITION_WHERE_EXPRESSION)
+            first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
+                                                                     VICTORY_CONDITION_WHERE_EXPRESSION,
+                                                                     str(condition.value), args)
         else:
             throw_malformed_query_error('victory_condition')
 
@@ -258,8 +269,7 @@ def build_rating_expression(rating, first, table_expression,
     except ValueError:
         throw_malformed_query_error('rating field')
 
-    args.append(rating)
-    first, where_expression = append_filter_expression(HAVING, first, '', rating_bound_expression)
+    first, where_expression, args = append_filter_expression(HAVING, first, '', rating_bound_expression, rating, args)
     return table_expression, where_expression, args, first
 
 
@@ -269,18 +279,22 @@ def build_player_count_expression(player_count, first, table_expression, player_
     except ValueError:
         throw_malformed_query_error('player count field')
 
-    args.append(player_count)
-    first, table_expression = append_filter_expression(WHERE, first, table_expression, player_count_where_expression)
+    first, table_expression, args = append_filter_expression(WHERE, first, table_expression,
+                                                             player_count_where_expression, player_count, args)
     return table_expression, args, first
 
 
-def append_filter_expression(prefix, first, where_expression, format_expression):
+def append_filter_expression(prefix, first, where_expression, format_expression, new_args, args):
     if first:
         where_expression += prefix + format_expression
         first = False
     else:
         where_expression += AND + format_expression
-    return first, where_expression
+    if new_args is list:
+        args += new_args
+    else:
+        args.append(new_args)
+    return first, where_expression, args
 
 
 def sort_player_game_results(results):
@@ -293,16 +307,18 @@ def sort_player_game_results(results):
         game_player_attributes = game_player_object['attributes']
         if id not in data:
             type = game_player_object['type']
-            attributes = {key: game_player_attributes[key] for key in GAME_SELECT_EXPRESSIONS.keys() if key in game_player_attributes}
+            attributes = {key: game_player_attributes[key] for key in GAME_SELECT_EXPRESSIONS.keys() if
+                          key in game_player_attributes}
             current_relationships = dict(players=dict(data=list()))
             data.append(dict(id=id, type=type, attributes=attributes, relationships=current_relationships))
-        player_dict = {key: game_player_attributes[key] for key in PLAYER_SELECT_EXPRESSIONS.keys() if key in game_player_attributes}
+        player_dict = {key: game_player_attributes[key] for key in PLAYER_SELECT_EXPRESSIONS.keys() if
+                       key in game_player_attributes}
 
         player_object = dict(attributes=player_dict)
         current_relationships['players']['data'].append(player_object)
         player_object['type'] = 'game_player_stats'
 
-        #TODO when id is removed from attributes for all other routes fix this line
+        # TODO when id is removed from attributes for all other routes fix this line
         player_object['id'] = player_dict.pop('game_player_stats_id')
     return game_player
 
