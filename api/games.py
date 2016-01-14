@@ -307,19 +307,21 @@ def append_filter_expression(prefix, first, where_expression, format_expression,
 
 
 def sort_player_game_results(results):
-    game_player = dict(data=CustomList())
+    game_player = dict(data=list())
     data = game_player['data']
 
     current_relationships = None
-    for game_player_object in results['data']:
-        id = game_player_object['id']
+    current_game_id = None
+    for index, game_player_object in enumerate(results['data']):
+        game_id = game_player_object['id']
         game_player_attributes = game_player_object['attributes']
-        if id not in data:
-            type = game_player_object['type']
+        if current_game_id != game_id:
+            current_game_id = game_id
+            gs_type = game_player_object['type']
             attributes = {key: game_player_attributes[key] for key in GAME_SELECT_EXPRESSIONS.keys() if
                           key in game_player_attributes}
             current_relationships = dict(players=dict(data=list()))
-            data.append(dict(id=id, type=type, attributes=attributes, relationships=current_relationships))
+            data.append(dict(id=game_id, type=gs_type, attributes=attributes, relationships=current_relationships))
         player_dict = {key: game_player_attributes[key] for key in PLAYER_SELECT_EXPRESSIONS.keys() if
                        key in game_player_attributes}
 
@@ -334,11 +336,3 @@ def sort_player_game_results(results):
 
 def throw_malformed_query_error(field):
     raise InvalidUsage('Invalid ' + field)
-
-
-class CustomList(list):
-    def __contains__(self, item):
-        for list_item in self:
-            if list_item['id'] == item:
-                return True
-        return False
