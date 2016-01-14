@@ -1,3 +1,5 @@
+from dateutil.parser import parse
+from dateutil.tz import tzoffset
 from faf.api.game_stats_schema import GameStatsAndGamePLayerStatsSchema
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
@@ -30,8 +32,8 @@ SUBQUERY_FOOTER = '{}) as games)'
 
 GROUP_BY_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {} '
 MAP_NAME_WHERE_EXPRESSION = '{} tm.name = %s'
-MAX_PLAYER_WHERE_EXPRESSION = 'playerCount.playerCount <= %s'
-MIN_PLAYER_WHERE_EXPRESSION = 'playerCount.playerCount >= %s'
+MAX_PLAYER_WHERE_EXPRESSION = 'player_count.playerCount <= %s'
+MIN_PLAYER_WHERE_EXPRESSION = 'player_count.playerCount >= %s'
 VICTORY_CONDITION_WHERE_EXPRESSION = 'gs.gameType = %s'
 MAX_RATING_HAVING_EXPRESSION = 'max_rating <= %s'
 MIN_RATING_HAVING_EXPRESSION = 'min_rating >= %s'
@@ -73,6 +75,7 @@ PLAYER_SELECT_EXPRESSIONS = {
 }
 
 GAME_AND_PLAYER_SELECT_EXPRESSIONS = {**GAME_SELECT_EXPRESSIONS, **PLAYER_SELECT_EXPRESSIONS}
+UTC_TZ = tzoffset('UTC', 0)
 
 
 @app.route('/games')
@@ -92,11 +95,9 @@ def games():
     page, page_size = get_page_attributes(MAX_GAME_PAGE_SIZE, request)
     limit_expression = get_limit(page, page_size)
 
-    if rating_type and not (max_rating or min_rating):
-        return {'errors': [{'title': 'Missing max/min_rating parameters'}]}, 422
-
-    if map_exclude and not map_name:
-        return {'errors': [{'title': 'Missing map_name parameter'}]}, 422
+    errors = check_syntax_errors(rating_type, max_rating, min_rating, map_exclude, map_name, max_datetime, min_datetime)
+    if errors:
+        return errors
 
     if player_list or map_name or max_rating or min_rating or victory_condition or max_players or min_players \
             or max_datetime or min_datetime:
@@ -145,44 +146,44 @@ def enricher(game):
             game['validity'] = GameValidity(int(game['validity'])).name
 
 
+def check_syntax_errors(rating_type, max_rating, min_rating, map_exclude, map_name, max_datetime, min_datetime):
+    if rating_type and not (max_rating or min_rating):
+        return {'errors': [{'title': 'Missing max/min_rating parameters'}]}, 422
+    elif map_exclude and not map_name:
+        return {'errors': [{'title': 'Missing map_name parameter'}]}, 422
+    try:
+        if max_datetime and not parse(max_datetime).tzinfo:
+            return {'errors': [{'title': 'max date time must include timezone'}]}, 422
+        if min_datetime and not parse(min_datetime).tzinfo:
+            return {'errors': [{'title': 'min date time must include timezone'}]}, 422
+    except ValueError:
+        throw_malformed_query_error('date time')
+    return None
+
+
 def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating, player_list, rating_type, max_players,
                 min_players, max_datetime, min_datetime, limit_expression):
     table_expression = HEADER
     having_expression = ''
-    subquery_expression, args = build_subquery(victory_condition, map_name, map_exclude, player_list, limit_expression)
     first = True
+
+    subquery_expression, args = build_subquery(victory_condition, map_name, map_exclude, player_list, limit_expression)
 
     table_expression = format_with_rating(rating_type, table_expression)
     if max_rating or min_rating:
+        having_expression, args, first = build_rating_expression(first, having_expression, args,
+                                                                 (max_rating, MAX_RATING_HAVING_EXPRESSION),
+                                                                 (min_rating, MIN_RATING_HAVING_EXPRESSION))
 
-        first = True
-        if max_rating:
-            having_expression, where_expression, args, first = build_rating_expression(max_rating, first,
-                                                                                       having_expression,
-                                                                                       MAX_RATING_HAVING_EXPRESSION,
-                                                                                       args)
-            having_expression += where_expression
-        if min_rating:
-            having_expression, where_expression, args, first = build_rating_expression(min_rating, first,
-                                                                                       having_expression,
-                                                                                       MIN_RATING_HAVING_EXPRESSION,
-                                                                                       args)
-            having_expression += where_expression
+    if max_players or min_players:
+        having_expression, args, first = build_player_count_expression(first, having_expression, args,
+                                                                       (max_players, MAX_PLAYER_WHERE_EXPRESSION),
+                                                                       (min_players, MIN_PLAYER_WHERE_EXPRESSION))
 
-    if max_players:
-        having_expression, args, first = build_player_count_expression(max_players, first, having_expression,
-                                                                       MAX_PLAYER_WHERE_EXPRESSION, args)
-
-    if min_players:
-        having_expression, args, first = build_player_count_expression(min_players, first, having_expression,
-                                                                       MIN_PLAYER_WHERE_EXPRESSION, args)
-    if max_datetime:
-        first, table_expression, args = append_filter_expression(HAVING, first, table_expression,
-                                                                 MAX_DATE_HAVING_EXPRESSION, max_datetime, args)
-
-    if min_datetime:
-        first, table_expression, args = append_filter_expression(HAVING, first, table_expression,
-                                                                 MIN_DATE_HAVING_EXPRESSION, min_datetime, args)
+    if max_datetime or min_datetime:
+        having_expression, args, first = build_date_time_expression(first, having_expression, args,
+                                                                    (max_datetime, MAX_DATE_HAVING_EXPRESSION),
+                                                                    (min_datetime, MIN_DATE_HAVING_EXPRESSION))
 
     return table_expression + subquery_expression + having_expression, args
 
@@ -209,24 +210,25 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list, limit_
         players = player_list.split(',')
         player_expression = 'l.login IN ({})'.format(','.join(['%s'] * len(players)))
         first, where_expression, args = append_filter_expression(WHERE, first, where_expression, player_expression,
-                                                                 players, args)
+                                                                 args, *players)
 
     if map_name:
         table_expression += MAP_JOIN
         if map_exclude:
-            first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
-                                                                     MAP_NAME_WHERE_EXPRESSION.format(NOT), map_name,
-                                                                     args)
+            map_name_expression = MAP_NAME_WHERE_EXPRESSION.format(NOT)
         else:
-            first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
-                                                                     MAP_NAME_WHERE_EXPRESSION.format(''), map_name,
-                                                                     args)
+            map_name_expression = MAP_NAME_WHERE_EXPRESSION.format('')
+
+        first, where_expression, args = append_filter_expression(WHERE, first, where_expression, map_name_expression,
+                                                                 args, map_name)
+
     if victory_condition:
         condition = VictoryCondition.from_gpgnet_string(victory_condition)
+        # condition can return a falsey value of 0
         if condition is not None:
             first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
                                                                      VICTORY_CONDITION_WHERE_EXPRESSION,
-                                                                     str(condition.value), args)
+                                                                     args, str(condition.value))
         else:
             throw_malformed_query_error('victory_condition')
 
@@ -253,38 +255,54 @@ def format_with_rating(rating_type, expression):
     return expression
 
 
-def build_rating_expression(rating, first, table_expression,
-                            rating_bound_expression, args):
-    try:
-        rating = int(rating)
-    except ValueError:
-        throw_malformed_query_error('rating field')
+def build_rating_expression(first, having_expression, args, *rating_bounds):
+    for rating, rating_bound_expression in rating_bounds:
+        if not rating:
+            continue
+        try:
+            rating = int(rating)
+        except ValueError:
+            throw_malformed_query_error('rating field')
+        first, where_expression, args = append_filter_expression(HAVING, first, '', rating_bound_expression, args,
+                                                                 rating)
+        having_expression += where_expression
 
-    first, where_expression, args = append_filter_expression(HAVING, first, '', rating_bound_expression, rating, args)
-    return table_expression, where_expression, args, first
+    return having_expression, args, first
 
 
-def build_player_count_expression(player_count, first, table_expression, player_count_where_expression, args):
-    try:
-        player_count = int(player_count)
-    except ValueError:
-        throw_malformed_query_error('player count field')
+def build_player_count_expression(first, table_expression, args, *player_counts):
+    for player_count, count_expression in player_counts:
+        if not player_count:
+            continue
+        try:
+            player_count = int(player_count)
+        except ValueError:
+            throw_malformed_query_error('player count field')
 
-    first, table_expression, args = append_filter_expression(WHERE, first, table_expression,
-                                                             player_count_where_expression, player_count, args)
+        first, table_expression, args = append_filter_expression(WHERE, first, table_expression, count_expression, args,
+                                                                 player_count)
+
     return table_expression, args, first
 
 
-def append_filter_expression(prefix, first, where_expression, format_expression, new_args, args):
+def build_date_time_expression(first, having_expression, args, *date_times):
+    for date_time, date_expression in date_times:
+        if not date_time:
+            continue
+        converted_dt = parse(date_time).astimezone(UTC_TZ)
+        first, having_expression, args = append_filter_expression(HAVING, first, having_expression, date_expression,
+                                                                  args, converted_dt)
+
+    return having_expression, args, first
+
+
+def append_filter_expression(prefix, first, where_expression, format_expression, args, *new_args):
     if first:
         where_expression += prefix + format_expression
         first = False
     else:
         where_expression += AND + format_expression
-    if new_args is list:
-        args += new_args
-    else:
-        args.append(new_args)
+    args.extend(new_args)
     return first, where_expression, args
 
 
