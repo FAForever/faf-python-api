@@ -16,10 +16,10 @@ def game_stats(request):
         cursor.execute("TRUNCATE TABLE game_stats")
         cursor.execute("""INSERT INTO game_stats
         (id, startTime, gameType, gameMod, host, mapId, gameName, validity) VALUES
-        (234, now(), '1', 2, 146315, 5091, 'testGame', 1),
-        (235, now(), '2', 2, 146315, 5092, 'testGame2', 1),
-        (236, now(), '3', 1, 146315, 5092, 'testGame3', 1),
-        (237, now(), '4', 2, 146315, 5093, 'testGame4', 1)""")
+        (234, '2000-01-01', '1', 2, 146315, 5091, 'testGame', 1),
+        (235, '2000-03-01', '2', 2, 146315, 5092, 'testGame2', 1),
+        (236, '2000-05-01', '3', 1, 146315, 5092, 'testGame3', 1),
+        (237, '2000-07-01', '4', 2, 146315, 5093, 'testGame4', 1)""")
 
     def finalizer():
         with db.connection:
@@ -40,6 +40,7 @@ def game_player_stats(request):
         (2, 234, 146316, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
         (3, 234, 146317, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
         (4, 234, 146318, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
+        (5, 235, 146316, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
         (7, 236, 146315, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
         (8, 236, 146316, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
         (9, 237, 146317, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
@@ -128,7 +129,7 @@ def global_rating(request):
     request.addfinalizer(finalizer)
 
 
-def test_games(test_client, game_stats, game_player_stats, global_rating, maps):
+def test_games(test_client, game_stats, game_player_stats, global_rating, maps, login):
     response = test_client.get('/games')
 
     assert response.status_code == 200
@@ -170,15 +171,19 @@ def test_games_query_one_player(test_client, game_stats, game_player_stats, logi
 
     result = json.loads(response.data.decode('utf-8'))
     results_data = result['data']
-    assert len(results_data) == 2
+    assert len(results_data) == 3
     assert results_data[0]['id'] == '236'
-    assert results_data[1]['id'] == '234'
+    assert results_data[1]['id'] == '235'
+    assert results_data[2]['id'] == '234'
     player_data_1 = results_data[0]['relationships']['players']['data']
     assert len(player_data_1) == 2
     assert player_data_1[0]['attributes']['game_id'] == '236'
     player_data_2 = results_data[1]['relationships']['players']['data']
-    assert len(player_data_2) == 4
-    assert player_data_2[0]['attributes']['game_id'] == '234'
+    assert len(player_data_2) == 1
+    assert player_data_2[0]['attributes']['game_id'] == '235'
+    player_data_3 = results_data[2]['relationships']['players']['data']
+    assert len(player_data_3) == 4
+    assert player_data_3[0]['attributes']['game_id'] == '234'
 
 
 def test_games_query_multiple_players(test_client, game_stats, game_player_stats, login, global_rating, maps):
@@ -229,7 +234,7 @@ def test_games_query_map_name_exclude(test_client, maps, game_player_stats, game
     result = json.loads(response.data.decode('utf-8'))
 
     results_data = result['data']
-    assert len(results_data) == 2
+    assert len(results_data) == 3
     assert results_data[0]['id'] == '237'
     player_data_1 = results_data[0]['relationships']['players']['data']
     assert len(player_data_1) == 2
@@ -272,9 +277,11 @@ def test_games_query_min_rating(test_client, game_stats, game_player_stats, glob
     result = json.loads(response.data.decode('utf-8'))
 
     results_data = result['data']
-    assert len(results_data) == 1
+    assert len(results_data) == 2
     assert results_data[0]['id'] == '236'
     assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '236'
+    assert results_data[1]['id'] == '235'
+    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
 
 
 def test_games_query_max_and_min_rating(test_client, game_stats, game_player_stats, global_rating, login, maps):
@@ -286,9 +293,11 @@ def test_games_query_max_and_min_rating(test_client, game_stats, game_player_sta
     result = json.loads(response.data.decode('utf-8'))
 
     results_data = result['data']
-    assert len(results_data) == 1
+    assert len(results_data) == 2
     assert results_data[0]['id'] == '237'
     assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '237'
+    assert results_data[1]['id'] == '235'
+    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
 
 
 def test_games_query_rating_type_and_no_rating(test_client, game_stats, game_player_stats):
@@ -311,13 +320,15 @@ def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_pla
     result = json.loads(response.data.decode('utf-8'))
 
     results_data = result['data']
-    assert len(results_data) == 3
+    assert len(results_data) == 4
     assert results_data[0]['id'] == '237'
     assert results_data[1]['id'] == '236'
-    assert results_data[2]['id'] == '234'
+    assert results_data[2]['id'] == '235'
+    assert results_data[3]['id'] == '234'
     assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '237'
     assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '236'
-    assert results_data[2]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+    assert results_data[2]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
+    assert results_data[3]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
 
 
 def test_games_query_victory_condition(test_client, game_stats, game_player_stats, global_rating, login, maps):
@@ -345,15 +356,15 @@ def test_games_malformed_query_victory_condition(test_client):
     assert 'message' in result
 
 
-def test_games_query_max_player_count(test_client, maps, game_stats, game_player_stats, login, global_rating):
+def test_games_query_max_player_count(test_client, maps, game_stats, game_player_stats, login, global_rating, app):
+    app.debug = True
     response = test_client.get('/games?filter[max_player_count]=2')
-
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     results_data = result['data']
-    assert len(results_data) == 2
+    assert len(results_data) == 3
 
 
 def test_games_query_min_player_count(test_client, maps, game_stats, game_player_stats, login, global_rating):
@@ -390,22 +401,21 @@ def test_games_query_all_parameters(test_client, maps, game_stats, game_player_s
     assert 'testUser' in player_data[0]['attributes']['login']
 
 
-def test_game_id_no_players(test_client, game_stats, global_rating, login, maps):
+def test_game_id_one_player(test_client, game_stats, game_player_stats, global_rating, login, maps):
     response = test_client.get('/games/235')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
-    results_data = result['data']
+    results_data = result['data'][0]
     assert 'data' in result
-    assert len(results_data['relationships']['players']['data']) == 0
     assert results_data['id'] == '235'
     assert results_data['attributes']['game_name'] == testGame2Name
     assert results_data['attributes']['validity'] == 'TOO_MANY_DESYNCS'
     assert results_data['attributes']['victory_condition'] == 'ERADICATION'
     player_data = results_data['relationships']['players']['data']
-    assert len(player_data) == 0
+    assert len(player_data) == 1
 
 
 def test_game_id_four_players(test_client, game_stats, game_player_stats, global_rating, login, maps):
@@ -416,7 +426,7 @@ def test_game_id_four_players(test_client, game_stats, game_player_stats, global
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    result_data = result['data']
+    result_data = result['data'][0]
     assert len(result_data['relationships']['players']['data']) == 4
     assert result_data['id'] == '234'
     assert result_data['attributes']['game_name'] == testGameName

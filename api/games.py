@@ -32,8 +32,8 @@ SUBQUERY_FOOTER = '{}) as games)'
 
 GROUP_BY_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {} '
 MAP_NAME_WHERE_EXPRESSION = '{} tm.name = %s'
-MAX_PLAYER_WHERE_EXPRESSION = 'player_count.playerCount <= %s'
-MIN_PLAYER_WHERE_EXPRESSION = 'player_count.playerCount >= %s'
+MAX_PLAYER_WHERE_EXPRESSION = 'player_count <= %s'
+MIN_PLAYER_WHERE_EXPRESSION = 'player_count >= %s'
 VICTORY_CONDITION_WHERE_EXPRESSION = 'gs.gameType = %s'
 MAX_RATING_HAVING_EXPRESSION = 'max_rating <= %s'
 MIN_RATING_HAVING_EXPRESSION = 'min_rating >= %s'
@@ -279,7 +279,7 @@ def build_player_count_expression(first, table_expression, args, *player_counts)
         except ValueError:
             throw_malformed_query_error('player count field')
 
-        first, table_expression, args = append_filter_expression(WHERE, first, table_expression, count_expression, args,
+        first, table_expression, args = append_filter_expression(HAVING, first, table_expression, count_expression, args,
                                                                  player_count)
 
     return table_expression, args, first
@@ -312,7 +312,7 @@ def sort_player_game_results(results):
 
     current_relationships = None
     current_game_id = None
-    for index, game_player_object in enumerate(results['data']):
+    for game_player_object in results['data']:
         game_id = game_player_object['id']
         game_player_attributes = game_player_object['attributes']
         if current_game_id != game_id:
@@ -330,7 +330,8 @@ def sort_player_game_results(results):
         player_object['type'] = 'game_player_stats'
 
         # TODO when id is removed from attributes for all other routes fix this line
-        player_object['id'] = player_dict.pop('game_player_stats_id')
+        if 'game_player_stats_id' in player_dict:
+            player_object['id'] = player_dict.pop('game_player_stats_id')
     return game_player
 
 
