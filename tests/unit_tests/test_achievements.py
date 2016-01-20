@@ -1,5 +1,6 @@
 import datetime
 import importlib
+from unittest.mock import Mock
 
 from faf.api.achievement_schema import AchievementSchema
 from faf.api.player_achievement_schema import PlayerAchievementSchema
@@ -9,12 +10,11 @@ import json
 from api import User
 import faf.db as db
 import unittest
-from tests.unit_tests.mock_oauth_token import MockOAuthToken
 
 
 class AchievementsTestCase(unittest.TestCase):
     def get_token(self, access_token=None, refresh_token=None):
-        return MockOAuthToken(
+        return Mock(
             user=User(id=1),
             expires=datetime.datetime.now() + datetime.timedelta(hours=1),
             scopes=['read_achievements', 'write_achievements']
