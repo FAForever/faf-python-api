@@ -4,7 +4,6 @@ Flask-Login
 Flask-JWT
 coveralls
 peewee >= 2.4.2
-lupa >= 1.0.1
 python-geoip-geolite2
 marshmallow
 marshmallow_jsonapi
