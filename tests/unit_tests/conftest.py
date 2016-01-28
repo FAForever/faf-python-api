@@ -15,7 +15,7 @@ def app():
     importlib.reload(api.ranked1v1)
 
     api.app.config.from_object('config')
-    api.debug = True
+    api.app.debug = True
     api.api_init()
     return api.app
 
