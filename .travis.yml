@@ -3,16 +3,16 @@ language: python
 python:
   - "3.5"
 
-sudo: false
+sudo: required
+dist: trusty
 
-services:
-  - mysql
-
-addons:
-  apt:
-    packages:
-    - liblua5.1-dev
-    - libffi-dev
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install debconf-utils
+  - sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password'
+  - sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password'
+  - sudo apt-get -y install mysql-client-5.6 mysql-client-core-5.6 mysql-server-core-5.6 liblua5.1-dev libffi-dev
+  - sudo service mysql start
 
 install:
   - cp config.example.py config.py
@@ -21,7 +21,7 @@ install:
   - "pip install -e db"
 
 before_script:
-  - "mysql -e 'create database faf_test;'"
+  - "mysql -uroot -e 'create database faf_test;'"
   - "mysql -uroot faf_test < db/db-structure.sql"
   - "mysql -uroot faf_test < db/db-data.sql"
 
