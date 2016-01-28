@@ -136,6 +136,7 @@ import api.oauth_handlers
 import api.deploy
 import api.auth
 import api.avatars
+import api.bugreports
 import api.games
 import api.mods
 import api.maps

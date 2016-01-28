@@ -8,6 +8,7 @@ import api
 def app():
     importlib.reload(api)
     importlib.reload(api.mods)
+    importlib.reload(api.bugreports)
     importlib.reload(api.maps)
     importlib.reload(api.events)
     importlib.reload(api.achievements)
