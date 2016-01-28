@@ -3,8 +3,13 @@ language: python
 python:
   - "3.5"
 
-before_install:
-  - sudo apt-get install liblua5.1-dev libffi-dev
+sudo: false
+
+addons:
+  apt:
+    packages:
+    - liblua5.1-dev
+    - libffi-dev
 
 install:
   - cp config.example.py config.py
