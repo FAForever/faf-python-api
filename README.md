@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/FAForever/api.svg?branch=develop)](https://travis-ci.org/FAForever/api)
+[![Coverage Status](https://coveralls.io/repos/github/FAForever/api/badge.svg?branch=develop)](https://coveralls.io/github/FAForever/api?branch=develop)
+
 # FAForever Python Web API
 This repository holds the web api (written in python) that is run on the server to
 provide required REST services to clients.
