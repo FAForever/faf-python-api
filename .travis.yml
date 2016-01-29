@@ -12,13 +12,7 @@ services:
 before_install:
   - sudo apt-get update
   - sudo apt-get -y install liblua5.1-dev libffi-dev
-  - pushd db
-  - docker build -t faf-db .
-  - docker run -d --name faf-db -e MYSQL_ROOT_PASSWORD=banana faf-db
-  - docker logs faf-db
-  - docker exec -i faf-db mysql -h127.0.0.1 -uroot -pbanana < db-structure.sql
-  - docker exec -i faf-db mysql -h127.0.0.1 -uroot -pbanana < db-data.sql
-  - popd
+  - bash init_and_wait_for_db.sh
   - cp config.example.py config.py
 
 install:
