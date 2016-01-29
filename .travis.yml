@@ -15,25 +15,18 @@ before_install:
   - pushd db
   - docker build -t faf-db .
   - docker run -d --name faf-db -e MYSQL_ROOT_PASSWORD=banana faf-db
-  - docker exec -i faf-db mysql -uroot -pbanana < db-structure.sql
-  - docker exec -i faf-db mysql -uroot -pbanana < db-data.sql
+  - docker logs faf-db
+  - docker exec -i faf-db mysql -h127.0.0.1 -uroot -pbanana < db-structure.sql
+  - docker exec -i faf-db mysql -h127.0.0.1 -uroot -pbanana < db-data.sql
   - popd
+  - cp config.example.py config.py
 
 install:
-  - cp config.example.py config.py
-  - "pip install --upgrade pip"
-  - "pip install --trusted-host content.dev.faforever.com -r requirements.txt"
-  - "pip install -e db"
-
-before_script:
-  - "mysql -uroot -e 'create database faf_test;'"
-  - "mysql -uroot faf_test < db/db-structure.sql"
-  - "mysql -uroot faf_test < db/db-data.sql"
+  - docker build -t faf-api .
 
 script:
-  - pip install -e .
-  - py.test --cov-report term-missing --cov=api
-  - pyflakes . || true
+  - docker run --link faf-db:db faf-api py.test --cov-report term-missing --cov=api
+  - docker run --link faf-db:db faf-api pyflakes . || true
 
 after_success:
-  - coveralls
+  - docker run --link faf-db:db faf-api coveralls
