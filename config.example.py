@@ -6,11 +6,11 @@ import os
 DATABASE = dict(
     db=os.getenv("FAF_DB_NAME", "faf_test"),
     user=os.getenv("FAF_DB_LOGIN", "root"),
-    password=os.getenv("DB_ENV_MYSQL_ROOT_PASSWORD", ""),
+    password=os.getenv("FAF_DB_PASSWORD", ""),
     host=os.getenv("DB_PORT_3306_TCP_ADDR", "127.0.0.1"),
     port=int(os.getenv("DB_PORT_3306_TCP_PORT", "3306")))
 
-HOST_NAME = os.getenv("FAF_API_HOSTNAME", 'dev.faforever.com')
+HOST_NAME = os.getenv("VIRTUAL_HOST", 'dev.faforever.com')
 
 ENVIRONMENT = os.getenv("FAF_API_ENVIRONMENT", 'testing')
 
