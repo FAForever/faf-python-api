@@ -19,8 +19,8 @@ install:
   - docker build -t faf-api .
 
 script:
-  - docker run --link faf-db:db faf-api py.test --cov-report term-missing --cov=api
-  - docker run --link faf-db:db faf-api pyflakes . || true
+  - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api py.test --cov-report term-missing --cov=api
+  - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api pyflakes . || true
 
 after_success:
-  - docker run --link faf-db:db faf-api coveralls
+  - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api coveralls
