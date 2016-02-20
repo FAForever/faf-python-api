@@ -64,3 +64,6 @@ You can then access the API by going to http://dev.faforever.com:8080
 Logs are viewable by
 
     docker logs faf-api
+
+If you want to view the raw JSON on the website, then you will need to allow 'Allow-Control-Allow-Origin'' in the browser.
+Here is an example extension for Chrome - (https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi?hl=en)
