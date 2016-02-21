@@ -29,11 +29,13 @@ Build the container using
 
 Run using
 
-    docker run -d --name faf-api --link faf-db:db faf-api
+    docker run -d --name faf-api --link faf-db:db -p8080:8080 faf-api
 
 Check to see if running by looking at the container and netstat
 
     docker ps
+
+If using linux, you can now access the api at http://localhost:8080, otherwise follow below instructions.
 
 Find containers IP (Container ID can be found under docker ps)
 
