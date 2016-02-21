@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 pushd db
 docker build -t faf-db .
 DB_CONTAINER=`docker run -d --name faf-db -e MYSQL_ROOT_PASSWORD=banana faf-db`
