@@ -17,25 +17,11 @@ Quick overview of Docker can be found:
 [Docker Quick Start Guide](https://docs.docker.com/engine/quickstart/)
 
 First you must install and configure the database component [faf-db](https://github.com/FAForever/db)
-You can either manually install the component and follow the instructions on the Github page or run the script - init_and_wait_for_db.sh (Linux and MAC only)
-In order to run the script,, make it executable by running
-
-    chmod +x init_and_wait_for_db.sh
+You can either manually install the component and follow the instructions on the Github page or run init_and_wait_for_db.sh (Linux and OS X only).
 
 Now you can run the script by typing (You will need netcat installed on the computer)
 
     ./init_and_wait_for_db.sh
-
-Modify config.example.py with the correct database parameters
-
-If you used the script, then the script should be changed to the following
-
-    DATABASE = dict(
-        db=os.getenv("FAF_DB_NAME", "faf_test"),
-        user=os.getenv("FAF_DB_LOGIN", "root"),
-        password=os.getenv("FAF_DB_PASSWORD", "pbanana"),
-        host=os.getenv("DB_PORT_3306_TCP_ADDR", "127.0.0.1"),
-        port=int(os.getenv("DB_PORT_3306_TCP_PORT", "3306")))
 
 Build the container using
 
