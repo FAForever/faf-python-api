@@ -1,7 +1,7 @@
+#!/usr/bin/env bash
 pushd db
 docker build -t faf-db .
 DB_CONTAINER=`docker run -d --name faf-db -e MYSQL_ROOT_PASSWORD=banana faf-db`
-./wait_for_db.sh
 until nc -z $(sudo docker inspect --format='{{.NetworkSettings.IPAddress}}' $DB_CONTAINER) 3306
 do
   echo "Waiting for mysql container..."

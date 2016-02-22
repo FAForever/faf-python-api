@@ -26,9 +26,7 @@ Now you can run the script by typing (You will need netcat installed on the comp
 
     ./init_and_wait_for_db.sh
 
-Modify config.example.py with the correct database parameters
-
-If you used the script, then the script should be changed to the following
+Modify config.example.py with the correct database parameters.
 
     DATABASE = dict(
         db=os.getenv("FAF_DB_NAME", "faf_test"),
