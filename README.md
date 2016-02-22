@@ -18,11 +18,8 @@ Quick overview of Docker can be found:
 
 First you must install and configure the database component [faf-db](https://github.com/FAForever/db)
 You can either manually install the component and follow the instructions on the Github page or run the script - init_and_wait_for_db.sh (Linux and MAC only)
-In order to run the script,, make it executable by running
 
-    chmod +x init_and_wait_for_db.sh
-
-Now you can run the script by typing (You will need netcat installed on the computer)
+You can run the script by typing (You will need netcat installed on the computer)
 
     ./init_and_wait_for_db.sh
 
@@ -63,5 +60,5 @@ Logs are viewable by
 
     docker logs faf-api
 
-If you want to view the raw JSON on the website, then you will need to allow 'Allow-Control-Allow-Origin'' in the browser.
+If you want to view the raw JSON on the website, then you will need to add 'Allow-Control-Allow-Origin'' in the browser.
 Here is an example extension for Chrome - (https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi?hl=en)
