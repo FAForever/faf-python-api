@@ -53,8 +53,8 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertEqual('REVEALED', result[0]['initial_state'])
         self.assertEqual('INCREMENTAL', result[0]['type'])
         self.assertEqual(10, result[0]['total_steps'])
-        self.assertEqual(None, result[0]['revealed_icon_url'])
-        self.assertEqual(None, result[0]['unlocked_icon_url'])
+        self.assertEqual("http://content.faforever.com/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81.png", result[0]['revealed_icon_url'])
+        self.assertEqual("http://content.faforever.com/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81.png", result[0]['unlocked_icon_url'])
 
     def test_achievements_get(self):
         response = self.app.get('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81')
@@ -67,8 +67,8 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertEqual('REVEALED', result['initial_state'])
         self.assertEqual('INCREMENTAL', result['type'])
         self.assertEqual(10, result['total_steps'])
-        self.assertEqual(None, result['revealed_icon_url'])
-        self.assertEqual(None, result['unlocked_icon_url'])
+        self.assertEqual("http://content.faforever.com/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81.png", result['revealed_icon_url'])
+        self.assertEqual("http://content.faforever.com/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81.png", result['unlocked_icon_url'])
 
     def test_achievements_increment_inserts_if_not_existing(self):
         response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(steps=5))
