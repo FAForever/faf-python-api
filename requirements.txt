@@ -1,3 +1,5 @@
+aiohttp
+aiohttp-wsgi
 Flask >= 0.10.1
 Flask-JWT
 Flask-Login

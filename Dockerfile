@@ -21,4 +21,4 @@ RUN pip install -e .
 
 RUN cat config.py
 
-CMD python run_local.py
+CMD python run.py
