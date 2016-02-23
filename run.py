@@ -26,4 +26,6 @@ if __name__ == '__main__':
           app.run(host='0.0.0.0', port=port)
         else:
           from aiohttp_wsgi import serve
-          serve(app)
+          from concurrent.futures import ProcessPoolExecutor
+          with ProcessPoolExecutor(max_workers=10) as executor:
+            serve(app, executor=executor)
