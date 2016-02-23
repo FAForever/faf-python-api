@@ -31,7 +31,7 @@ def test_report():
 
 
 def test_no_reports(test_client, app):
-    response = test_client.get('/bugreports')
+    response = test_client.get('/bugs')
     assert json.loads(response.data.decode()) == {"data": []}
 
 
@@ -42,11 +42,11 @@ def test_manual_report(test_client, app):
     data, errors = s.dumps(report)
     assert not errors
 
-    response = test_client.post('/bugreports', data=data)
+    response = test_client.post('/bugs', data=data)
     assert response.status_code == 201
 
     s = BugReportSchema(many=True)
-    response = test_client.get('/bugreports')
+    response = test_client.get('/bugs')
     result, errors = s.loads(response.data.decode(), many=True)
     assert not errors
 
@@ -56,7 +56,7 @@ def test_add_status_update(test_client, app):
 
     s = BugReportSchema()
     data, errors = s.dumps(report)
-    response = json.loads(test_client.post('/bugreports', data=data).data.decode())
+    response = json.loads(test_client.post('/bugs', data=data).data.decode())
     id = response['data']['id']
 
     status = {'data': {
@@ -69,7 +69,7 @@ def test_add_status_update(test_client, app):
     }}
 
     s = BugReportStatusSchema()
-    response = test_client.post('/bugreports/{}/status'.format(id), data=json.dumps(status))
+    response = test_client.post('/bugs/{}/status'.format(id), data=json.dumps(status))
     assert response.status_code == 201
 
     result, errors = s.loads(response.data.decode(), many=False)
