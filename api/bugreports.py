@@ -21,7 +21,7 @@ SELECT_EXPRESSIONS = {
 TABLE = "bugreports INNER JOIN bugreport_targets on bugreports.target = bugreport_targets.id"
 MAX_PAGE_SIZE = 1000
 
-@app.route('/bugreports', methods=['GET'])
+@app.route('/bugs', methods=['GET'])
 def list_bugreports():
     def add_bugreport_target(item):
         item['target'] = {
@@ -32,7 +32,7 @@ def list_bugreports():
     return fetch_data(BugReportSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, enricher=add_bugreport_target)
 
 
-@app.route('/bugreports', methods=['POST'])
+@app.route('/bugs', methods=['POST'])
 def create_bug():
     schema = BugReportSchema()
     results, errors = schema.loads(request.data.decode('utf-8'))
@@ -64,7 +64,7 @@ def create_bug():
 
     return result, 201
 
-@app.route('/bugreports/<bugreport_id>/status', methods=['POST'])
+@app.route('/bugs/<bugreport_id>/status', methods=['POST'])
 def add_status(bugreport_id):
     schema = BugReportStatusSchema()
     result, errors = schema.loads(request.data.decode('utf-8'))
