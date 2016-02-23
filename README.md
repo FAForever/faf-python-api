@@ -23,6 +23,8 @@ Now you can run the script by typing (You will need netcat installed on the comp
 
     ./init_and_wait_for_db.sh
 
+*You will need to modify config.example.py with the correct database parameters.
+
 Build the container using
 
     docker build -t faf-api .
@@ -53,5 +55,5 @@ Logs are viewable by
 
     docker logs faf-api
 
-If you want to view the raw JSON on the website, then you will need to allow 'Allow-Control-Allow-Origin'' in the browser.
+Currently, if you want to view the raw JSON on the website, then you will need to allow 'Allow-Control-Allow-Origin'' in the browser.
 Here is an example extension for Chrome - (https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi?hl=en)
