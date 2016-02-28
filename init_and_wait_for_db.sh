@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+git clone https://github.com/FAForever/db.git db
 pushd db
 docker build -t faf-db .
 DB_CONTAINER=`docker run -d --name faf-db -e MYSQL_ROOT_PASSWORD=banana faf-db`

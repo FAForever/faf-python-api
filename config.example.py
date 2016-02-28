@@ -6,7 +6,7 @@ import os
 DATABASE = dict(
     db=os.getenv("FAF_DB_NAME", "faf_test"),
     user=os.getenv("FAF_DB_LOGIN", "root"),
-    password=os.getenv("FAF_DB_PASSWORD", ""),
+    password=os.getenv("FAF_DB_PASSWORD", "banana"),
     host=os.getenv("DB_PORT_3306_TCP_ADDR", "127.0.0.1"),
     port=int(os.getenv("DB_PORT_3306_TCP_PORT", "3306")))
 
