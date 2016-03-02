@@ -23,6 +23,8 @@ Now you can run the script by typing (You will need netcat installed on the comp
 
     ./init_and_wait_for_db.sh
 
+**You will need to modify config.example.py with the correct database parameters.**
+
 Build the container using
 
     docker build -t faf-api .
