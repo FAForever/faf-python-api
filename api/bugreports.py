@@ -23,6 +23,53 @@ MAX_PAGE_SIZE = 1000
 
 @app.route('/bugs', methods=['GET'])
 def list_bugreports():
+    """
+    Lists all bug report definitions.
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       GET /bugs
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": [
+            {
+              "attributes": {
+                "automatic": true,
+                "id": "31424",
+                "log": "log",
+                "target": {
+                  "data": {
+                    "attributes": {
+                      "name": "client",
+                      "ref": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
+                      "url": "https://github.com/FAForever/client"
+                    },
+                    "id": "client/tree/\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
+                    "type": "bugreport_target"
+                  }
+                },
+                "title": "Bug report",
+                "traceback": "traceback"
+              },
+              "id": "31424",
+              "type": "bugreport"
+            },
+            ...
+          ]
+        }
+
+    :status 200: No error
+    """
     def add_bugreport_target(item):
         item['target'] = {
             'name': item['name'],
