@@ -38,26 +38,43 @@ PLAYER_EVENTS_SELECT_EXPRESSIONS = {
 
 @app.route('/events')
 def events_list():
-    """Lists all event definitions.
+    """
+    Lists all event definitions.
 
-    HTTP Parameters::
+    **Example Request**:
 
-        language    string  The preferred language to use for strings returned by this method
-        region      string  The preferred region to use for strings returned by this method
+    .. sourcecode:: http
 
-    :return:
-        If successful, this method returns a response body with the following structure::
+       GET /events
 
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": [
             {
-              "items": [
-                {
-                  "id": string,
-                  "name": string,
-                  "type": string,
-                  "image_url": string
-                }
-              ]
-            }
+              "attributes": {
+                "id": "15b6c19a-6084-4e82-ada9-6c30e282191f",
+                "image_url": null,
+                "name": "Seraphim wins",
+                "type": "NUMERIC"
+              },
+              "id": "15b6c19a-6084-4e82-ada9-6c30e282191f",
+              "type": "event"
+            },
+            ...
+          ]
+        }
+
+
+    :query string language: The preferred language to use for strings returned by this method. default is en.
+    :query string region: The preferred region to use for strings returned by this method. default is US.
+    :status 200: No error
     """
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
@@ -69,31 +86,42 @@ def events_list():
 @app.route('/events/recordMultiple', methods=['POST'])
 @oauth.require_oauth('write_events')
 def events_record_multiple():
-    """Records multiple events for the currently authenticated player.
+    """
+    Records multiple events for the currently authenticated player.
 
-    HTTP Body:
-        In the request body, supply data with the following structure::
+    **Example Request**:
 
+    .. sourcecode:: http
+
+       POST /events/recordMultiple
+
+       {
+          "updates": [
             {
-              "updates": [
-                {
-                  "event_id": string,
-                  "count": long
-                }
-              ]
+              "event_id": string,
+              "count": long
             }
+          ]
+       }
 
-    :return:
-        If successful, this method returns a response body with the following structure::
+    **Example Response**:
 
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "updated_events": [
             {
-              "updated_events": [
-                {
-                  "event_id": string,
-                  "count": long
-                }
-              ],
+              "event_id": string,
+              "count": long
             }
+          ],
+        }
+
+    :status 200: No error
     """
     return record_multiple(request.oauth.user.id, request.json['updates'])
 
@@ -101,26 +129,39 @@ def events_record_multiple():
 @app.route('/players/<int:player_id>/events')
 @oauth.require_oauth('read_events')
 def events_list_player(player_id):
-    """Lists the events for a player.
+    """
+    Lists the events for a player.
 
-    :param player_id: ID of the player.
+    **Example Request**:
 
-    :return:
-        If successful, this method returns a response body with the following structure::
+    .. sourcecode:: http
 
+       GET /players/781/events
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": [
             {
-              "data": [
-                {
-                  "id": string,
-                  "attributes": {
-                      "event_id": string,
-                      "count": integer,
-                      "create_time": long,
-                      "update_time": long
-                  }
-                }
-              ]
+              "id": string,
+              "attributes": {
+                  "event_id": string,
+                  "count": integer,
+                  "create_time": long,
+                  "update_time": long
+              }
             }
+          ]
+        }
+
+
+    :status 200: No error
     """
     select_expressions = copy(PLAYER_EVENTS_SELECT_EXPRESSIONS)
     del select_expressions['player_id']
