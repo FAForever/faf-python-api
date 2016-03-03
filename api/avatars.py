@@ -53,7 +53,7 @@ def avatars():
 @app.route("/avatar/<int:id>", methods=['GET', 'PUT'])
 def avatar(id):
     """
-    Lists all avatars.
+    Displays individual avatars
 
     .. warning:: Not working currently. Broken.
 
@@ -61,7 +61,7 @@ def avatar(id):
 
     .. sourcecode:: http
 
-       GET, PUT /avatar
+       GET, PUT /avatar/781
 
     **Example Response**:
 
