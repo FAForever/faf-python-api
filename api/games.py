@@ -72,6 +72,90 @@ NOT = 'NOT'
 
 @app.route('/games')
 def games():
+    """
+    Lists all games.
+
+    .. warning:: Invalid documentation on route right now.
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       GET /games
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": [
+            {
+              "attributes": {
+                "game_mod": "0",
+                "game_name": "noob 4v4",
+                "host": "15945",
+                "id": "4477178",
+                "map_name": "Crossfire Canal",
+                "start_time": "2016-02-26T04:09:39+00:00",
+                "victory_condition": "DEMORALIZATION"
+              },
+              "id": "4477178",
+              "relationships": {
+                "players": {
+                  "data": [
+                    {
+                      "attributes": {
+                        "color": 2,
+                        "deviation": 199.501,
+                        "faction": 1,
+                        "game_id": "4477178",
+                        "has_ai": false,
+                        "id": "8306945",
+                        "login": "lethaljester",
+                        "mean": 1225.62,
+                        "place": 1,
+                        "player_id": "15945",
+                        "score": -1,
+                        "score_time": null,
+                        "team": 1
+                      },
+                      "id": "8306945",
+                      "type": "game_player_stats"
+                    },
+            ...
+          ]
+        }
+
+
+    :param filter[players]: Filter based upon player login (Separate by "," for multiple players) /games?filter[players]=dragonson,sirbaer
+    :type filter[players]: str
+
+    .. warning:: Currently, broke filter[map_name]...
+
+    :param filter[map_name]: Filter based upon map name
+    :type filter[map_name]: str
+
+
+    :param filter[map_exclude]: Filters maps, requires map_name
+    :type filter[map_exclude]: str
+    :param filter[max_rating]: Whether or not to filter active players or not (true or false)
+    :type filter[max_rating]: boolean
+    :param filter[min_rating]: Whether or not to filter active players or not (true or false)
+    :type filter[min_rating]: boolean
+    :param filter[victory_condition]: Whether or not to filter active players or not (true or false)
+    :type filter[victory_condition]: boolean
+    :param filter[rating_type]: Whether or not to filter active players or not (true or false)
+    :type filter[rating_type]: boolean
+    :param filter[max_player_count]: Whether or not to filter active players or not (true or false)
+    :type filter[max_player_count]: int
+    :param filter[min_player_count]: Whether or not to filter active players or not (true or false)
+    :type filter[min_player_count]: int
+
+    """
     player_list = request.args.get('filter[players]')
     map_name = request.args.get('filter[map_name]')
     map_exclude = request.args.get('filter[map_exclude]')
