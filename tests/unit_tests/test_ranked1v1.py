@@ -130,6 +130,17 @@ def test_ranked1v1_filter_active(test_client, ranked1v1_ratings):
     for item in result['data']:
         assert item['attributes']['is_active'] == True
 
+def test_ranked1v1_filter_inactive(test_client, ranked1v1_ratings):
+    response = test_client.get('/ranked1v1?filter[is_active]=false')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'data' in result
+    assert len(result['data']) == 1
+    assert result['data'][0]['attributes']['is_active'] == 0
+
 def test_ranked1v1_filter_player(test_client, ranked1v1_ratings):
     with db.connection:
         cursor = db.connection.cursor()
@@ -150,18 +161,6 @@ def test_ranked1v1_filter_player(test_client, ranked1v1_ratings):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute("""UPDATE login SET login="a" WHERE login = 'test';""")
-
-def test_ranked1v1_filter_inactive(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1?filter[is_active]=false')
-
-    assert response.status_code == 200
-    assert response.content_type == 'application/vnd.api+json'
-
-    result = json.loads(response.data.decode('utf-8'))
-    assert 'data' in result
-    assert len(result['data']) == 1
-    assert result['data'][0]['attributes']['is_active'] == 0
-
 
 def test_ranked1v1_stats(test_client, ranked1v1_ratings):
     response = test_client.get('/ranked1v1/stats')
