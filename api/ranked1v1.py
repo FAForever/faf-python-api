@@ -32,15 +32,22 @@ def ranked1v1():
 
     page = int(request.values.get('page[number]', 1))
     page_size = int(request.values.get('page[size]', MAX_PAGE_SIZE))
+    player = request.args.get('filter[player]')
     row_num = (page - 1) * page_size
+
+    args = {'row_num': row_num}
 
     where = ''
     active_filter = request.values.get('filter[is_active]')
     if active_filter:
         where += 'is_active = ' + ('1' if active_filter.lower() == 'true' else '0') + ' AND r.numGames > 0'
 
+    if player:
+        where += " l.login LIKE %(player)s"
+        args['player'] = '%' + player + '%'
+
     return fetch_data(Ranked1v1Schema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-rating',
-                      args=dict(row_num=row_num), where=where)
+                      args=args, where=where)
 
 
 @app.route('/ranked1v1/<int:player_id>')
