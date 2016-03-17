@@ -2,5 +2,6 @@
 *.pyc
 *.egg-info
 *.sh
+venv
 
 config.py
