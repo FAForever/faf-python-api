@@ -60,6 +60,9 @@ def make_response_json(rv):
     if isinstance(rv, dict):
         response = jsonify(rv)
         response.headers['content-type'] = 'application/vnd.api+json'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE'
         return response
     elif isinstance(rv, tuple):
         values = dict(zip(['response', 'status', 'headers'], rv))
@@ -73,6 +76,9 @@ def make_response_json(rv):
         if 'headers' in values and values['headers'] is not None:
             response.headers = values.get('headers')
         response.headers['content-type'] = 'application/vnd.api+json'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE'
         return response
     else:
         return _make_response(rv)
