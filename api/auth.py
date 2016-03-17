@@ -5,50 +5,21 @@ import base64
 import json
 from functools import wraps
 from hashlib import sha256
+from typing import Union
 from urllib.parse import urlparse
 import re
 
 import jwt
-from flask import request, redirect, url_for, render_template, abort, g
+from flask import redirect, url_for, render_template, abort, g
 from flask_jwt import JWTError
 from flask_login import login_user, current_user
-from requests.packages.urllib3.packages import six
 from api.oauth_handlers import *
 from api import flask_jwt
 
 
-def _to_bytes(value, encoding='ascii'):
-    """Converts a string value to bytes, if necessary.
-
-    Unfortunately, ``six.b`` is insufficient for this task since in
-    Python2 it does not modify ``unicode`` objects.
-
-    Args:
-        value: The string/bytes value to be converted.
-        encoding: The encoding to use to convert unicode to bytes. Defaults
-                  to "ascii", which will not allow any characters from ordinals
-                  larger than 127. Other useful values are "latin-1", which
-                  which will only allows byte ordinals (up to 255) and "utf-8",
-                  which will encode any unicode that needs to be.
-
-    Returns:
-        The original value converted to bytes (if unicode) or as passed in
-        if it started out as bytes.
-
-    Raises:
-        ValueError if the value could not be converted to bytes.
-    """
-    result = (value.encode(encoding)
-              if isinstance(value, six.text_type) else value)
-    if isinstance(result, six.binary_type):
-        return result
-    else:
-        raise ValueError('%r could not be converted to bytes' % (value,))
-
-
-def _urlsafe_b64decode(b64string):
-    # Guard against unicode strings, which base64 can't handle.
-    b64string = _to_bytes(b64string)
+def _urlsafe_b64decode(b64string: Union[str, bytes]):
+    if isinstance(b64string, str):
+        b64string = b64string.encode('utf-8')
     padded = b64string + b'=' * (4 - len(b64string) % 4)
     return base64.urlsafe_b64decode(padded)
 
