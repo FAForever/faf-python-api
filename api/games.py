@@ -1,6 +1,6 @@
 from dateutil.parser import parse
 from dateutil.tz import tzoffset
-from faf.api.game_stats_schema import GameStatsAndGamePLayerStatsSchema
+from faf.api.game_stats_schema import GameStatsSchema, GamePlayerStatsSchema
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
 from flask import request
@@ -59,7 +59,7 @@ GAME_SELECT_EXPRESSIONS = {
 }
 
 PLAYER_SELECT_EXPRESSIONS = {
-    'game_player_stats_id': 'gps.id',
+    'id': 'gps.id',
     'game_id': 'gameId',
     'player_id': 'playerId',
     'login': 'l.login',
@@ -109,27 +109,52 @@ def games():
         game_player_joined_maps['max_rating'] = build_rating_selector(rating_type, MAX_RATING_HEADER_EXPRESSION)
         game_player_joined_maps['min_rating'] = build_rating_selector(rating_type, MIN_RATING_HEADER_EXPRESSION)
 
-        result = fetch_data(GameStatsAndGamePLayerStatsSchema(), select_expression, game_player_joined_maps,
-                            MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id', enricher=enricher)
+        result = fetch_data(GameStatsSchema(), select_expression, game_player_joined_maps,
+                            MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id', item_enricher=enricher)
     else:
-        result = fetch_data(GameStatsAndGamePLayerStatsSchema(), GAMES_NO_FILTER_EXPRESSION.format(limit_expression),
+        result = fetch_data(GameStatsSchema(), GAMES_NO_FILTER_EXPRESSION.format(limit_expression),
                             GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id',
-                            enricher=enricher)
+                            item_enricher=enricher)
 
     return sort_player_game_results(result)
 
 
 @app.route('/games/<game_id>')
 def game(game_id):
-    result = fetch_data(GameStatsAndGamePLayerStatsSchema(),
+    result = fetch_data(GameStatsSchema(),
                         GAME_STATS_TABLE + MAP_JOIN + GAME_PLAYER_STATS_JOIN + GLOBAL_JOIN + LOGIN_JOIN,
                         GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
-                        where='gs.id = %s', args=game_id, enricher=enricher)
+                        where='gs.id = %s', args=game_id, item_enricher=enricher)
 
     if len(result['data']) == 0:
         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
 
     return sort_player_game_results(result)
+
+
+# @app.route('/games/<game_id>/players')
+# def game(game_id):
+#     result = fetch_data(GameStatsSchema(),
+#                         GAME_STATS_TABLE + MAP_JOIN + GAME_PLAYER_STATS_JOIN + GLOBAL_JOIN + LOGIN_JOIN,
+#                         GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
+#                         where='gs.id = %s', args=game_id, enricher=enricher)
+#
+#     if len(result['data']) == 0:
+#         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
+#
+#     return sort_player_game_results(result)
+
+
+@app.route('/games/<game_id>/relationships/players')
+def game_players(game_id):
+    player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE + LOGIN_JOIN + GLOBAL_JOIN,
+                                PLAYER_SELECT_EXPRESSIONS,
+                                MAX_GAME_PAGE_SIZE, request, where='gameId = %s', args=game_id)
+
+    if not player_results['data']:
+        return {'errors': [{'title': 'No players for this game ID were found'}]}, 404
+
+    return player_results
 
 
 def enricher(game):
@@ -144,6 +169,8 @@ def enricher(game):
             del game['validity']
         else:
             game['validity'] = GameValidity(int(game['validity'])).name
+    # attributes = GamePlayerStatsSchema(**{key: game[key] for key in PLAYER_SELECT_EXPRESSIONS.keys() if key in game})
+    # game['players'] = attributes
 
 
 def check_syntax_errors(rating_type, max_rating, min_rating, map_exclude, map_name, max_datetime, min_datetime):
@@ -279,7 +306,8 @@ def build_player_count_expression(first, table_expression, args, *player_counts)
         except ValueError:
             throw_malformed_query_error('player count field')
 
-        first, table_expression, args = append_filter_expression(HAVING, first, table_expression, count_expression, args,
+        first, table_expression, args = append_filter_expression(HAVING, first, table_expression, count_expression,
+                                                                 args,
                                                                  player_count)
 
     return table_expression, args, first
