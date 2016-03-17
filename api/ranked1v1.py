@@ -77,6 +77,8 @@ def ranked1v1():
     :type page[size]: int
     :param filter[isActive]: Whether or not to filter active players or not (true or false) (EX.: /ranked1v1?filter[is_active]=true)
     :type filter[isActive]: boolean
+    :param filter[player]: Allows search functionality in the ranked1v1 endpoint based upon the players login name (EX.: /ranked1v1?filter[player]=Zock)
+    :type filter[player]: name
     :status 200: No error
 
     """
