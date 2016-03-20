@@ -46,6 +46,8 @@ def ranked1v1():
         where += " l.login LIKE %(player)s"
         args['player'] = '%' + player + '%'
 
+    append_select_expression()
+
     return fetch_data(Ranked1v1Schema(), TABLE1V1, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-rating',
                       args=args, where=where)
 
@@ -58,6 +60,8 @@ def ranked1v1_get(player_id):
                                         AND is_active = 1
                                         AND numGames > 0)
                                         """
+
+    append_select_expression()
 
     result = fetch_data(Ranked1v1Schema(), TABLE1V1, select_expressions, MAX_PAGE_SIZE, request,
                         many=False, where='r.id=%(id)s', args=dict(id=player_id, row_num=0))
@@ -93,11 +97,3 @@ def ranked1v1_stats():
         data['rating_distribution'][str(int(item['rating']))] = item['count']
 
     return Ranked1v1StatsSchema().dump(data, many=False).data
-
-
-def append_select_expression():
-    select = SELECT_EXPRESSIONS.copy()
-    select['won_games'] = 'r.winGames'
-    select['lost_games'] = 'r.numGames - r.winGames'
-    select['winning_percentage'] = 'ROUND((r.winGames/r.numGames) * 100)'
-    return select
