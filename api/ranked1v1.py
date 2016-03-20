@@ -46,9 +46,9 @@ def ranked1v1():
         where += " l.login LIKE %(player)s"
         args['player'] = '%' + player + '%'
 
-    append_select_expression()
+    select = append_select_expression()
 
-    return fetch_data(Ranked1v1Schema(), TABLE1V1, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-rating',
+    return fetch_data(Ranked1v1Schema(), TABLE1V1, select, MAX_PAGE_SIZE, request, sort='-rating',
                       args=args, where=where)
 
 @app.route('/rating/<string:rating_type>')
@@ -86,16 +86,15 @@ def rating_type(rating_type):
 
 @app.route('/ranked1v1/<int:player_id>')
 def ranked1v1_get(player_id):
-    select_expressions = SELECT_EXPRESSIONS.copy()
-    select_expressions['ranking'] = """(SELECT count(*) FROM ladder1v1_rating
+    select = append_select_expression()
+
+    select['ranking'] = """(SELECT count(*) FROM ladder1v1_rating
                                         WHERE ROUND(mean - 3 * deviation) >= ROUND(r.mean - 3 * r.deviation)
                                         AND is_active = 1
                                         AND numGames > 0)
                                         """
 
-    append_select_expression()
-
-    result = fetch_data(Ranked1v1Schema(), TABLE1V1, select_expressions, MAX_PAGE_SIZE, request,
+    result = fetch_data(Ranked1v1Schema(), TABLE1V1, select, MAX_PAGE_SIZE, request,
                         many=False, where='r.id=%(id)s', args=dict(id=player_id, row_num=0))
 
     if 'id' not in result['data']:
