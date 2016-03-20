@@ -93,3 +93,11 @@ def ranked1v1_stats():
         data['rating_distribution'][str(int(item['rating']))] = item['count']
 
     return Ranked1v1StatsSchema().dump(data, many=False).data
+
+
+def append_select_expression():
+    select = SELECT_EXPRESSIONS.copy()
+    select['won_games'] = 'r.winGames'
+    select['lost_games'] = 'r.numGames - r.winGames'
+    select['winning_percentage'] = 'ROUND((r.winGames/r.numGames) * 100)'
+    return select
