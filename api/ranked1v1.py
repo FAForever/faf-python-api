@@ -51,6 +51,38 @@ def ranked1v1():
     return fetch_data(Ranked1v1Schema(), TABLE1V1, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-rating',
                       args=args, where=where)
 
+@app.route('/rating/<string:rating_type>')
+def rating_type(rating_type):
+    if request.values.get('sort'):
+        raise InvalidUsage('Sorting is not supported for ranked1v1')
+
+    page = int(request.values.get('page[number]', 1))
+    page_size = int(request.values.get('page[size]', MAX_PAGE_SIZE))
+    player = request.args.get('filter[player]')
+    row_num = (page - 1) * page_size
+    select = SELECT_EXPRESSIONS
+
+    args = {'row_num': row_num}
+
+    where = ''
+    active_filter = request.values.get('filter[is_active]')
+    if active_filter:
+        where += 'is_active = ' + ('1' if active_filter.lower() == 'true' else '0') + ' AND r.numGames > 0'
+
+    if player:
+        where += " l.login LIKE %(player)s"
+        args['player'] = '%' + player + '%'
+
+    if rating_type == '1v1':
+        table = TABLE1V1
+        select = append_select_expression()
+    elif rating_type == 'global':
+        table = TABLEGLOBAL
+    else:
+        raise InvalidUsage('The rating type should be either 1v1 or global.')
+
+    return fetch_data(Ranked1v1Schema(), table, select, MAX_PAGE_SIZE, request, sort='-rating',
+                      args=args, where=where)
 
 @app.route('/ranked1v1/<int:player_id>')
 def ranked1v1_get(player_id):
@@ -64,6 +96,33 @@ def ranked1v1_get(player_id):
     append_select_expression()
 
     result = fetch_data(Ranked1v1Schema(), TABLE1V1, select_expressions, MAX_PAGE_SIZE, request,
+                        many=False, where='r.id=%(id)s', args=dict(id=player_id, row_num=0))
+
+    if 'id' not in result['data']:
+        return {'errors': [{'title': 'No entry with this id was found'}]}, 404
+
+    return result
+
+@app.route('/rating/<string:rating_type>/<int:player_id>')
+def rating_type_get_player(rating_type, player_id):
+    select_expressions = SELECT_EXPRESSIONS.copy()
+    select_expressions['ranking'] = """(SELECT count(*) FROM ladder1v1_rating
+                                        WHERE ROUND(mean - 3 * deviation) >= ROUND(r.mean - 3 * r.deviation)
+                                        AND is_active = 1
+                                        AND numGames > 0)
+                                        """
+
+    select = select_expressions
+
+    if rating_type == '1v1':
+        table = TABLE1V1
+        select = append_select_expression()
+    elif rating_type == 'global':
+        table = TABLEGLOBAL
+    else:
+        raise InvalidUsage('The rating type should be either 1v1 or global.')
+
+    result = fetch_data(Ranked1v1Schema(), table, select, MAX_PAGE_SIZE, request,
                         many=False, where='r.id=%(id)s', args=dict(id=player_id, row_num=0))
 
     if 'id' not in result['data']:
