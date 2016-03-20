@@ -25,7 +25,7 @@ SELECT_EXPRESSIONS = {
     'ranking': '@rownum:=@rownum+1'
 }
 
-TABLE = 'ladder1v1_rating r JOIN login l on r.id = l.id, (SELECT @rownum:=%(row_num)s) n'
+TABLE1V1 = 'ladder1v1_rating r JOIN login l on r.id = l.id, (SELECT @rownum:=%(row_num)s) n'
 
 
 @app.route('/ranked1v1')
@@ -105,7 +105,7 @@ def ranked1v1():
         where += " l.login LIKE %(player)s"
         args['player'] = '%' + player + '%'
 
-    return fetch_data(Ranked1v1Schema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-rating',
+    return fetch_data(Ranked1v1Schema(), TABLE1V1, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, sort='-rating',
                       args=args, where=where)
 
 
@@ -158,7 +158,7 @@ def ranked1v1_get(player_id):
                                         AND numGames > 0)
                                         """
 
-    result = fetch_data(Ranked1v1Schema(), TABLE, select_expressions, MAX_PAGE_SIZE, request,
+    result = fetch_data(Ranked1v1Schema(), TABLE1V1, select_expressions, MAX_PAGE_SIZE, request,
                         many=False, where='r.id=%(id)s', args=dict(id=player_id, row_num=0))
 
     if 'id' not in result['data']:
