@@ -26,6 +26,7 @@ SELECT_EXPRESSIONS = {
 }
 
 TABLE1V1 = 'ladder1v1_rating r JOIN login l on r.id = l.id, (SELECT @rownum:=%(row_num)s) n'
+TABLEGLOBAL = 'global_rating r JOIN login l on r.id = l.id, (SELECT @rownum:=%(row_num)s) n'
 
 
 @app.route('/ranked1v1')
