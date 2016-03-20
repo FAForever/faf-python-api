@@ -17,6 +17,8 @@ SELECT_EXPRESSIONS = {
     'deviation': 'r.deviation',
     'num_games': 'r.numGames',
     'won_games': 'r.winGames',
+    'lost_games': 'r.numGames - r.winGames',
+    'winning_percentage': 'ROUND((r.winGames/r.numGames) * 100)',
     'is_active': 'r.is_active',
     'rating': 'ROUND(r.mean - 3 * r.deviation)',
     'ranking': '@rownum:=@rownum+1'
