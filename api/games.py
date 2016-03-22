@@ -14,33 +14,36 @@ GAME_STATS_TABLE = 'game_stats gs'
 GAME_PLAYER_STATS_TABLE = 'game_player_stats gps'
 
 GAME_PLAYER_STATS_JOIN = ' INNER JOIN game_player_stats gps ON gs.id = gps.gameId'
-MAP_JOIN = ' INNER JOIN table_map tm ON tm.id = gs.mapId'
+MAP_JOIN = ' INNER JOIN table_map tmap ON tmap.id = gs.mapId'
+FEATURED_MOD_JOIN = ' INNER JOIN game_featuredMods gfmod ON gfmod.id = gs.gameMod'
 LOGIN_JOIN = ' INNER JOIN login l ON l.id = gps.playerId'
 GLOBAL_JOIN = ' INNER JOIN global_rating r ON r.id = gps.playerId'
 LADDER1V1_JOIN = ' INNER JOIN ladder1v1_rating r ON r.id = gps.playerId'
 
-GAMES_NO_FILTER_EXPRESSION = GAME_PLAYER_STATS_TABLE + ' INNER JOIN (SELECT * FROM ' + GAME_STATS_TABLE + ' {})' \
-                                                                                                          ' AS gs ON gs.id = gps.gameId' + LOGIN_JOIN + MAP_JOIN + GLOBAL_JOIN
+GAMES_NO_FILTER_EXPRESSION = GAME_PLAYER_STATS_TABLE + ' INNER JOIN (SELECT * FROM ' + GAME_STATS_TABLE + ' {}) ' \
+                                                                                                          'AS gs ON gs.id = gps.gameId' + LOGIN_JOIN + MAP_JOIN + FEATURED_MOD_JOIN + GLOBAL_JOIN
 
 PLAYER_COUNT_EXPRESSION = '(SELECT COUNT(*) FROM ' + GAME_PLAYER_STATS_TABLE + ' WHERE gs.id = gps.gameId)'
 RATING_EXPRESSION = '(ROUND(r.mean-3*r.deviation)) FROM ' + GAME_PLAYER_STATS_TABLE + ' {} WHERE gps.gameId=gs.id)'
 MIN_RATING_HEADER_EXPRESSION = '(SELECT MIN'
 MAX_RATING_HEADER_EXPRESSION = '(SELECT MAX'
-HEADER = GAME_STATS_TABLE + GAME_PLAYER_STATS_JOIN + LOGIN_JOIN + MAP_JOIN + '{}'
-SUBQUERY_HEADER = ' WHERE gs.id IN (SELECT * FROM (SELECT {} FROM '
-SUBQUERY_FOOTER = '{}) as games)'
+HEADER = GAME_STATS_TABLE + GAME_PLAYER_STATS_JOIN + LOGIN_JOIN + MAP_JOIN + FEATURED_MOD_JOIN + '{}'
+SUBQUERY_HEADER = ' WHERE gs.id IN (SELECT * FROM (SELECT {} FROM {}'
+SUBQUERY_FOOTER = ' {}) as games)'
 
 GROUP_BY_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {} '
-MAP_NAME_WHERE_EXPRESSION = '{} tm.name = %s'
+MAP_NAME_WHERE_EXPRESSION = '{} tmap.name = %s'
 MAX_PLAYER_WHERE_EXPRESSION = 'player_count <= %s'
 MIN_PLAYER_WHERE_EXPRESSION = 'player_count >= %s'
 VICTORY_CONDITION_WHERE_EXPRESSION = 'gs.gameType = %s'
+GAME_MOD_WHERE_EXPRESSION = '{}.{} = %s'
+GAME_MOD_WHERE_ID = 'gs', 'gameType'
+GAME_MOD_WHERE_NAME = 'gfmod', 'name'
 MAX_RATING_HAVING_EXPRESSION = 'max_rating <= %s'
 MIN_RATING_HAVING_EXPRESSION = 'min_rating >= %s'
 MAX_DATE_HAVING_EXPRESSION = 'startTime <= %s'
 MIN_DATE_HAVING_EXPRESSION = 'startTime >= %s'
 
-LIMIT = ' LIMIT '
 AND = ' AND '
 WHERE = ' WHERE '
 HAVING = ' HAVING '
@@ -49,9 +52,11 @@ NOT = ' NOT'
 GAME_SELECT_EXPRESSIONS = {
     'id': 'gs.id',
     'game_name': 'gameName',
-    'map_name': 'tm.name',
+    'map_name': 'tmap.name',
+    'map_id': 'tmap.id',
     'victory_condition': 'gameType',
-    'game_mod': 'gameMod',
+    'mod_name': 'gfmod.gamemod',
+    'mod_id': 'gfmod.id',
     'host': 'host',
     'start_time': 'startTime',
     'validity': 'validity',
@@ -86,6 +91,7 @@ def games():
     max_rating = request.args.get('filter[max_rating]')
     min_rating = request.args.get('filter[min_rating]')
     victory_condition = request.args.get('filter[victory_condition]')
+    game_mod = request.args.get('filter[mod]')
     rating_type = request.args.get('filter[rating_type]')
     max_players = request.args.get('filter[max_player_count]')
     min_players = request.args.get('filter[min_player_count]')
@@ -99,11 +105,11 @@ def games():
     if errors:
         return errors
 
-    if player_list or map_name or max_rating or min_rating or victory_condition or max_players or min_players \
-            or max_datetime or min_datetime:
+    if player_list or map_name or max_rating or min_rating or victory_condition or game_mod \
+            or max_players or min_players or max_datetime or min_datetime:
         select_expression, args = build_query(victory_condition, map_name, map_exclude, max_rating, min_rating,
                                               player_list, rating_type, max_players, min_players, max_datetime,
-                                              min_datetime, limit_expression)
+                                              min_datetime, game_mod, limit_expression)
 
         game_player_joined_maps = GAME_AND_PLAYER_SELECT_EXPRESSIONS
         game_player_joined_maps['max_rating'] = build_rating_selector(rating_type, MAX_RATING_HEADER_EXPRESSION)
@@ -169,8 +175,8 @@ def enricher(game):
             del game['validity']
         else:
             game['validity'] = GameValidity(int(game['validity'])).name
-    # attributes = GamePlayerStatsSchema(**{key: game[key] for key in PLAYER_SELECT_EXPRESSIONS.keys() if key in game})
-    # game['players'] = attributes
+            # attributes = GamePlayerStatsSchema(**{key: game[key] for key in PLAYER_SELECT_EXPRESSIONS.keys() if key in game})
+            # game['players'] = attributes
 
 
 def check_syntax_errors(rating_type, max_rating, min_rating, map_exclude, map_name, max_datetime, min_datetime):
@@ -189,12 +195,13 @@ def check_syntax_errors(rating_type, max_rating, min_rating, map_exclude, map_na
 
 
 def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating, player_list, rating_type, max_players,
-                min_players, max_datetime, min_datetime, limit_expression):
+                min_players, max_datetime, min_datetime, game_mod, limit_expression):
     table_expression = HEADER
     having_expression = ''
     first = True
 
-    subquery_expression, args = build_subquery(victory_condition, map_name, map_exclude, player_list, limit_expression)
+    subquery_expression, args = build_subquery(victory_condition, map_name, map_exclude,
+                                               player_list, game_mod, limit_expression)
 
     table_expression = format_with_rating(rating_type, table_expression)
     if max_rating or min_rating:
@@ -215,22 +222,22 @@ def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating
     return table_expression + subquery_expression + having_expression, args
 
 
-def build_subquery(victory_condition, map_name, map_exclude, player_list, limit_expression):
+def build_subquery(victory_condition, map_name, map_exclude, player_list, game_mod, limit_expression):
     table_expression = SUBQUERY_HEADER
     where_expression = ''
     args = list()
     first = True
     players = None
 
-    if not (victory_condition or map_name or player_list):
+    if not (victory_condition or map_name or player_list or game_mod):
         return '', args
 
-    if map_name or victory_condition:
-        table_expression = table_expression.format('gs.id') + GAME_STATS_TABLE
+    if map_name or victory_condition or game_mod:
+        table_expression = table_expression.format('gs.id', GAME_STATS_TABLE)
         if player_list:
             table_expression += GAME_PLAYER_STATS_JOIN
     else:
-        table_expression = table_expression.format('gameId') + GAME_PLAYER_STATS_TABLE
+        table_expression = table_expression.format('gameId', GAME_PLAYER_STATS_TABLE, '')
 
     if player_list:
         table_expression += LOGIN_JOIN
@@ -250,7 +257,9 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list, limit_
                                                                  args, map_name)
 
     if victory_condition:
-        condition = VictoryCondition.from_gpgnet_string(victory_condition)
+        condition = victory_condition
+        if not victory_condition.isdigit():
+            condition = VictoryCondition.from_gpgnet_string(victory_condition)
         # condition can return a falsey value of 0
         if condition is not None:
             first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
@@ -258,6 +267,16 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list, limit_
                                                                      args, str(condition.value))
         else:
             throw_malformed_query_error('victory_condition')
+
+    if game_mod:
+        if game_mod.isdigit():
+            game_mod_expression = GAME_MOD_WHERE_EXPRESSION.format(*GAME_MOD_WHERE_ID)
+        else:
+            game_mod_expression = GAME_MOD_WHERE_EXPRESSION.format(*GAME_MOD_WHERE_NAME)
+            table_expression += FEATURED_MOD_JOIN
+        first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
+                                                                 game_mod_expression,
+                                                                 args, game_mod)
 
     if players:
         where_expression += GROUP_BY_EXPRESSION.format(len(players) - 1)
