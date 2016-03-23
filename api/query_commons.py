@@ -1,5 +1,3 @@
-from pprint import pprint
-
 from pymysql.cursors import DictCursor
 
 from api import InvalidUsage
@@ -100,7 +98,7 @@ def get_limit(page, limit):
 
 
 def fetch_data(schema, table, select_expression_dict, max_page_size, request, where='', args=None, many=True,
-               item_enricher=None, query_enricher=None, sort=None):
+               item_enricher=None, sort=None):
     """ Fetches data in an JSON-API conforming way.
 
     :param schema: the marshmallow schema to use for serialization

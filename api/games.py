@@ -101,7 +101,7 @@ def games():
     page, page_size = get_page_attributes(MAX_GAME_PAGE_SIZE, request)
     limit_expression = get_limit(page, page_size)
 
-    errors = check_syntax_errors(rating_type, max_rating, min_rating, map_exclude, map_name, max_datetime, min_datetime)
+    errors = check_syntax_errors(map_exclude, map_name, max_datetime, min_datetime)
     if errors:
         return errors
 
@@ -146,10 +146,8 @@ def enricher(game):
         game['validity'] = GameValidity(int(game['validity'])).name
 
 
-def check_syntax_errors(rating_type, max_rating, min_rating, map_exclude, map_name, max_datetime, min_datetime):
-    if rating_type and not (max_rating or min_rating):
-        return {'errors': [{'title': 'Missing max/min_rating parameters'}]}, 422
-    elif map_exclude and not map_name:
+def check_syntax_errors(map_exclude, map_name, max_datetime, min_datetime):
+    if map_exclude and not map_name:
         return {'errors': [{'title': 'Missing map_name parameter'}]}, 422
     try:
         if max_datetime and not parse(max_datetime).tzinfo:
@@ -192,7 +190,7 @@ def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating
 def build_subquery(victory_condition, map_name, map_exclude, player_list, game_mod, limit_expression):
     table_expression = SUBQUERY_HEADER
     where_expression = ''
-    args = list()
+    args = []
     first = True
     players = None
 
