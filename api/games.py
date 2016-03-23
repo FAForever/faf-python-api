@@ -1,6 +1,6 @@
 from dateutil.parser import parse
 from dateutil.tz import tzoffset
-from faf.api.game_stats_schema import GameStatsSchema, GamePlayerStatsSchema
+from faf.api.game_stats_schema import GameStatsAndGamePlayerStatsSchema
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
 from flask import request
@@ -29,6 +29,7 @@ MIN_RATING_HEADER_EXPRESSION = '(SELECT MIN'
 MAX_RATING_HEADER_EXPRESSION = '(SELECT MAX'
 HEADER = GAME_STATS_TABLE + GAME_PLAYER_STATS_JOIN + LOGIN_JOIN + MAP_JOIN + FEATURED_MOD_JOIN + '{}'
 SUBQUERY_HEADER = ' WHERE gs.id IN (SELECT * FROM (SELECT {} FROM {}'
+SUBQUERY_ORDER_BY = ' ORDER BY {} desc'
 SUBQUERY_FOOTER = ' {}) as games)'
 
 GROUP_BY_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {} '
@@ -64,7 +65,6 @@ GAME_SELECT_EXPRESSIONS = {
 }
 
 PLAYER_SELECT_EXPRESSIONS = {
-    'id': 'gps.id',
     'game_id': 'gameId',
     'player_id': 'playerId',
     'login': 'l.login',
@@ -115,10 +115,10 @@ def games():
         game_player_joined_maps['max_rating'] = build_rating_selector(rating_type, MAX_RATING_HEADER_EXPRESSION)
         game_player_joined_maps['min_rating'] = build_rating_selector(rating_type, MIN_RATING_HEADER_EXPRESSION)
 
-        result = fetch_data(GameStatsSchema(), select_expression, game_player_joined_maps,
+        result = fetch_data(GameStatsAndGamePlayerStatsSchema(), select_expression, game_player_joined_maps,
                             MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id', item_enricher=enricher)
     else:
-        result = fetch_data(GameStatsSchema(), GAMES_NO_FILTER_EXPRESSION.format(limit_expression),
+        result = fetch_data(GameStatsAndGamePlayerStatsSchema(), GAMES_NO_FILTER_EXPRESSION.format(limit_expression),
                             GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id',
                             item_enricher=enricher)
 
@@ -127,7 +127,7 @@ def games():
 
 @app.route('/games/<game_id>')
 def game(game_id):
-    result = fetch_data(GameStatsSchema(),
+    result = fetch_data(GameStatsAndGamePlayerStatsSchema(),
                         GAME_STATS_TABLE + MAP_JOIN + GAME_PLAYER_STATS_JOIN + GLOBAL_JOIN + LOGIN_JOIN,
                         GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
                         where='gs.id = %s', args=game_id, item_enricher=enricher)
@@ -138,45 +138,12 @@ def game(game_id):
     return sort_player_game_results(result)
 
 
-# @app.route('/games/<game_id>/players')
-# def game(game_id):
-#     result = fetch_data(GameStatsSchema(),
-#                         GAME_STATS_TABLE + MAP_JOIN + GAME_PLAYER_STATS_JOIN + GLOBAL_JOIN + LOGIN_JOIN,
-#                         GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
-#                         where='gs.id = %s', args=game_id, enricher=enricher)
-#
-#     if len(result['data']) == 0:
-#         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
-#
-#     return sort_player_game_results(result)
-
-
-@app.route('/games/<game_id>/relationships/players')
-def game_players(game_id):
-    player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE + LOGIN_JOIN + GLOBAL_JOIN,
-                                PLAYER_SELECT_EXPRESSIONS,
-                                MAX_GAME_PAGE_SIZE, request, where='gameId = %s', args=game_id)
-
-    if not player_results['data']:
-        return {'errors': [{'title': 'No players for this game ID were found'}]}, 404
-
-    return player_results
-
-
 def enricher(game):
     if 'victory_condition' in game:
-        if not game['victory_condition']:
-            del game['victory_condition']
-        else:
-            game['victory_condition'] = VictoryCondition(int(game['victory_condition'])).name
+        game['victory_condition'] = VictoryCondition(int(game['victory_condition'])).name
 
     if 'validity' in game:
-        if not game['validity']:
-            del game['validity']
-        else:
-            game['validity'] = GameValidity(int(game['validity'])).name
-            # attributes = GamePlayerStatsSchema(**{key: game[key] for key in PLAYER_SELECT_EXPRESSIONS.keys() if key in game})
-            # game['players'] = attributes
+        game['validity'] = GameValidity(int(game['validity'])).name
 
 
 def check_syntax_errors(rating_type, max_rating, min_rating, map_exclude, map_name, max_datetime, min_datetime):
@@ -234,10 +201,12 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list, game_m
 
     if map_name or victory_condition or game_mod:
         table_expression = table_expression.format('gs.id', GAME_STATS_TABLE)
+        order_by_expression = SUBQUERY_ORDER_BY.format('gs.id')
         if player_list:
             table_expression += GAME_PLAYER_STATS_JOIN
     else:
         table_expression = table_expression.format('gameId', GAME_PLAYER_STATS_TABLE, '')
+        order_by_expression = SUBQUERY_ORDER_BY.format('gameId')
 
     if player_list:
         table_expression += LOGIN_JOIN
@@ -281,7 +250,7 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list, game_m
     if players:
         where_expression += GROUP_BY_EXPRESSION.format(len(players) - 1)
 
-    table_expression += where_expression + SUBQUERY_FOOTER.format(limit_expression)
+    table_expression += where_expression + order_by_expression + SUBQUERY_FOOTER.format(limit_expression)
 
     return table_expression, args
 
@@ -360,7 +329,7 @@ def sort_player_game_results(results):
     current_relationships = None
     current_game_id = None
     for game_player_object in results['data']:
-        game_id = game_player_object['id']
+        game_id = game_player_object['attributes']['game_id']
         game_player_attributes = game_player_object['attributes']
         if current_game_id != game_id:
             current_game_id = game_id

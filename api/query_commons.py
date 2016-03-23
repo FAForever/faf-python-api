@@ -163,7 +163,6 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
         elif result:
             item_enricher(result)
 
-    pprint(result)
     data = schema.dump(result, many=many).data
 
     # TODO `id` is treated specially, that means it's put into ['data'] and NOT into ['attributes']
