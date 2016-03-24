@@ -16,10 +16,10 @@ def game_stats(request):
         cursor.execute("TRUNCATE TABLE game_stats")
         cursor.execute("""INSERT INTO game_stats
         (id, startTime, gameType, gameMod, host, mapId, gameName, validity) VALUES
-        (234, '2000-01-01', '1', 2, 146315, 5091, 'testGame', 1),
-        (235, '2000-03-01', '2', 2, 146315, 5092, 'testGame2', 1),
-        (236, '2000-05-01', '3', 1, 146315, 5092, 'testGame3', 1),
-        (237, '2000-07-01', '4', 2, 146315, 5093, 'testGame4', 1)""")
+        (234, '1997-07-16T19:20', '1', 1, 146315, 5091, 'testGame', 1),
+        (235, '1997-07-19T19:20', '2', 2, 146315, 5092, 'testGame2', 1),
+        (236, '1997-07-21T19:20', '3', 3, 146315, 5092, 'testGame3', 1),
+        (237, '1997-07-24T19:20', '4', 2, 146315, 5093, 'testGame4', 1)""")
 
     def finalizer():
         with db.connection:
@@ -36,10 +36,10 @@ def game_player_stats(request):
         cursor.execute("TRUNCATE TABLE game_player_stats")
         cursor.execute("""INSERT INTO game_player_stats (id, gameId, playerId, AI, faction, color, team, place,
         mean, deviation, after_mean, after_deviation, score, scoreTime) VALUES
-        (1, 234, 146315, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
-        (2, 234, 146316, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
-        (3, 234, 146317, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
-        (4, 234, 146318, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
+        (1, 234, 146315, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, '1997-07-16T19:20+01:00'),
+        (2, 234, 146316, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, '1997-07-16T19:20+01:00'),
+        (3, 234, 146317, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, '1997-07-16T19:20+01:00'),
+        (4, 234, 146318, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, '1997-07-17T19:20+01:00'),
         (5, 235, 146316, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
         (7, 236, 146315, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
         (8, 236, 146316, 0, 1, 1, 1, 1, 0, 1, 2, 2, 50, now()),
@@ -272,7 +272,106 @@ def test_games_query_map_exclude(test_client):
     assert 'errors' in result
 
 
-def test_games_query_max_rating(test_client, game_stats, game_player_stats, global_rating,login, maps):
+def test_games_query_mod_name(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
+    response = test_client.get('/games?filter[mod]=gfmod1')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    results_data = result['data']
+    assert len(results_data) == 1
+    assert results_data[0]['id'] == '234'
+    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+
+
+def test_games_query_mod_name_no_result(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
+    response = test_client.get('/games?filter[mod]=NoMod')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    results_data = result['data']
+    assert len(results_data) == 0
+
+
+def test_games_query_mod_id(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
+    response = test_client.get('/games?filter[mod]=1')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    results_data = result['data']
+    assert len(results_data) == 1
+    assert results_data[0]['id'] == '234'
+    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+
+
+def test_games_query_min_date_bounds(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
+    response = test_client.get('/games?filter[min_datetime]=1997-07-17T19:20')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    results_data = result['data']
+    assert len(results_data) == 3
+    assert results_data[0]['id'] == '237'
+    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '237'
+    assert results_data[1]['id'] == '236'
+    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '236'
+    assert results_data[2]['id'] == '235'
+    assert results_data[2]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
+
+
+def test_games_query_max_date_bounds(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
+    response = test_client.get('/games?filter[max_datetime]=1997-07-19T19:20')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    results_data = result['data']
+    assert len(results_data) == 2
+    assert results_data[0]['id'] == '235'
+    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
+    assert results_data[1]['id'] == '234'
+    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+
+
+def test_games_query_max_date_depend_on_start_time(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
+    response = test_client.get('/games?filter[max_datetime]=1997-07-16T19:20')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    results_data = result['data']
+    assert len(results_data) == 1
+    assert results_data[0]['id'] == '234'
+    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+
+
+def test_games_query_malformed_min_date_bounds(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
+    response = test_client.get('/games?filter[min_datetime]=asfd')
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    assert 'message' in result
+
+
+def test_games_query_max_rating(test_client, game_stats, game_player_stats, global_rating, login, maps):
     response = test_client.get('/games?filter[max_rating]=1000')
 
     assert response.status_code == 200
@@ -411,7 +510,8 @@ def test_games_query_all_parameters(test_client, maps, game_stats, game_player_s
     response = test_client.get('/games?filter[players]=testUser1,testUser3&filter[map_name]=testMap2'
                                '&filter[max_rating]=2000&filter[min_rating]=500&filter[game_type]=1'
                                '&filter[rating_type]=ladder&filter[map_exclude]=true&filter[max_player_count]=4'
-                               '&filter[min_player_count]=3')
+                               '&filter[min_player_count]=3&filter[mod]=gfmod1&filter[min_datetime]=1997-07-16T19:20'
+                               '&filter[max_datetime]=1997-07-25T19:20')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -472,9 +572,9 @@ def test_game_id_no_game(test_client, game_stats, game_player_stats):
     assert response.status_code == 404
     assert response.content_type == 'application/vnd.api+json'
 
-    data = json.loads(response.data.decode('utf-8'))
+    result = json.loads(response.data.decode('utf-8'))
 
-    assert 'errors' in data
+    assert 'errors' in result
 
 
 def test_games_page_size(test_client, game_stats, game_player_stats, maps, mods, global_rating, login):

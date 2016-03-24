@@ -1,11 +1,10 @@
-from dateutil.parser import parse
-from dateutil.tz import tzoffset
 from faf.api.game_stats_schema import GameStatsAndGamePlayerStatsSchema
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
 from flask import request
 from api import app, InvalidUsage
 from api.query_commons import fetch_data, get_page_attributes, get_limit
+from iso8601 import parse_date, ParseError
 
 MAX_GAME_PAGE_SIZE = 1000
 MAX_PLAYER_PAGE_SIZE = MAX_GAME_PAGE_SIZE * 12
@@ -82,7 +81,6 @@ PLAYER_SELECT_EXPRESSIONS = {
 }
 
 GAME_AND_PLAYER_SELECT_EXPRESSIONS = {**GAME_SELECT_EXPRESSIONS, **PLAYER_SELECT_EXPRESSIONS}
-UTC_TZ = tzoffset('UTC', 0)
 
 
 @app.route('/games')
@@ -153,11 +151,11 @@ def check_syntax_errors(map_exclude, map_name, max_datetime, min_datetime):
     if map_exclude and not map_name:
         return {'errors': [{'title': 'Missing map_name parameter'}]}, 422
     try:
-        if max_datetime and not parse(max_datetime).tzinfo:
+        if max_datetime and not parse_date(max_datetime).tzinfo:
             return {'errors': [{'title': 'max date time must include timezone'}]}, 422
-        if min_datetime and not parse(min_datetime).tzinfo:
+        if min_datetime and not parse_date(min_datetime).tzinfo:
             return {'errors': [{'title': 'min date time must include timezone'}]}, 422
-    except ValueError:
+    except ParseError:
         throw_malformed_query_error('date time')
     return None
 
@@ -230,13 +228,14 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list, game_m
         condition = victory_condition
         if not victory_condition.isdigit():
             condition = VictoryCondition.from_gpgnet_string(victory_condition)
-        # condition can return a falsey value of 0
-        if condition is not None:
-            first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
-                                                                     VICTORY_CONDITION_WHERE_EXPRESSION,
-                                                                     args, str(condition.value))
-        else:
-            throw_malformed_query_error('victory_condition')
+            # condition can return a falsey value of 0
+            if condition is not None:
+                condition = condition.value
+            else:
+                throw_malformed_query_error('victory_condition')
+        first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
+                                                                 VICTORY_CONDITION_WHERE_EXPRESSION,
+                                                                 args, str(condition))
 
     if game_mod:
         if game_mod.isdigit():
@@ -306,7 +305,7 @@ def build_date_time_expression(first, having_expression, args, *date_times):
     for date_time, date_expression in date_times:
         if not date_time:
             continue
-        converted_dt = parse(date_time).astimezone(UTC_TZ)
+        converted_dt = parse_date(date_time)
         first, having_expression, args = append_filter_expression(HAVING, first, having_expression, date_expression,
                                                                   args, converted_dt)
 
