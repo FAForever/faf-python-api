@@ -329,7 +329,7 @@ def sort_player_game_results(results):
     current_relationships = None
     current_game_id = None
     for game_player_object in results['data']:
-        game_id = game_player_object['attributes']['game_id']
+        game_id = game_player_object['id']
         game_player_attributes = game_player_object['attributes']
         if current_game_id != game_id:
             current_game_id = game_id
