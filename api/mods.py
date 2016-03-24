@@ -47,7 +47,7 @@ def mods_upload():
 @app.route('/mods/<mod_uid>')
 def mod(mod_uid):
     result = fetch_data(ModSchema(), 'table_mod', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
-                        where="`uid` = %s", args=mod_uid, many=False, item_enricher=enricher)
+                        where="`uid` = %s", args=mod_uid, many=False, enricher=enricher)
 
     if 'id' not in result['data']:
         return {'errors': [{'title': 'No mod with this uid was found'}]}, 404
@@ -57,7 +57,7 @@ def mod(mod_uid):
 
 @app.route('/mods')
 def mods():
-    return fetch_data(ModSchema(), 'table_mod', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, item_enricher=enricher)
+    return fetch_data(ModSchema(), 'table_mod', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, enricher=enricher)
 
 
 def enricher(mod):

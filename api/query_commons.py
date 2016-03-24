@@ -98,7 +98,7 @@ def get_limit(page, limit):
 
 
 def fetch_data(schema, table, select_expression_dict, max_page_size, request, where='', args=None, many=True,
-               item_enricher=None, sort=None):
+               enricher=None, sort=None):
     """ Fetches data in an JSON-API conforming way.
 
     :param schema: the marshmallow schema to use for serialization
@@ -109,7 +109,7 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
     :param where: additional WHERE clauses, without the WHERE
     :param args: arguments to use when building the SQL query (e.g. ``where="id = %(id)s", args=dict(id=id)``
     :param many: ``True`` for selecting many entries, ``False`` for single entries
-    :param item_enricher: an option function to apply to each item BEFORE it's dumped using the schema
+    :param enricher: an option function to apply to each item BEFORE it's dumped using the schema
     :param sort: order the query by given column name in asc order, prefix with '-' for desc order
     """
     requested_fields = request.values.get('fields[{}]'.format(schema.Meta.type_))
@@ -154,12 +154,12 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
         else:
             result = cursor.fetchone()
 
-    if item_enricher:
+    if enricher:
         if many:
             for item in result:
-                item_enricher(item)
+                enricher(item)
         elif result:
-            item_enricher(result)
+            enricher(result)
 
     data = schema.dump(result, many=many).data
 

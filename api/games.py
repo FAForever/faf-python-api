@@ -116,12 +116,12 @@ def games():
         game_player_joined_maps['min_rating'] = build_rating_selector(rating_type, MIN_RATING_HEADER_EXPRESSION)
 
         result = fetch_data(GameStatsAndGamePlayerStatsSchema(), select_expression, game_player_joined_maps,
-                            MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id', item_enricher=enricher)
+                            MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id', enricher=enricher)
     else:
         result = fetch_data(GameStatsAndGamePlayerStatsSchema(),
                             GAMES_NO_FILTER_EXPRESSION.format('gs.id', limit_expression),
                             GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id',
-                            item_enricher=enricher)
+                            enricher=enricher)
 
     return sort_player_game_results(result)
 
@@ -131,7 +131,7 @@ def game(game_id):
     result = fetch_data(GameStatsAndGamePlayerStatsSchema(),
                         GAME_STATS_TABLE + MAP_JOIN + GAME_PLAYER_STATS_JOIN + GLOBAL_JOIN + LOGIN_JOIN +
                         FEATURED_MOD_JOIN, GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
-                        where='gs.id = %s', args=game_id, item_enricher=enricher)
+                        where='gs.id = %s', args=game_id, enricher=enricher)
 
     if len(result['data']) == 0:
         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404

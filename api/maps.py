@@ -62,7 +62,7 @@ def maps():
         many = False
 
     results = fetch_data(MapSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, where=where, args=args,
-                         many=many, item_enricher=enricher)
+                         many=many, enricher=enricher)
     return results
 
 
