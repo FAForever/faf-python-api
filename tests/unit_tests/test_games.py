@@ -77,10 +77,10 @@ def mods(request):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute("DELETE FROM game_featuredMods")
-        cursor.execute("""INSERT INTO game_featuredMods(id, name) VALUES
-        (1,'gfmod1'),
-        (2,'gfmod2'),
-        (3,'gfmod3')""")
+        cursor.execute("""INSERT INTO game_featuredMods(id, name, description) VALUES
+        (1,'gfmod1','desc'),
+        (2,'gfmod2','desc'),
+        (3,'gfmod3','desc')""")
 
     def finalizer():
         with db.connection:
