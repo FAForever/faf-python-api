@@ -1,4 +1,4 @@
-from faf.api.game_stats_schema import GameStatsAndGamePlayerStatsSchema
+from faf.api.game_stats_and_game_player_stats_schema import GameStatsAndGamePlayerStatsSchema
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
 from flask import request
