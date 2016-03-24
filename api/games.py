@@ -66,6 +66,7 @@ GAME_SELECT_EXPRESSIONS = {
 }
 
 PLAYER_SELECT_EXPRESSIONS = {
+    'gps_id': 'gps.id',
     'game_id': 'gameId',
     'player_id': 'playerId',
     'login': 'l.login',
@@ -106,7 +107,7 @@ def games():
     if errors:
         return errors
 
-    if player_list or map_name or max_rating or min_rating or victory_condition or game_mod \
+    if player_list or map_name or max_rating or min_rating or rating_type or victory_condition or game_mod \
             or max_players or min_players or max_datetime or min_datetime:
         select_expression, args = build_query(victory_condition, map_name, map_exclude, max_rating, min_rating,
                                               player_list, rating_type, max_players, min_players, max_datetime,
@@ -130,8 +131,8 @@ def games():
 @app.route('/games/<game_id>')
 def game(game_id):
     result = fetch_data(GameStatsAndGamePlayerStatsSchema(),
-                        GAME_STATS_TABLE + MAP_JOIN + GAME_PLAYER_STATS_JOIN + GLOBAL_JOIN + LOGIN_JOIN,
-                        GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
+                        GAME_STATS_TABLE + MAP_JOIN + GAME_PLAYER_STATS_JOIN + GLOBAL_JOIN + LOGIN_JOIN +
+                        FEATURED_MOD_JOIN, GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
                         where='gs.id = %s', args=game_id, item_enricher=enricher)
 
     if len(result['data']) == 0:
@@ -346,8 +347,8 @@ def sort_player_game_results(results):
         player_object['type'] = 'game_player_stats'
 
         # TODO when id is removed from attributes for all other routes fix this line
-        if 'game_player_stats_id' in player_dict:
-            player_object['id'] = player_dict.pop('game_player_stats_id')
+        if 'gps_id' in player_dict:
+            player_object['id'] = player_dict.pop('gps_id')
     return game_player
 
 

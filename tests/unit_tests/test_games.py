@@ -73,6 +73,24 @@ def maps(request):
 
 
 @pytest.fixture
+def mods(request):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute("DELETE FROM game_featuredMods")
+        cursor.execute("""INSERT INTO game_featuredMods(id, name) VALUES
+        (1,'gfmod1'),
+        (2,'gfmod2'),
+        (3,'gfmod3')""")
+
+    def finalizer():
+        with db.connection:
+            cursor = db.connection.cursor()
+            cursor.execute("DELETE FROM table_map")
+
+    request.addfinalizer(finalizer)
+
+
+@pytest.fixture
 def login(request):
     with db.connection:
         cursor = db.connection.cursor()
@@ -129,7 +147,7 @@ def global_rating(request):
     request.addfinalizer(finalizer)
 
 
-def test_games(test_client, game_stats, game_player_stats, global_rating, maps, login):
+def test_games(test_client, game_stats, game_player_stats, global_rating, maps, mods, login):
     response = test_client.get('/games')
 
     assert response.status_code == 200
@@ -144,8 +162,10 @@ def test_games(test_client, game_stats, game_player_stats, global_rating, maps, 
         assert 'type' in item
         assert 'game_name' in item['attributes']
         assert 'map_name' in item['attributes']
+        assert 'map_id' in item['attributes']
         assert 'victory_condition' in item['attributes']
-        assert 'game_mod' in item['attributes']
+        assert 'mod_name' in item['attributes']
+        assert 'mod_id' in item['attributes']
         assert 'host' in item['attributes']
         assert 'start_time' in item['attributes']
         assert 'validity' in item['attributes']
@@ -163,7 +183,7 @@ def test_games_no_games(test_client):
     assert len(result['data']) == 0
 
 
-def test_games_query_one_player(test_client, game_stats, game_player_stats, login, global_rating, maps):
+def test_games_query_one_player(test_client, game_stats, game_player_stats, login, global_rating, maps, mods):
     response = test_client.get('/games?filter[players]=testUser2')
 
     assert response.status_code == 200
@@ -300,15 +320,24 @@ def test_games_query_max_and_min_rating(test_client, game_stats, game_player_sta
     assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
 
 
-def test_games_query_rating_type_and_no_rating(test_client, game_stats, game_player_stats):
-    response = test_client.get('/games?filter[rating_type]=global')
+def test_games_query_rating_type_ladder(test_client, game_stats, game_player_stats, ladder, login, maps, mods):
+    response = test_client.get('/games?filter[rating_type]=ladder')
 
-    assert response.status_code == 422
+    assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
 
-    assert 'errors' in result
+    results_data = result['data']
+    assert len(results_data) == 4
+    assert results_data[0]['id'] == '237'
+    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '237'
+    assert results_data[1]['id'] == '236'
+    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '236'
+    assert results_data[2]['id'] == '235'
+    assert results_data[2]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
+    assert results_data[3]['id'] == '234'
+    assert results_data[3]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
 
 
 def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_player_stats, ladder, login, maps):
@@ -418,7 +447,7 @@ def test_game_id_one_player(test_client, game_stats, game_player_stats, global_r
     assert len(player_data) == 1
 
 
-def test_game_id_four_players(test_client, game_stats, game_player_stats, global_rating, login, maps):
+def test_game_id_four_players(test_client, game_stats, game_player_stats, global_rating, login, maps, mods):
     response = test_client.get('/games/234')
 
     assert response.status_code == 200
@@ -448,7 +477,7 @@ def test_game_id_no_game(test_client, game_stats, game_player_stats):
     assert 'errors' in data
 
 
-def test_games_page_size(test_client, game_stats, game_player_stats, maps):
+def test_games_page_size(test_client, game_stats, game_player_stats, maps, mods, global_rating, login):
     response = test_client.get('/games?page[size]=1')
 
     assert response.status_code == 200
@@ -505,11 +534,3 @@ def test_games_query_game_type_sql_injection(test_client):
     assert response.status_code == 200
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['data']) == 0
-
-
-def test_games_query_invalid_map_exclude(test_client):
-    response = test_client.get('/games?filter[map_exclude]=hey&filter[map_name]=hey')
-
-    assert response.status_code == 400
-    result = json.loads(response.data.decode('utf-8'))
-    assert 'message' in result
