@@ -1,7 +1,10 @@
 import json
 
+import math
+
 import pytest
 from faf import db
+from iso8601 import parse_date
 
 testGameName = 'testGame'
 testGame2Name = 'testGame2'
@@ -195,15 +198,13 @@ def test_games_query_one_player(test_client, game_stats, game_player_stats, logi
     assert results_data[0]['id'] == '236'
     assert results_data[1]['id'] == '235'
     assert results_data[2]['id'] == '234'
-    player_data_1 = results_data[0]['relationships']['players']['data']
+    player_data_1 = results_data[0]['attributes']['players']
     assert len(player_data_1) == 2
-    assert player_data_1[0]['attributes']['game_id'] == '236'
-    player_data_2 = results_data[1]['relationships']['players']['data']
+    player_data_2 = results_data[1]['attributes']['players']
     assert len(player_data_2) == 1
-    assert player_data_2[0]['attributes']['game_id'] == '235'
-    player_data_3 = results_data[2]['relationships']['players']['data']
+    assert player_data_2[0]['login'] == 'testUser2'
+    player_data_3 = results_data[2]['attributes']['players']
     assert len(player_data_3) == 4
-    assert player_data_3[0]['attributes']['game_id'] == '234'
 
 
 def test_games_query_multiple_players(test_client, game_stats, game_player_stats, login, global_rating, maps):
@@ -217,7 +218,9 @@ def test_games_query_multiple_players(test_client, game_stats, game_player_stats
     results_data = result['data']
     assert len(results_data) == 1
     assert results_data[0]['id'] == '234'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+    players = results_data[0]['attributes']['players']
+    assert any([player['login'] == 'testUser1'] for player in players)
+    assert any([player['login'] == 'testUser3'] for player in players)
 
 
 def test_games_query_player_no_result(test_client, game_stats, game_player_stats, login):
@@ -242,7 +245,7 @@ def test_games_query_map_name(test_client, maps, game_player_stats, game_stats, 
     results_data = result['data']
     assert len(results_data) == 1
     assert results_data[0]['id'] == '234'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+    assert results_data[0]['attributes']['map_name'] == 'testMap1'
 
 
 def test_games_query_map_name_exclude(test_client, maps, game_player_stats, game_stats, global_rating, login):
@@ -255,10 +258,7 @@ def test_games_query_map_name_exclude(test_client, maps, game_player_stats, game
 
     results_data = result['data']
     assert len(results_data) == 3
-    assert results_data[0]['id'] == '237'
-    player_data_1 = results_data[0]['relationships']['players']['data']
-    assert len(player_data_1) == 2
-    assert player_data_1[0]['attributes']['game_id'] == '237'
+    assert all([not game['attributes']['map_name'] == 'testMap1'] for game in results_data)
 
 
 def test_games_query_map_exclude(test_client):
@@ -283,7 +283,7 @@ def test_games_query_mod_name(test_client, maps, game_player_stats, game_stats, 
     results_data = result['data']
     assert len(results_data) == 1
     assert results_data[0]['id'] == '234'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+    assert all([game['attributes']['mod_name'] == 'gfmod1'] for game in results_data)
 
 
 def test_games_query_mod_name_no_result(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
@@ -309,7 +309,7 @@ def test_games_query_mod_id(test_client, maps, game_player_stats, game_stats, gl
     results_data = result['data']
     assert len(results_data) == 1
     assert results_data[0]['id'] == '234'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+    assert all([game['attributes']['mod_id'] == 1 for game in results_data])
 
 
 def test_games_query_min_date_bounds(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
@@ -322,12 +322,8 @@ def test_games_query_min_date_bounds(test_client, maps, game_player_stats, game_
 
     results_data = result['data']
     assert len(results_data) == 3
-    assert results_data[0]['id'] == '237'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '237'
-    assert results_data[1]['id'] == '236'
-    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '236'
-    assert results_data[2]['id'] == '235'
-    assert results_data[2]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
+    assert all(
+        [parse_date(game['attributes']['start_time']) >= parse_date('1997-07-17T19:20') for game in results_data])
 
 
 def test_games_query_max_date_bounds(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
@@ -340,13 +336,12 @@ def test_games_query_max_date_bounds(test_client, maps, game_player_stats, game_
 
     results_data = result['data']
     assert len(results_data) == 2
-    assert results_data[0]['id'] == '235'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
-    assert results_data[1]['id'] == '234'
-    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+    assert all([parse_date(game['attributes']['start_time']) <= parse_date('1997-07-19T19:20')]
+               for game in results_data)
 
 
-def test_games_query_max_date_depend_on_start_time(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
+def test_games_query_max_date_depend_on_start_time(test_client, maps, game_player_stats, game_stats, global_rating,
+                                                   login, mods):
     response = test_client.get('/games?filter[max_datetime]=1997-07-16T19:20')
 
     assert response.status_code == 200
@@ -356,11 +351,12 @@ def test_games_query_max_date_depend_on_start_time(test_client, maps, game_playe
 
     results_data = result['data']
     assert len(results_data) == 1
-    assert results_data[0]['id'] == '234'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+    assert all(
+        [parse_date(game['attributes']['start_time']) >= parse_date('1997-07-16T19:20') for game in results_data])
 
 
-def test_games_query_malformed_min_date_bounds(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
+def test_games_query_malformed_min_date_bounds(test_client, maps, game_player_stats, game_stats, global_rating, login,
+                                               mods):
     response = test_client.get('/games?filter[min_datetime]=asfd')
 
     assert response.status_code == 400
@@ -381,10 +377,9 @@ def test_games_query_max_rating(test_client, game_stats, game_player_stats, glob
 
     results_data = result['data']
     assert len(results_data) == 1
-    assert results_data[0]['id'] == '237'
-    player_data = results_data[0]['relationships']['players']['data']
-    assert len(player_data) == 2
-    assert player_data[0]['attributes']['game_id'] == '237'
+    for game in results_data:
+        assert all([player['mean'] - 3 * player['deviation'] <= 1000
+                    for player in game['attributes']['players']])
 
 
 def test_games_query_min_rating(test_client, game_stats, game_player_stats, global_rating, login, maps):
@@ -397,10 +392,9 @@ def test_games_query_min_rating(test_client, game_stats, game_player_stats, glob
 
     results_data = result['data']
     assert len(results_data) == 2
-    assert results_data[0]['id'] == '236'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '236'
-    assert results_data[1]['id'] == '235'
-    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
+    for game in results_data:
+        assert all([player['mean'] - 3 * player['deviation'] >= 1100
+                    for player in game['attributes']['players']])
 
 
 def test_games_query_max_and_min_rating(test_client, game_stats, game_player_stats, global_rating, login, maps):
@@ -413,10 +407,10 @@ def test_games_query_max_and_min_rating(test_client, game_stats, game_player_sta
 
     results_data = result['data']
     assert len(results_data) == 2
-    assert results_data[0]['id'] == '237'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '237'
-    assert results_data[1]['id'] == '235'
-    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
+    for game in results_data:
+        assert all([(player['mean'] - 3 * player['deviation'] <= 2000) and
+                    (player['mean'] - 3 * player['deviation'] >= 500)
+                    for player in game['attributes']['players']])
 
 
 def test_games_query_rating_type_ladder(test_client, game_stats, game_player_stats, ladder, login, maps, mods):
@@ -430,13 +424,14 @@ def test_games_query_rating_type_ladder(test_client, game_stats, game_player_sta
     results_data = result['data']
     assert len(results_data) == 4
     assert results_data[0]['id'] == '237'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '237'
-    assert results_data[1]['id'] == '236'
-    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '236'
-    assert results_data[2]['id'] == '235'
-    assert results_data[2]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
-    assert results_data[3]['id'] == '234'
-    assert results_data[3]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+    players = results_data[0]['attributes']['players']
+    assert 'testUser3' == players[0]['login'] or 'testUser3' == players[1]['login']
+    assert 'testUser4' == players[0]['login'] or 'testUser4' == players[1]['login']
+    for player in players:
+        if player['login'] == 'testUser3':
+            assert math.isclose(player['mean'], 500)
+        else:
+            assert math.isclose(player['mean'], 700)
 
 
 def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_player_stats, ladder, login, maps):
@@ -449,14 +444,10 @@ def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_pla
 
     results_data = result['data']
     assert len(results_data) == 4
-    assert results_data[0]['id'] == '237'
-    assert results_data[1]['id'] == '236'
-    assert results_data[2]['id'] == '235'
-    assert results_data[3]['id'] == '234'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '237'
-    assert results_data[1]['relationships']['players']['data'][0]['attributes']['game_id'] == '236'
-    assert results_data[2]['relationships']['players']['data'][0]['attributes']['game_id'] == '235'
-    assert results_data[3]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+    for game in results_data:
+        assert all([(player['mean'] - 3 * player['deviation'] <= 2000) and
+                    (player['mean'] - 3 * player['deviation'] >= 500)
+                    for player in game['attributes']['players']])
 
 
 def test_games_query_victory_condition(test_client, game_stats, game_player_stats, global_rating, login, maps):
@@ -469,8 +460,7 @@ def test_games_query_victory_condition(test_client, game_stats, game_player_stat
 
     results_data = result['data']
     assert len(results_data) == 1
-    assert results_data[0]['id'] == '234'
-    assert results_data[0]['relationships']['players']['data'][0]['attributes']['game_id'] == '234'
+    assert all([game['attributes']['victory_condition'] == 'DOMINATION' for game in results_data])
 
 
 def test_games_malformed_query_victory_condition(test_client):
@@ -519,15 +509,18 @@ def test_games_query_all_parameters(test_client, maps, game_stats, game_player_s
     result = json.loads(response.data.decode('utf-8'))
     results_data = result['data'][0]
     assert 'data' in result
-    assert len(result['data'])
-    player_data = results_data['relationships']['players']['data']
+    assert len(result['data']) == 1
+    player_data = results_data['attributes']['players']
     assert len(player_data) == 4
     assert results_data['id'] == '234'
     assert results_data['attributes']['game_name'] == testGameName
     assert results_data['attributes']['validity'] == 'TOO_MANY_DESYNCS'
     assert results_data['attributes']['victory_condition'] == 'DOMINATION'
-    assert player_data[0]['attributes']['game_id'] == '234'
-    assert 'testUser' in player_data[0]['attributes']['login']
+    assert all([(player['mean'] - 3 * player['deviation'] <= 2000) and
+                (player['mean'] - 3 * player['deviation'] >= 500)
+                for player in results_data['attributes']['players']])
+    assert parse_date('1997-07-16T19:20') <= parse_date(results_data['attributes']['start_time']) <= parse_date(
+        '1997-07-25T19:20')
 
 
 def test_game_id_one_player(test_client, game_stats, game_player_stats, global_rating, login, maps):
@@ -540,11 +533,11 @@ def test_game_id_one_player(test_client, game_stats, game_player_stats, global_r
     results_data = result['data'][0]
     assert 'data' in result
     assert results_data['id'] == '235'
-    assert results_data['attributes']['game_name'] == testGame2Name
-    assert results_data['attributes']['validity'] == 'TOO_MANY_DESYNCS'
-    assert results_data['attributes']['victory_condition'] == 'ERADICATION'
-    player_data = results_data['relationships']['players']['data']
-    assert len(player_data) == 1
+    attributes = results_data['attributes']
+    assert attributes['game_name'] == testGame2Name
+    assert attributes['validity'] == 'TOO_MANY_DESYNCS'
+    assert attributes['victory_condition'] == 'ERADICATION'
+    assert len(attributes['players']) == 1
 
 
 def test_game_id_four_players(test_client, game_stats, game_player_stats, global_rating, login, maps, mods):
@@ -556,14 +549,9 @@ def test_game_id_four_players(test_client, game_stats, game_player_stats, global
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
     result_data = result['data'][0]
-    assert len(result_data['relationships']['players']['data']) == 4
+    assert len(result_data['attributes']['players']) == 4
     assert result_data['id'] == '234'
     assert result_data['attributes']['game_name'] == testGameName
-
-    for item in result_data['relationships']['players']['data']:
-        assert 'id' in item
-        assert 'type' in item
-        assert item['type'] == 'game_player_stats'
 
 
 def test_game_id_no_game(test_client, game_stats, game_player_stats):
