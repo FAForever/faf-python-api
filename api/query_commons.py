@@ -97,13 +97,13 @@ def get_limit(page, limit):
     return 'LIMIT {}, {}'.format((page - 1) * limit, limit)
 
 
-def fetch_data(schema, table, select_expression_dict, max_page_size, request, where='', args=None, many=True,
-               enricher=None, sort=None):
+def fetch_data(schema, table, root_select_expression_dict, max_page_size, request, where='', args=None, many=True,
+               enricher=None, sort=None, **nested_expression_dict):
     """ Fetches data in an JSON-API conforming way.
 
     :param schema: the marshmallow schema to use for serialization
     :param table: the table to select the data from (or any FROM expression, without the FROM)
-    :param select_expression_dict: a dictionary that maps API field names to select expressions
+    :param root_select_expression_dict: a dictionary that maps API field names to select expressions
     :param max_page_size: max number of items per page
     :param request: the flask HTTP request
     :param where: additional WHERE clauses, without the WHERE
@@ -111,17 +111,26 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
     :param many: ``True`` for selecting many entries, ``False`` for single entries
     :param enricher: an option function to apply to each item BEFORE it's dumped using the schema
     :param sort: order the query by given column name in asc order, prefix with '-' for desc order
+    :param nested_expression_dict: dict of nested objects to be found in select_expression_dict e.g.
+        nested_expression_dict = {'nest_atr_name' : { 'nest_atr_key' : 'nest_atr_value'}}
     """
     requested_fields = request.values.get('fields[{}]'.format(schema.Meta.type_))
 
     if not sort:
         sort = request.values.get('sort')
 
+    select_dict = {**root_select_expression_dict}
+    for nested_dict in nested_expression_dict.values():
+        select_dict.update(nested_dict)
+
     # Sanitize fields
     if requested_fields:
-        fields = [field for field in requested_fields.split(',') if field in select_expression_dict.keys()]
+        fields = [field for field in requested_fields.split(',') if field in select_dict.keys()]
+        nested_fields = [field for field in requested_fields.split(',') if field in nested_expression_dict.keys()]
+        for nested_field in nested_fields:
+            fields.extend([*nested_expression_dict[nested_field]])
     else:
-        fields = list(select_expression_dict.keys())
+        fields = [*select_dict.keys()]
 
     id_selected = True
     if 'id' not in fields:
@@ -129,7 +138,7 @@ def fetch_data(schema, table, select_expression_dict, max_page_size, request, wh
         fields.append('id')
         id_selected = False
 
-    select_expressions = get_select_expressions(fields, select_expression_dict)
+    select_expressions = get_select_expressions(fields, select_dict)
 
     if many:
         page, page_size = get_page_attributes(max_page_size, request)

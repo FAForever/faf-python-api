@@ -1,4 +1,4 @@
-from faf.api.game_stats_and_game_player_stats_schema import GameStatsAndGamePlayerStatsSchema
+from faf.api.game_stats_schema import GameStats
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
 from flask import request
@@ -65,7 +65,6 @@ GAME_SELECT_EXPRESSIONS = {
 }
 
 PLAYER_SELECT_EXPRESSIONS = {
-    'gps_id': 'gps.id',
     'game_id': 'gameId',
     'player_id': 'playerId',
     'login': 'l.login',
@@ -75,12 +74,12 @@ PLAYER_SELECT_EXPRESSIONS = {
     'is_ai': 'AI',
     'place': 'place',
     'mean': 'r.mean',
+    'max_rating': 'NULL',
+    'min_rating': 'NULL',
     'deviation': 'r.deviation',
     'score': 'score',
     'score_time': 'scoreTime'
 }
-
-GAME_AND_PLAYER_SELECT_EXPRESSIONS = {**GAME_SELECT_EXPRESSIONS, **PLAYER_SELECT_EXPRESSIONS}
 
 
 @app.route('/games')
@@ -111,32 +110,33 @@ def games():
                                               player_list, rating_type, max_players, min_players, max_datetime,
                                               min_datetime, game_mod, limit_expression)
 
-        game_player_joined_maps = GAME_AND_PLAYER_SELECT_EXPRESSIONS
-        game_player_joined_maps['max_rating'] = build_rating_selector(rating_type, MAX_RATING_HEADER_EXPRESSION)
-        game_player_joined_maps['min_rating'] = build_rating_selector(rating_type, MIN_RATING_HEADER_EXPRESSION)
+        player_select_expression = PLAYER_SELECT_EXPRESSIONS
+        player_select_expression['max_rating'] = build_rating_selector(rating_type, MAX_RATING_HEADER_EXPRESSION)
+        player_select_expression['min_rating'] = build_rating_selector(rating_type, MIN_RATING_HEADER_EXPRESSION)
 
-        result = fetch_data(GameStatsAndGamePlayerStatsSchema(), select_expression, game_player_joined_maps,
-                            MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id', enricher=enricher)
+        result = fetch_data(GameStats(), select_expression, GAME_SELECT_EXPRESSIONS,
+                            MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id', enricher=enricher,
+                            players=player_select_expression)
     else:
-        result = fetch_data(GameStatsAndGamePlayerStatsSchema(),
+        result = fetch_data(GameStats(),
                             GAMES_NO_FILTER_EXPRESSION.format('gs.id', limit_expression),
-                            GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id',
-                            enricher=enricher)
+                            GAME_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id', enricher=enricher,
+                            players=PLAYER_SELECT_EXPRESSIONS)
 
-    return sort_player_game_results(result)
+    return sort_game_results(result)
 
 
 @app.route('/games/<game_id>')
 def game(game_id):
-    result = fetch_data(GameStatsAndGamePlayerStatsSchema(),
+    result = fetch_data(GameStats(),
                         GAME_STATS_TABLE + MAP_JOIN + GAME_PLAYER_STATS_JOIN + GLOBAL_JOIN + LOGIN_JOIN +
-                        FEATURED_MOD_JOIN, GAME_AND_PLAYER_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
-                        where='gs.id = %s', args=game_id, enricher=enricher)
+                        FEATURED_MOD_JOIN, GAME_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
+                        where='gs.id = %s', args=game_id, enricher=enricher, players=PLAYER_SELECT_EXPRESSIONS)
 
     if len(result['data']) == 0:
         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
 
-    return sort_player_game_results(result)
+    return sort_game_results(result)
 
 
 def enricher(game):
@@ -322,32 +322,29 @@ def append_filter_expression(prefix, first, where_expression, format_expression,
     return first, where_expression, args
 
 
-def sort_player_game_results(results):
-    game_player = dict(data=list())
+def sort_game_results(results):
+    game_player = {'data': []}
     data = game_player['data']
 
-    current_relationships = None
+    current_game_attributes = None
     current_game_id = None
-    for game_player_object in results['data']:
-        game_id = game_player_object['id']
-        game_player_attributes = game_player_object['attributes']
+    for game_result in results['data']:
+        game_id = game_result['id']
+        game_attributes = game_result['attributes']
         if current_game_id != game_id:
             current_game_id = game_id
-            gs_type = game_player_object['type']
-            attributes = {key: game_player_attributes[key] for key in GAME_SELECT_EXPRESSIONS.keys() if
-                          key in game_player_attributes}
-            current_relationships = dict(players=dict(data=list()))
-            data.append(dict(id=game_id, type=gs_type, attributes=attributes, relationships=current_relationships))
-        player_dict = {key: game_player_attributes[key] for key in PLAYER_SELECT_EXPRESSIONS.keys() if
-                       key in game_player_attributes}
-
-        player_object = dict(attributes=player_dict)
-        current_relationships['players']['data'].append(player_object)
-        player_object['type'] = 'game_player_stats'
-
-        # TODO when id is removed from attributes for all other routes fix this line
-        if 'gps_id' in player_dict:
-            player_object['id'] = player_dict.pop('gps_id')
+            gs_type = game_result['type']
+            current_game_attributes = {key: game_attributes[key] for key in GAME_SELECT_EXPRESSIONS.keys() if
+                                       key in game_attributes}
+            if any(x in game_attributes for x in PLAYER_SELECT_EXPRESSIONS.keys()):
+                current_game_attributes['players'] = []
+            data.append({'id': game_id, 'type': gs_type, 'attributes': current_game_attributes})
+        if 'players' in current_game_attributes:
+            player_dict = {key: game_attributes[key] for key in PLAYER_SELECT_EXPRESSIONS.keys() if
+                           key in game_attributes}
+            player_dict.pop('game_id', None)
+            if player_dict:
+                current_game_attributes['players'].append(player_dict)
     return game_player
 
 
