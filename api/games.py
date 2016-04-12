@@ -1,73 +1,85 @@
-import distutils.util
-from faf.api.game_stats_schema import GameStatsSchema, GamePlayerStatsSchema
+from faf.api.game_stats_schema import GameStats
 from faf.game_validity import GameValidity
 from faf.victory_condition import VictoryCondition
 from flask import request
 from api import app, InvalidUsage
-from api.query_commons import fetch_data
+from api.query_commons import fetch_data, get_page_attributes, get_limit
+from iso8601 import parse_date, ParseError
 
 MAX_GAME_PAGE_SIZE = 1000
 MAX_PLAYER_PAGE_SIZE = MAX_GAME_PAGE_SIZE * 12
 
+GAME_STATS_TABLE = 'game_stats gs'
+GAME_PLAYER_STATS_TABLE = 'game_player_stats gps'
+
+GAME_PLAYER_STATS_JOIN = ' INNER JOIN game_player_stats gps ON gs.id = gps.gameId'
+MAP_JOIN = ' INNER JOIN table_map tmap ON tmap.id = gs.mapId'
+FEATURED_MOD_JOIN = ' INNER JOIN game_featuredMods gfmod ON gfmod.id = gs.gameMod'
+LOGIN_JOIN = ' INNER JOIN login l ON l.id = gps.playerId'
+GLOBAL_JOIN = ' INNER JOIN global_rating r ON r.id = gps.playerId'
+LADDER1V1_JOIN = ' INNER JOIN ladder1v1_rating r ON r.id = gps.playerId'
+
+PLAYER_COUNT_EXPRESSION = '(SELECT COUNT(*) FROM ' + GAME_PLAYER_STATS_TABLE + ' WHERE gs.id = gps.gameId)'
+RATING_EXPRESSION = '(ROUND(r.mean-3*r.deviation)) FROM ' + GAME_PLAYER_STATS_TABLE + ' {} WHERE gps.gameId=gs.id)'
+MIN_RATING_HEADER_EXPRESSION = '(SELECT MIN'
+MAX_RATING_HEADER_EXPRESSION = '(SELECT MAX'
+HEADER = GAME_STATS_TABLE + GAME_PLAYER_STATS_JOIN + LOGIN_JOIN + MAP_JOIN + FEATURED_MOD_JOIN + '{}'
+SUBQUERY_HEADER = ' WHERE gs.id IN (SELECT * FROM (SELECT {} FROM {}'
+SUBQUERY_ORDER_BY = ' ORDER BY {} DESC'
+SUBQUERY_FOOTER = ' {}) AS games)'
+
+GROUP_BY_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {} '
+MAP_NAME_WHERE_EXPRESSION = '{} tmap.name = %s'
+MAX_PLAYER_WHERE_EXPRESSION = 'player_count <= %s'
+MIN_PLAYER_WHERE_EXPRESSION = 'player_count >= %s'
+VICTORY_CONDITION_WHERE_EXPRESSION = 'gs.gameType = %s'
+GAME_MOD_WHERE_EXPRESSION = '{}.{} = %s'
+GAME_MOD_WHERE_ID = 'gs', 'gameMod'
+GAME_MOD_WHERE_NAME = 'gfmod', 'name'
+MAX_RATING_HAVING_EXPRESSION = 'max_rating <= %s'
+MIN_RATING_HAVING_EXPRESSION = 'min_rating >= %s'
+MAX_DATE_HAVING_EXPRESSION = 'startTime <= %s'
+MIN_DATE_HAVING_EXPRESSION = 'startTime >= %s'
+
+GAMES_NO_FILTER_EXPRESSION = GAME_PLAYER_STATS_TABLE + ' INNER JOIN (SELECT * FROM ' + GAME_STATS_TABLE + \
+                             SUBQUERY_ORDER_BY + ' {}) AS gs ON gs.id = gps.gameId' \
+                             + LOGIN_JOIN + MAP_JOIN + FEATURED_MOD_JOIN + GLOBAL_JOIN
+
+AND = ' AND '
+WHERE = ' WHERE '
+HAVING = ' HAVING '
+NOT = ' NOT'
+
 GAME_SELECT_EXPRESSIONS = {
     'id': 'gs.id',
     'game_name': 'gameName',
-    'map_name': 'tm.name',
+    'map_name': 'tmap.name',
+    'map_id': 'tmap.id',
     'victory_condition': 'gameType',
-    'game_mod': 'gameMod',
+    'mod_name': 'gfmod.gamemod',
+    'mod_id': 'gfmod.id',
     'host': 'host',
     'start_time': 'startTime',
-    'validity': 'validity'
+    'validity': 'validity',
+    'player_count': PLAYER_COUNT_EXPRESSION
 }
 
 PLAYER_SELECT_EXPRESSIONS = {
-    'id': 'gps.id',
     'game_id': 'gameId',
     'player_id': 'playerId',
     'login': 'l.login',
     'team': 'team',
     'faction': 'faction',
     'color': 'color',
-    'has_ai': 'AI',
+    'is_ai': 'AI',
     'place': 'place',
     'mean': 'r.mean',
+    'max_rating': 'NULL',
+    'min_rating': 'NULL',
     'deviation': 'r.deviation',
     'score': 'score',
     'score_time': 'scoreTime'
 }
-
-GAME_STATS_TABLE = 'game_stats gs'
-GAME_PLAYER_STATS_TABLE = 'game_player_stats gps'
-LOGIN_TABLE = 'login'
-
-MAP_JOIN = ' INNER JOIN table_map tm ON tm.id = gs.mapId'
-LOGIN_JOIN = ' INNER JOIN login l ON l.id = gps.playerId'
-GLOBAL_JOIN = ' INNER JOIN global_rating r ON r.id = gps.playerId'
-LADDER1V1_JOIN = ' INNER JOIN ladder1v1_rating r ON r.id = gps.playerId'
-
-GAME_STATS_HEADER_EXPRESSION = 'game_stats gs' + MAP_JOIN + ' WHERE gs.id'
-GAME_PLAYER_STATS_HEADER_EXPRESSION = 'game_player_stats gps' + LOGIN_JOIN + ' {} WHERE gameId '
-SUB_HEADER_EXPRESSION_HEAD = ' IN (SELECT playerCount.gameId FROM (' \
-                        'SELECT gps.gameId, COUNT(playerId) AS `playerCount` FROM game_player_stats gps INNER JOIN (' \
-                        'SELECT gameId FROM game_player_stats gps INNER JOIN game_stats gs ON gs.id = gps.gameId'
-SUB_HEADER_EXPRESSION_FOOT = ') games ON gps.gameId = games.gameId GROUP BY gps.gameId) playerCount '
-COUNT_TABLE_EXPRESSION_HEADER = 'INNER JOIN (SELECT gameId, COUNT(playerId) AS `playerCount` FROM game_player_stats gps'
-COUNT_TABLE_EXPRESSION_FOOTER = 'GROUP BY gameId) maxPlayerRatingCount ON ' \
-                                'playerCount.playerCount = maxPlayerRatingCount.playerCount ' \
-                                'AND playerCount.gameId = maxPlayerRatingCount.gameId'
-FOOTER_EXPRESSION = ')'
-
-MAX_RATING_WHERE_EXPRESSION = '%s >= ROUND(r.mean - 3 * r.deviation)'
-MIN_RATING_WHERE_EXPRESSION = '%s <= ROUND(r.mean - 3 * r.deviation)'
-MAP_NAME_WHERE_EXPRESSION = '{} tm.name = %s'
-MAX_PLAYER_WHERE_EXPRESSION = 'playerCount.playerCount <= %s'
-MIN_PLAYER_WHERE_EXPRESSION = 'playerCount.playerCount >= %s'
-VICTORY_CONDITION_WHERE_EXPRESSION = 'gs.gameType = %s'
-GROUP_BY_EXPRESSION = ' GROUP BY gameId HAVING COUNT(*) > {} '
-
-AND = ' AND '
-WHERE = ' WHERE '
-NOT = 'NOT'
 
 
 @app.route('/games')
@@ -78,209 +90,262 @@ def games():
     max_rating = request.args.get('filter[max_rating]')
     min_rating = request.args.get('filter[min_rating]')
     victory_condition = request.args.get('filter[victory_condition]')
+    game_mod = request.args.get('filter[mod]')
     rating_type = request.args.get('filter[rating_type]')
     max_players = request.args.get('filter[max_player_count]')
     min_players = request.args.get('filter[min_player_count]')
+    max_datetime = request.args.get('filter[max_datetime]')
+    min_datetime = request.args.get('filter[min_datetime]')
 
-    if rating_type and not (max_rating or min_rating):
-        return {'errors': [{'title': 'Missing max/min_rating parameters'}]}, 422
+    page, page_size = get_page_attributes(MAX_GAME_PAGE_SIZE, request)
+    limit_expression = get_limit(page, page_size)
 
-    if map_exclude and not map_name:
-        return {'errors': [{'title': 'Missing map_name parameter'}]}, 422
+    errors = check_syntax_errors(map_exclude, map_name, max_datetime, min_datetime)
+    if errors:
+        return errors
 
-    if player_list or map_name or max_rating or min_rating or victory_condition or max_players or min_players:
-        if not map_exclude:
-            map_exclude = 'False'
-
+    if player_list or map_name or max_rating or min_rating or rating_type or victory_condition or game_mod \
+            or max_players or min_players or max_datetime or min_datetime:
         select_expression, args = build_query(victory_condition, map_name, map_exclude, max_rating, min_rating,
-                                              player_list,
-                                              rating_type, max_players, min_players)
+                                              player_list, rating_type, max_players, min_players, max_datetime,
+                                              min_datetime, game_mod, limit_expression)
 
-        game_stats_select_expression = GAME_STATS_HEADER_EXPRESSION + select_expression + FOOTER_EXPRESSION
-        game_player_stats_select_expression = build_game_player_stats_query(select_expression, rating_type)
-        game_results = fetch_data(GameStatsSchema(), game_stats_select_expression, GAME_SELECT_EXPRESSIONS,
-                                  MAX_GAME_PAGE_SIZE, request,
-                                  args=args, enricher=enricher, sort='-id')
-        player_results = fetch_data(GamePlayerStatsSchema(), game_player_stats_select_expression,
-                                    PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, args=args,
-                                    sort='-game_id')
+        player_select_expression = PLAYER_SELECT_EXPRESSIONS
+        player_select_expression['max_rating'] = build_rating_selector(rating_type, MAX_RATING_HEADER_EXPRESSION)
+        player_select_expression['min_rating'] = build_rating_selector(rating_type, MIN_RATING_HEADER_EXPRESSION)
+
+        result = fetch_data(GameStats(), select_expression, GAME_SELECT_EXPRESSIONS,
+                            MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id', enricher=enricher,
+                            players=player_select_expression)
     else:
-        game_results = fetch_data(GameStatsSchema(), GAME_STATS_TABLE + MAP_JOIN, GAME_SELECT_EXPRESSIONS,
-                                  MAX_GAME_PAGE_SIZE, request, enricher=enricher, sort='-id')
-        player_results = fetch_data(GamePlayerStatsSchema(), GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN + LOGIN_JOIN,
-                                    PLAYER_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-game_id')
-    return join_game_and_player_results(game_results, player_results)
+        result = fetch_data(GameStats(),
+                            GAMES_NO_FILTER_EXPRESSION.format('gs.id', limit_expression),
+                            GAME_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id', enricher=enricher,
+                            players=PLAYER_SELECT_EXPRESSIONS)
+
+    return sort_game_results(result)
 
 
 @app.route('/games/<game_id>')
 def game(game_id):
-    game_result = fetch_data(GameStatsSchema(), GAME_STATS_TABLE + MAP_JOIN, GAME_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
-                             where='gs.id = %s', args=game_id, many=False, enricher=enricher)
+    result = fetch_data(GameStats(),
+                        GAME_STATS_TABLE + MAP_JOIN + GAME_PLAYER_STATS_JOIN + GLOBAL_JOIN + LOGIN_JOIN +
+                        FEATURED_MOD_JOIN, GAME_SELECT_EXPRESSIONS, MAX_GAME_PAGE_SIZE, request,
+                        where='gs.id = %s', args=game_id, enricher=enricher, players=PLAYER_SELECT_EXPRESSIONS)
 
-    if 'id' not in game_result['data']:
+    if len(result['data']) == 0:
         return {'errors': [{'title': 'No game with this game ID was found'}]}, 404
 
-    player_select_expression = GAME_PLAYER_STATS_TABLE + GLOBAL_JOIN + LOGIN_JOIN
-    player_results = fetch_data(GamePlayerStatsSchema(), player_select_expression, PLAYER_SELECT_EXPRESSIONS,
-                                MAX_GAME_PAGE_SIZE,
-                                request, where='gameId = %s', args=game_id)
-
-    game_result['data']['relationships'] = dict(players=player_results)
-
-    return game_result
+    return sort_game_results(result)
 
 
 def enricher(game):
     if 'victory_condition' in game:
-        if not game['victory_condition']:
-            del game['victory_condition']
-        else:
-            game['victory_condition'] = VictoryCondition(int(game['victory_condition'])).name
+        game['victory_condition'] = VictoryCondition(int(game['victory_condition'])).name
 
     if 'validity' in game:
-        if not game['validity']:
-            del game['validity']
-        else:
-            game['validity'] = GameValidity(int(game['validity'])).name
+        game['validity'] = GameValidity(int(game['validity'])).name
+
+
+def check_syntax_errors(map_exclude, map_name, max_datetime, min_datetime):
+    if map_exclude and not map_name:
+        return {'errors': [{'title': 'Missing map_name parameter'}]}, 422
+    try:
+        if max_datetime and not parse_date(max_datetime).tzinfo:
+            return {'errors': [{'title': 'max date time must include timezone'}]}, 422
+        if min_datetime and not parse_date(min_datetime).tzinfo:
+            return {'errors': [{'title': 'min date time must include timezone'}]}, 422
+    except ParseError:
+        throw_malformed_query_error('date time')
+    return None
 
 
 def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating, player_list, rating_type, max_players,
-                min_players):
-    table_expression = SUB_HEADER_EXPRESSION_HEAD
+                min_players, max_datetime, min_datetime, game_mod, limit_expression):
+    table_expression = HEADER
+    having_expression = ''
+    first = True
+
+    subquery_expression, args = build_subquery(victory_condition, map_name, map_exclude,
+                                               player_list, game_mod, limit_expression)
+
+    table_expression = format_with_rating(rating_type, table_expression)
+    if max_rating or min_rating:
+        having_expression, args, first = build_rating_expression(first, having_expression, args,
+                                                                 (max_rating, MAX_RATING_HAVING_EXPRESSION),
+                                                                 (min_rating, MIN_RATING_HAVING_EXPRESSION))
+
+    if max_players or min_players:
+        having_expression, args, first = build_player_count_expression(first, having_expression, args,
+                                                                       (max_players, MAX_PLAYER_WHERE_EXPRESSION),
+                                                                       (min_players, MIN_PLAYER_WHERE_EXPRESSION))
+
+    if max_datetime or min_datetime:
+        having_expression, args, first = build_date_time_expression(first, having_expression, args,
+                                                                    (max_datetime, MAX_DATE_HAVING_EXPRESSION),
+                                                                    (min_datetime, MIN_DATE_HAVING_EXPRESSION))
+
+    return table_expression + subquery_expression + having_expression, args
+
+
+def build_subquery(victory_condition, map_name, map_exclude, player_list, game_mod, limit_expression):
+    table_expression = SUBQUERY_HEADER
     where_expression = ''
-    args = list()
+    args = []
     first = True
     players = None
+
+    if not (victory_condition or map_name or player_list or game_mod):
+        return '', args
+
+    if map_name or victory_condition or game_mod:
+        table_expression = table_expression.format('gs.id', GAME_STATS_TABLE)
+        order_by_expression = SUBQUERY_ORDER_BY.format('gs.id')
+        if player_list:
+            table_expression += GAME_PLAYER_STATS_JOIN
+    else:
+        table_expression = table_expression.format('gameId', GAME_PLAYER_STATS_TABLE, '')
+        order_by_expression = SUBQUERY_ORDER_BY.format('gameId')
 
     if player_list:
         table_expression += LOGIN_JOIN
         players = player_list.split(',')
-        player_expression = LOGIN_TABLE + ' IN ({})'.format(','.join(['%s'] * len(players)))
-        args += players
-        first, where_expression = append_where_expression(first, where_expression, player_expression)
+        player_expression = 'l.login IN ({})'.format(','.join(['%s'] * len(players)))
+        first, where_expression, args = append_filter_expression(WHERE, first, where_expression, player_expression,
+                                                                 args, *players)
 
     if map_name:
         table_expression += MAP_JOIN
-        args.append(map_name)
-        try:
-            map_exclude = distutils.util.strtobool(map_exclude)
-        except ValueError:
-            throw_malformed_query_error('map_name')
         if map_exclude:
-            first, where_expression = append_where_expression(first, where_expression,
-                                                              MAP_NAME_WHERE_EXPRESSION.format(NOT))
+            map_name_expression = MAP_NAME_WHERE_EXPRESSION.format(NOT)
         else:
-            first, where_expression = append_where_expression(first, where_expression,
-                                                              MAP_NAME_WHERE_EXPRESSION.format(''))
+            map_name_expression = MAP_NAME_WHERE_EXPRESSION.format('')
+
+        first, where_expression, args = append_filter_expression(WHERE, first, where_expression, map_name_expression,
+                                                                 args, map_name)
 
     if victory_condition:
-        condition = VictoryCondition.from_gpgnet_string(victory_condition)
-        # Returns false regardless if enum is assigned when "if condition"
-        if condition is not None:
-            args.append(str(condition.value))
-            first, where_expression = append_where_expression(first, where_expression, VICTORY_CONDITION_WHERE_EXPRESSION)
+        condition = victory_condition
+        if not victory_condition.isdigit():
+            condition = VictoryCondition.from_gpgnet_string(victory_condition)
+            # condition can return a falsey value of 0
+            if condition is not None:
+                condition = condition.value
+            else:
+                throw_malformed_query_error('victory_condition')
+        first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
+                                                                 VICTORY_CONDITION_WHERE_EXPRESSION,
+                                                                 args, str(condition))
+
+    if game_mod:
+        if game_mod.isdigit():
+            game_mod_expression = GAME_MOD_WHERE_EXPRESSION.format(*GAME_MOD_WHERE_ID)
         else:
-            throw_malformed_query_error('victory_condition')
+            game_mod_expression = GAME_MOD_WHERE_EXPRESSION.format(*GAME_MOD_WHERE_NAME)
+            table_expression += FEATURED_MOD_JOIN
+        first, where_expression, args = append_filter_expression(WHERE, first, where_expression,
+                                                                 game_mod_expression,
+                                                                 args, game_mod)
 
     if players:
         where_expression += GROUP_BY_EXPRESSION.format(len(players) - 1)
-    else:
-        where_expression += GROUP_BY_EXPRESSION.format(0)
 
-    table_expression += where_expression + SUB_HEADER_EXPRESSION_FOOT
-
-    if max_rating or min_rating:
-        first_rating = True
-        table_expression += COUNT_TABLE_EXPRESSION_HEADER
-        if max_rating:
-            table_expression, where_expression, args, first_rating = build_rating_expression(max_rating, first_rating,
-                                                                                             rating_type,
-                                                                                             table_expression,
-                                                                                             MAX_RATING_WHERE_EXPRESSION,
-                                                                                             args)
-            table_expression += where_expression
-        if min_rating:
-            table_expression, where_expression, args, first_rating = build_rating_expression(min_rating, first_rating,
-                                                                                             rating_type,
-                                                                                             table_expression,
-                                                                                             MIN_RATING_WHERE_EXPRESSION,
-                                                                                             args)
-            table_expression += where_expression
-        table_expression += COUNT_TABLE_EXPRESSION_FOOTER
-
-    first_count = True
-    if max_players:
-        table_expression, args, first_count = build_player_count_expression(max_players, first_count, table_expression,
-                                                                            MAX_PLAYER_WHERE_EXPRESSION, args)
-
-    if min_players:
-        table_expression, args, first_count = build_player_count_expression(min_players, first_count, table_expression,
-                                                                            MIN_PLAYER_WHERE_EXPRESSION, args)
+    table_expression += where_expression + order_by_expression + SUBQUERY_FOOTER.format(limit_expression)
 
     return table_expression, args
 
 
-def build_rating_expression(rating, first, rating_type, table_expression,
-                            rating_where_expression, args):
-    try:
-        rating = int(rating)
-    except ValueError:
-        throw_malformed_query_error('rating field')
-
+def build_rating_selector(rating_type, rating_expression):
     if rating_type == 'ladder':
-        if LADDER1V1_JOIN not in table_expression:
-            table_expression += LADDER1V1_JOIN
+        return rating_expression + RATING_EXPRESSION.format(LADDER1V1_JOIN)
     else:
-        if GLOBAL_JOIN not in table_expression:
-            table_expression += GLOBAL_JOIN
-
-    args.append(rating)
-    first, where_expression = append_where_expression(first, '', rating_where_expression)
-    return table_expression, where_expression, args, first
+        return rating_expression + RATING_EXPRESSION.format(GLOBAL_JOIN)
 
 
-def build_player_count_expression(player_count, first, table_expression, player_count_where_expression, args):
-    try:
-        player_count = int(player_count)
-    except ValueError:
-        throw_malformed_query_error('player count field')
+def format_with_rating(rating_type, expression):
+    if rating_type == 'ladder':
+        expression = expression.format(LADDER1V1_JOIN)
+    else:
+        expression = expression.format(GLOBAL_JOIN)
+    return expression
 
-    args.append(player_count)
-    first, table_expression = append_where_expression(first, table_expression, player_count_where_expression)
+
+def build_rating_expression(first, having_expression, args, *rating_bounds):
+    for rating, rating_bound_expression in rating_bounds:
+        if not rating:
+            continue
+        try:
+            rating = int(rating)
+        except ValueError:
+            throw_malformed_query_error('rating field')
+        first, where_expression, args = append_filter_expression(HAVING, first, '', rating_bound_expression, args,
+                                                                 rating)
+        having_expression += where_expression
+
+    return having_expression, args, first
+
+
+def build_player_count_expression(first, table_expression, args, *player_counts):
+    for player_count, count_expression in player_counts:
+        if not player_count:
+            continue
+        try:
+            player_count = int(player_count)
+        except ValueError:
+            throw_malformed_query_error('player count field')
+
+        first, table_expression, args = append_filter_expression(HAVING, first, table_expression, count_expression,
+                                                                 args,
+                                                                 player_count)
+
     return table_expression, args, first
 
 
-def append_where_expression(first, where_expression, format_expression):
+def build_date_time_expression(first, having_expression, args, *date_times):
+    for date_time, date_expression in date_times:
+        if not date_time:
+            continue
+        converted_dt = parse_date(date_time)
+        first, having_expression, args = append_filter_expression(HAVING, first, having_expression, date_expression,
+                                                                  args, converted_dt)
+
+    return having_expression, args, first
+
+
+def append_filter_expression(prefix, first, where_expression, format_expression, args, *new_args):
     if first:
-        where_expression += WHERE + format_expression
+        where_expression += prefix + format_expression
         first = False
     else:
         where_expression += AND + format_expression
-    return first, where_expression
+    args.extend(new_args)
+    return first, where_expression, args
 
 
-def build_game_player_stats_query(select_expression, rating_type):
-    if rating_type == 'ladder':
-        table_expression = GAME_PLAYER_STATS_HEADER_EXPRESSION.format(LADDER1V1_JOIN, LOGIN_JOIN)
-    else:
-        table_expression = GAME_PLAYER_STATS_HEADER_EXPRESSION.format(GLOBAL_JOIN, LOGIN_JOIN)
-    return table_expression + select_expression + FOOTER_EXPRESSION
+def sort_game_results(results):
+    game_player = {'data': []}
+    data = game_player['data']
 
-
-def join_game_and_player_results(game_results, player_results):
-    game_player = dict()
-    for player in player_results['data']:
-        id = player['attributes']['game_id']
-        if id not in game_player:
-            game_player[id] = list()
-        game_player[id].append(player)
-    for game in game_results['data']:
-        if game['id'] not in game_player:
-            game['relationships'] = dict(players=dict(data=list()))
-        else:
-            game['relationships'] = dict(players=dict(data=list(game_player[game['id']])))
-
-    return game_results
+    current_game_attributes = None
+    current_game_id = None
+    for game_result in results['data']:
+        game_id = game_result['id']
+        game_attributes = game_result['attributes']
+        if current_game_id != game_id:
+            current_game_id = game_id
+            gs_type = game_result['type']
+            current_game_attributes = {key: game_attributes[key] for key in GAME_SELECT_EXPRESSIONS.keys() if
+                                       key in game_attributes}
+            if any(x in game_attributes for x in PLAYER_SELECT_EXPRESSIONS.keys()):
+                current_game_attributes['players'] = []
+            data.append({'id': game_id, 'type': gs_type, 'attributes': current_game_attributes})
+        if 'players' in current_game_attributes:
+            player_dict = {key: game_attributes[key] for key in PLAYER_SELECT_EXPRESSIONS.keys() if
+                           key in game_attributes}
+            player_dict.pop('game_id', None)
+            if player_dict:
+                current_game_attributes['players'].append(player_dict)
+    return game_player
 
 
 def throw_malformed_query_error(field):
