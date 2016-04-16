@@ -106,7 +106,7 @@ def games():
 
     if player_list or map_name or max_rating or min_rating or rating_type or victory_condition or game_mod \
             or max_players or min_players or max_datetime or min_datetime:
-        select_expression, args = build_query(victory_condition, map_name, map_exclude, max_rating, min_rating,
+        select_expression, args, limit = build_query(victory_condition, map_name, map_exclude, max_rating, min_rating,
                                               player_list, rating_type, max_players, min_players, max_datetime,
                                               min_datetime, game_mod, limit_expression)
 
@@ -115,13 +115,13 @@ def games():
         player_select_expression['min_rating'] = build_rating_selector(rating_type, MIN_RATING_HEADER_EXPRESSION)
 
         result = fetch_data(GameStats(), select_expression, GAME_SELECT_EXPRESSIONS,
-                            MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id', enricher=enricher,
+                            MAX_PLAYER_PAGE_SIZE, request, args=args, sort='-id', enricher=enricher, limit=limit,
                             players=player_select_expression)
     else:
         result = fetch_data(GameStats(),
                             GAMES_NO_FILTER_EXPRESSION.format('gs.id', limit_expression),
                             GAME_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id', enricher=enricher,
-                            players=PLAYER_SELECT_EXPRESSIONS)
+                            limit=False, players=PLAYER_SELECT_EXPRESSIONS)
 
     return sort_game_results(result)
 
@@ -166,7 +166,7 @@ def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating
     having_expression = ''
     first = True
 
-    subquery_expression, args = build_subquery(victory_condition, map_name, map_exclude,
+    subquery_expression, args, limit = build_subquery(victory_condition, map_name, map_exclude,
                                                player_list, game_mod, limit_expression)
 
     table_expression = format_with_rating(rating_type, table_expression)
@@ -185,7 +185,7 @@ def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating
                                                                     (max_datetime, MAX_DATE_HAVING_EXPRESSION),
                                                                     (min_datetime, MIN_DATE_HAVING_EXPRESSION))
 
-    return table_expression + subquery_expression + having_expression, args
+    return table_expression + subquery_expression + having_expression, args, limit
 
 
 def build_subquery(victory_condition, map_name, map_exclude, player_list, game_mod, limit_expression):
@@ -196,7 +196,7 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list, game_m
     players = None
 
     if not (victory_condition or map_name or player_list or game_mod):
-        return '', args
+        return '', args, True
 
     if map_name or victory_condition or game_mod:
         table_expression = table_expression.format('gs.id', GAME_STATS_TABLE)
@@ -252,7 +252,7 @@ def build_subquery(victory_condition, map_name, map_exclude, player_list, game_m
 
     table_expression += where_expression + order_by_expression + SUBQUERY_FOOTER.format(limit_expression)
 
-    return table_expression, args
+    return table_expression, args, False
 
 
 def build_rating_selector(rating_type, rating_expression):
