@@ -7,7 +7,7 @@ from api.query_commons import fetch_data, get_page_attributes, get_limit
 from iso8601 import parse_date, ParseError
 
 MAX_GAME_PAGE_SIZE = 1000
-MAX_PLAYER_PAGE_SIZE = MAX_GAME_PAGE_SIZE * 12
+MAX_PLAYER_PAGE_SIZE = MAX_GAME_PAGE_SIZE * 16
 
 GAME_STATS_TABLE = 'game_stats gs'
 GAME_PLAYER_STATS_TABLE = 'game_player_stats gps'
@@ -97,7 +97,7 @@ def games():
     max_datetime = request.args.get('filter[max_datetime]')
     min_datetime = request.args.get('filter[min_datetime]')
 
-    page, page_size = get_page_attributes(MAX_GAME_PAGE_SIZE, request)
+    page, page_size = get_page_attributes(MAX_PLAYER_PAGE_SIZE, request)
     limit_expression = get_limit(page, page_size)
 
     errors = check_syntax_errors(map_exclude, map_name, max_datetime, min_datetime)
