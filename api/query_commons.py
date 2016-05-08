@@ -98,7 +98,7 @@ def get_limit(page, limit):
 
 
 def fetch_data(schema, table, root_select_expression_dict, max_page_size, request, where='', args=None, many=True,
-               enricher=None, sort=None, **nested_expression_dict):
+               enricher=None, sort=None, limit=True, **nested_expression_dict):
     """ Fetches data in an JSON-API conforming way.
 
     :param schema: the marshmallow schema to use for serialization
@@ -140,14 +140,13 @@ def fetch_data(schema, table, root_select_expression_dict, max_page_size, reques
 
     select_expressions = get_select_expressions(fields, select_dict)
 
+    limit_expression = ''
+    order_by_expression = ''
     if many:
         page, page_size = get_page_attributes(max_page_size, request)
-
-        limit_expression = get_limit(page, page_size)
+        if limit:
+            limit_expression = get_limit(page, page_size)
         order_by_expression = get_order_by(sort, fields)
-    else:
-        limit_expression = ''
-        order_by_expression = ''
 
     if where:
         where = "WHERE {}".format(where)
