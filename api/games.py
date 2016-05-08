@@ -109,36 +109,36 @@ def games():
               "data": [
                 {
                   "attributes": {
-                  "game_name": "Game",
-                  "host": "28185",
-                  "id": "4559095",
-                  "map_id": 593,
-                  "map_name": "Williamson's Bridge",
-                  "mod_id": 27,
-                  "mod_name": "fafbeta",
-                  "players": [
-                    {
-                      "color": 9,
-                      "deviation": 52.8005,
-                      "faction": "1",
-                      "is_ai": false,
-                      "login": "EdgarRr",
-                      "mean": 1194.72,
-                      "place": 1,
-                      "player_id": "28185",
-                      "score": -1,
-                      "score_time": null,
-                      "team": 1
-                    }
-                  ],
-                  "start_time": "2016-03-19T22:50:18+00:00",
-                  "validity": "VALID",
-                  "victory_condition": "DEMORALIZATION"
-                }
-              ]
-              "id": "4559095",
-              "type": "game_stats"
-            }
+                    "game_name": string,
+                    "host": string,
+                    "id": string,
+                    "map_id": integer,
+                    "map_name": string,
+                    "mod_id": integer,
+                    "mod_name": string,
+                    "players": [
+                      {
+                        "color": integer,
+                        "deviation": float,
+                        "faction": string,
+                        "is_ai": boolean,
+                        "login": string,
+                        "mean": float,
+                        "place": integer,
+                        "player_id": string,
+                        "score": integer,
+                        "score_time": string,
+                        "team": integer
+                      }
+                    ],
+                    "start_time": string,
+                    "validity": string,
+                    "victory_condition": string
+                  }
+                ]
+                "id": string,
+                "type": strings
+              }
     """
 
     player_list = request.args.get('filter[players]')
