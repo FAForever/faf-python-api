@@ -84,6 +84,63 @@ PLAYER_SELECT_EXPRESSIONS = {
 
 @app.route('/games')
 def games():
+    """Searches for games.
+
+    HTTP Parameters::
+        Field                Type              Description
+
+        players              string            A comma delimited list of the players to search for
+        map_name             string            The map name to search for
+        map_exclude          string            If any input is provided, map provided in map_name is excluded instead of included, requires map_name
+        max_rating           integer           Inclusive maximum rating bound for all players
+        min_rating           integer           Inclusive minimum rating bound for all players
+        victory_condition    string/integer    The victory condition to search for, can be either id or name
+        mod                  string/integer    The featured mod to search for, can be either id or name
+        rating_type          string            Rating type to search for, defaults to global, else `ladder` must be provided for ladder rating
+        max_player_count     integer           Inclusive maximum player count bound, uses rating_type value
+        min_player_count     integer           Inclusive minimum player count bound, uses rating_type value
+        max_datetime         string            Inclusive latest datetime (iso8601 format), based on game start time
+        min_datetime         string            Inclusive earliest datetime (iso8601 format), based on game start time
+
+    :return:
+        If successful, this method returns a response body with the following structure::
+
+            {
+              "data": [
+                {
+                  "attributes": {
+                  "game_name": "Game",
+                  "host": "28185",
+                  "id": "4559095",
+                  "map_id": 593,
+                  "map_name": "Williamson's Bridge",
+                  "mod_id": 27,
+                  "mod_name": "fafbeta",
+                  "players": [
+                    {
+                      "color": 9,
+                      "deviation": 52.8005,
+                      "faction": "1",
+                      "is_ai": false,
+                      "login": "EdgarRr",
+                      "mean": 1194.72,
+                      "place": 1,
+                      "player_id": "28185",
+                      "score": -1,
+                      "score_time": null,
+                      "team": 1
+                    }
+                  ],
+                  "start_time": "2016-03-19T22:50:18+00:00",
+                  "validity": "VALID",
+                  "victory_condition": "DEMORALIZATION"
+                }
+              ]
+              "id": "4559095",
+              "type": "game_stats"
+            }
+    """
+
     player_list = request.args.get('filter[players]')
     map_name = request.args.get('filter[map_name]')
     map_exclude = request.args.get('filter[map_exclude]')
@@ -107,8 +164,8 @@ def games():
     if player_list or map_name or max_rating or min_rating or rating_type or victory_condition or game_mod \
             or max_players or min_players or max_datetime or min_datetime:
         select_expression, args, limit = build_query(victory_condition, map_name, map_exclude, max_rating, min_rating,
-                                              player_list, rating_type, max_players, min_players, max_datetime,
-                                              min_datetime, game_mod, limit_expression)
+                                                     player_list, rating_type, max_players, min_players, max_datetime,
+                                                     min_datetime, game_mod, limit_expression)
 
         player_select_expression = PLAYER_SELECT_EXPRESSIONS
         player_select_expression['max_rating'] = build_rating_selector(rating_type, MAX_RATING_HEADER_EXPRESSION)
@@ -122,8 +179,8 @@ def games():
                             GAMES_NO_FILTER_EXPRESSION.format('gs.id', limit_expression),
                             GAME_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id', enricher=enricher,
                             limit=False, players=PLAYER_SELECT_EXPRESSIONS)
-
-    return sort_game_results(result)
+    a = sort_game_results(result)
+    return a
 
 
 @app.route('/games/<game_id>')
@@ -167,7 +224,7 @@ def build_query(victory_condition, map_name, map_exclude, max_rating, min_rating
     first = True
 
     subquery_expression, args, limit = build_subquery(victory_condition, map_name, map_exclude,
-                                               player_list, game_mod, limit_expression)
+                                                      player_list, game_mod, limit_expression)
 
     table_expression = format_with_rating(rating_type, table_expression)
     if max_rating or min_rating:
