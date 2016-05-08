@@ -179,8 +179,7 @@ def games():
                             GAMES_NO_FILTER_EXPRESSION.format('gs.id', limit_expression),
                             GAME_SELECT_EXPRESSIONS, MAX_PLAYER_PAGE_SIZE, request, sort='-id', enricher=enricher,
                             limit=False, players=PLAYER_SELECT_EXPRESSIONS)
-    a = sort_game_results(result)
-    return a
+    return sort_game_results(result)
 
 
 @app.route('/games/<game_id>')
