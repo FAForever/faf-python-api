@@ -1,11 +1,11 @@
-import db, pymysql
+import faf.db as db
 
 from api import *
 
 @app.route('/clans')
 def clans_get():
     clans = []
-    with db.connection.cursor(pymysql.cursors.DictCursor) as cursor:
+    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
         cursor.execute('SELECT * FROM clan_list WHERE status = 1')
         clans = cursor.fetchall()
 
@@ -13,7 +13,7 @@ def clans_get():
 
 @app.route('/clan/<int:id>')
 def clan_get(id):
-    with db.connection.cursor(pymysql.cursors.DictCursor) as cursor:
+    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
         cursor.execute('SELECT * FROM clan_list WHERE clan_id = %s LIMIT 1', id)
         if cursor.rowcount == 1:
             clan_details = cursor.fetchall()
@@ -26,7 +26,7 @@ def clan_get(id):
 @app.route('/clan_members')
 def clan_members_get():
     members = []
-    with db.connection.cursor(pymysql.cursors.DictCursor) as cursor:
+    with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
         cursor.execute('SELECT * FROM clan_members')
         members = cursor.fetchall()
         
