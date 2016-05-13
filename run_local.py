@@ -11,4 +11,4 @@ api_init()
 
 # By default, run debug mode
 app.debug = True
-app.run(host='0.0.0.0', port=8080)
+app.run(host='0.0.0.0', port=2000)
