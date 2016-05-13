@@ -12,6 +12,12 @@ if sys.version_info.major != 3:
 
 from api import app, api_init
 
+import sys
+import logging
+logger = logging.getLogger()
+
+logger.addHandler(logging.StreamHandler(stream=sys.stderr))
+
 app.config.from_object('config')
 
 api_init()

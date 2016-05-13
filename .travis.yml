@@ -1,23 +1,26 @@
 language: python
 
 python:
-  - "3.4"
+  - "3.5"
+
+sudo: required
+dist: trusty
+
+services:
+  - docker
 
 before_install:
-  - sudo apt-get install liblua5.1-dev
+  - sudo apt-get update
+  - sudo apt-get -y install liblua5.1-dev libffi-dev
+  - bash init_and_wait_for_db.sh
+  - cp config.example.py config.py
 
 install:
-  - cp config.example.py config.py
-  - "pip install --upgrade pip"
-  - "pip install --trusted-host content.dev.faforever.com -r requirements.txt"
-
-before_script:
-  - "mysql -e 'create database faf_test;'"
+  - docker build -t faf-api .
 
 script:
-  - pip install -e .
-  - py.test --cov-report term-missing --cov=api
-  - pyflakes . || true
+  - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api py.test --cov-report term-missing --cov=api
+  - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api pyflakes . || true
 
 after_success:
-  - coveralls
+  - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api coveralls

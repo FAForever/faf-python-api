@@ -1,5 +1,8 @@
 .idea
 *.pyc
 *.egg-info
+*.sh
+.cache
+venv
 
 config.py

@@ -1,12 +1,23 @@
+aiohttp
+aiohttp-wsgi
 Flask >= 0.10.1
+Flask-JWT
+Flask-Login
 Flask-OAuthlib
+iso8601
+PyJWT
 coveralls
-peewee >= 2.4.2
-python-geoip-geolite2
+cryptography
 geoip2
-uritemplate.py
-requests
-pymysql
+git+https://github.com/Cheyans/faftools.git@develop#egg=faftools
+marshmallow
+marshmallow_jsonapi
+peewee >= 2.4.2
 pyflakes
-pytest-mock
+pymysql
 pytest-cov
+pytest-mock
+python-geoip-geolite2
+requests
+statsd
+uritemplate.py
