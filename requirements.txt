@@ -7,7 +7,6 @@ Flask-OAuthlib
 iso8601
 PyJWT
 coveralls
-cryptography
 geoip2
 git+https://github.com/Cheyans/faftools.git@develop#egg=faftools
 marshmallow
