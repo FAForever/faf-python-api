@@ -97,7 +97,6 @@ def api_init():
     """
     Initializes flask. Call _after_ setting flask config.
     """
-    # db.init_db(app.config)
     app.github = github.make_session(app.config['GITHUB_USER'],
                                      app.config['GITHUB_TOKEN'])
     app.slack = slack.make_session(app.config['SLACK_HOOK_URL'])
@@ -118,13 +117,13 @@ def api_init():
         def after_req(response):
             stats.timing('api.request', (time.time()-request._start_time)*1000)
             return response
-
+            
+# https://github.com/FAForever/api/issues/40
 @app.before_request
 def before_request():
-    db.init_db(app.config)
+    faf.db.init_db(app.config)
 
 # ======== Init OAuth =======
-
 
 
 def get_current_user():
