@@ -60,9 +60,13 @@ def api_init():
     """
     Initializes flask. Call _after_ setting flask config.
     """
-    db.init_db(app.config)
+    # db.init_db(app.config)
     app.github = github.make_session(app.config['GITHUB_USER'],
                                      app.config['GITHUB_TOKEN'])
+
+@app.before_request
+def before_request():
+    db.init_db(app.config)
 
 # ======== Import (initialize) oauth2 handlers =====
 import api.oauth
