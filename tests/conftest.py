@@ -2,7 +2,7 @@ import importlib
 
 import pytest
 import api
-
+import faf.db
 
 @pytest.fixture
 def app():
@@ -18,6 +18,10 @@ def app():
     api.app.config.from_object('config')
     api.app.debug = True
     api.api_init()
+    # TODO: use a custom test db instead of the real instance
+    # The real database is connected before each request, so we fake it
+    # https://github.com/FAForever/api/issues/40
+    faf.db.init_db(api.app.config)
     return api.app
 
 
