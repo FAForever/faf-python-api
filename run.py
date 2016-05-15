@@ -3,13 +3,14 @@
 
 Usage:
   run.py
+  run.py [-d | -aio] -p 80
   run.py [-d | -aio] --port=80
 
 Options:
   -h             Show this screen
   -aio           Use aiohttp
   -d             Enable debug mode
-  --port=<port>  Listen on given port [default: 8080].
+  -p --port=<port>  Listen on given port [default: 8080].
 """
 from api import app, api_init
 from docopt import docopt
