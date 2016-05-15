@@ -17,6 +17,9 @@ class OAuthTestCase(unittest.TestCase):
         api.app.config.from_object('config')
         api.api_init()
         api.app.debug = True
+        # The real database is connected before each request, so we fake it
+        # https://github.com/FAForever/api/issues/40
+        db.init_db(api.app.config)
 
         self.app = api.app.test_client()
 
