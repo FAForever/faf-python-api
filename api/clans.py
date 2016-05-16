@@ -6,7 +6,7 @@ from api import *
 def clans_get():
     clans = []
     with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
-        cursor.execute('SELECT * FROM clan_list WHERE status = 1')
+        cursor.execute('SELECT * FROM clans WHERE status = 1')
         clans = cursor.fetchall()
 
     return { 'data': clans }
