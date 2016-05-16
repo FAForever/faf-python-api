@@ -28,6 +28,21 @@ def clans(request):
     request.addfinalizer(finalizer)
 
 @pytest.fixture
+def clan_members(request):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute("TRUNCATE TABLE clan_members")
+        cursor.execute("""INSERT INTO clan_members (`clan_id`, `player_id`) VALUES
+        (21,447), (21, 449), (21, 474)""")
+
+    def finalizer():
+        with db.connection:
+            cursor = db.connection.cursor()
+            cursor.execute("TRUNCATE TABLE clan_members")
+
+    request.addfinalizer(finalizer)
+
+@pytest.fixture
 def clan_login(request):
     with db.connection:
         cursor = db.connection.cursor()
@@ -99,3 +114,43 @@ def test_clan_leader_names(test_client, clans, clan_login):
     assert result['data'][6]['leader_name'] == 'Pathogen'
     assert result['data'][7]['leader_name'] == 'Kammer'
     assert result['data'][8]['leader_name'] == 'Stromfresser'
+
+def test_invalid_clan(test_client):
+    response = test_client.get('/clan/42')
+
+    # TODO: is this correct, or should we return 404?
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert {} == result
+
+def test_clan_details(test_client, clans, clan_members, clan_login):
+    response = test_client.get('/clan/21')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'clan_details' in result
+    assert 'members' in result
+    assert len(result['clan_details']) == 1
+    assert len(result['members']) == 3
+
+    for item in result['clan_details']:
+        assert 'clan_id' in item
+        assert 'status' in item
+        assert 'clan_name' in item
+        assert 'clan_tag' in item
+        assert 'clan_leader_id' in item
+        assert 'clan_founder_id' in item
+        assert 'clan_desc' in item
+        assert 'create_date' in item
+        assert 'leader_name' in item
+        assert 'founder_name' in item
+
+    assert result['members'][0]['player_name'] == 'Dragonfire'    
+    assert result['members'][1]['player_name'] == 'Blackheart'    
+    assert result['members'][2]['player_name'] == 'Pathogen'    
+
+
