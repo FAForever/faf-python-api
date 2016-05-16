@@ -20,3 +20,4 @@ python-geoip-geolite2
 requests
 statsd
 uritemplate.py
+sqlalchemy
