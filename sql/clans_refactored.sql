@@ -40,7 +40,7 @@ VIEW `clans` AS
             FROM
                 `clan_members`
             WHERE
-                (`clan_members`.`clan_id` = `clan_id`)) AS `member_count`
+                (`clan_members`.`clan_id` = `clan_list`.`clan_id`)) AS `member_count`
     FROM
         `clan_list`
         LEFT JOIN `login` `leader` ON (`clan_leader_id` = `leader`.`id`)

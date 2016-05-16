@@ -33,7 +33,7 @@ def clan_members(request):
         cursor = db.connection.cursor()
         cursor.execute("TRUNCATE TABLE clan_members")
         cursor.execute("""INSERT INTO clan_members (`clan_id`, `player_id`) VALUES
-        (21,447), (21, 449), (21, 474)""")
+        (21,447), (21, 449), (21, 474), (24, 447), (24, 449), (25, 447)""")
 
     def finalizer():
         with db.connection:
@@ -65,7 +65,7 @@ def clan_login(request):
 
     request.addfinalizer(finalizer)
 
-def test_clan_list(test_client, clans, clan_login):
+def test_clan_list(test_client, clans, clan_members, clan_login):
     response = test_client.get('/clans')
 
     assert response.status_code == 200
@@ -86,6 +86,8 @@ def test_clan_list(test_client, clans, clan_login):
         assert 'create_date' in item
         assert 'leader_name' in item
         assert 'founder_name' in item
+
+    assert result['data'][0]['member_count'] == 3
 
 def test_clan_founder_names(test_client, clans, clan_login):
     response = test_client.get('/clans')
