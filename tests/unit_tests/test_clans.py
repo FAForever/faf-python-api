@@ -8,7 +8,7 @@ from faf import db
 def clans(request):
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute("TRUNCATE TABLE clan_list")
+        cursor.execute("DELETE FROM clan_list")
         cursor.execute("""INSERT INTO clan_list VALUES
         (21,'2014-02-16 19:26:41',1,'FAF_Developer','DEV',447,447,'Developers, that try to improve FAF.'),
         (24,'2014-02-16 21:05:31',1,'Bad Company','BC',449,449,'This clan was founded by a player called Epic, who is sadly not active anymore. It is classified by its democratic system (new members need to pass a vote), and also a minimum rating of 1500 is required (exceptions under special circumstances are possible). Bad Company developed into a clan regularly hosting high class teamgames and consisting of high-level players. It won the clan tournament \"Intergalactic Colosseum 6\" ahead of any other participating clan. To join BC, you should pm any of our members.'),
@@ -23,7 +23,7 @@ def clans(request):
     def finalizer():
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute("TRUNCATE TABLE clan_list")
+            cursor.execute("DELETE FROM clan_list")
 
     request.addfinalizer(finalizer)
 
@@ -31,14 +31,14 @@ def clans(request):
 def clan_members(request):
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute("TRUNCATE TABLE clan_members")
+        cursor.execute("DELETE FROM clan_members")
         cursor.execute("""INSERT INTO clan_members (`clan_id`, `player_id`) VALUES
         (21,447), (21, 449), (21, 474), (24, 447), (24, 449), (25, 447)""")
 
     def finalizer():
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute("TRUNCATE TABLE clan_members")
+            cursor.execute("DELETE FROM clan_members")
 
     request.addfinalizer(finalizer)
 
@@ -46,7 +46,7 @@ def clan_members(request):
 def clan_login(request):
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute("TRUNCATE TABLE login")
+        cursor.execute("DELETE FROM login")
         cursor.execute("""INSERT INTO login (id, login, password, email) VALUES
         (447, 'Dragonfire', '', 'a'),
         (449, 'Blackheart', '', 'b'),
@@ -61,7 +61,7 @@ def clan_login(request):
     def finalizer():
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute("TRUNCATE TABLE login")
+            cursor.execute("DELETE FROM login")
 
     request.addfinalizer(finalizer)
 
@@ -118,6 +118,16 @@ def test_clan_leader_names(test_client, clans, clan_login):
     assert result['data'][8]['leader_name'] == 'Stromfresser'
 
 def test_invalid_clan(test_client):
+    response = test_client.get('/clan/42')
+
+    # TODO: is this correct, or should we return 404?
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert {} == result
+
+def test_invalid_clan_with_data(test_client, clans, clan_members, clan_login):
     response = test_client.get('/clan/42')
 
     # TODO: is this correct, or should we return 404?
