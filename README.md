@@ -9,6 +9,9 @@ provide required REST services to clients.
 
 Currently documentation is sparse. Please help us out!
 
+## Installation From GIT
+When downloading from git be sure to run `git clone --recurse-submodules` on initial install, or if it is already cloned then run `git submodule update --init`.
+
 ## Installation - Docker
 
 Get [docker](http://docker.com).
@@ -23,13 +26,15 @@ Now you can run the script by typing (You will need netcat installed on the comp
 
     ./init_and_wait_for_db.sh
 
+**You will need to modify config.example.py with the correct database parameters OR update environment variables.**
+
 Build the container using
 
     docker build -t faf-api .
 
 Run using
 
-    docker run -d --name faf-api --link faf-db:db -p8080:8080 faf-api
+    docker run -d --name faf-api --link faf-db:db -p 8080:8080 faf-api
 
 Check to see if running by looking at the container and netstat
 
