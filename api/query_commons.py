@@ -101,7 +101,7 @@ def fetch_data(schema, table, root_select_expression_dict, max_page_size, reques
                enricher=None, sort=None, limit=True, **nested_expression_dict):
     """ Fetches data in an JSON-API conforming way.
 
-    :param schema: the marshmallow schema to use for serialization
+    :param schema: the marshmallow schema to use for serialization, provided by faftools: https://github.com/FAForever/faftools/tree/develop/faf/api 
     :param table: the table to select the data from (or any FROM expression, without the FROM)
     :param root_select_expression_dict: a dictionary that maps API field names to select expressions
     :param max_page_size: max number of items per page

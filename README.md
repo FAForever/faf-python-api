@@ -3,7 +3,7 @@
 
 # FAForever Python Web API
 This repository holds the web api (written in python) that is run on the server to
-provide required REST services to clients.
+provide required REST services to clients. It is adapted to [JSON API](http://jsonapi.org/). 
 
 # Documentation
 
@@ -65,6 +65,17 @@ Here is an example extension for Chrome - (https://chrome.google.com/webstore/de
 Documentation is currently handled by Sphinx until there is a more solid API. The documentation can be built using the following command:
 
     ./create_documentation.sh
+
+# Results for Queries
+
+This API should follow [JSON API](http://jsonapi.org/) (sorting, paging, limiting, selecting fields). For this reason we recommend to use [fetch_data#query_commons.py](https://github.com/FAForever/api/blob/develop/api/query_commons.py#L100).
+Take a look at the other API endpoints. For serialization & deserialization a [marshmallow-jsonapi](https://github.com/marshmallow-code/marshmallow-jsonapi) [`Schema`](https://github.com/marshmallow-code/marshmallow-jsonapi/blob/dev/marshmallow_jsonapi/schema.py) is needed. 
+FAForever schemas are located in [faftools](https://github.com/FAForever/faftools/tree/develop/faf/api). Push a new schema to a GitHub branch and execute this command to test it:
+
+    sudo pip3 install --upgrade git+<YourGitRepo>@<YourBranch>#egg=faftools
+e.g.
+
+    sudo pip3 install --upgrade git+https://github.com/FAForever/faftools.git@feat/clan#egg=faftools
 
 # Using OAuth 2.0
 
