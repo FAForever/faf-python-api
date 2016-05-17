@@ -56,31 +56,48 @@ PLAYER_ACHIEVEMENT_SELECT_EXPRESSIONS = {
 
 @app.route('/achievements')
 def achievements_list():
-    """Lists all achievement definitions.
+    """
+    Lists all achievement definitions.
 
-    HTTP Parameters::
+    **Example Request**:
 
-        language    string  The preferred language to use for strings returned by this method
-        region      string  The preferred region to use for strings returned by this method
+    .. sourcecode:: http
 
-    :return:
-        If successful, this method returns a response body with the following structure::
+       GET /achievements
 
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": [
             {
-              "updated_achievements": [
-                {
-                  "id": string,
-                  "name": string,
-                  "description": string,
-                  "type": string,
-                  "total_steps": integer,
-                  "initial_state": string,
-                  "experience_points": integer,
-                  "revealed_icon_url": string,
-                  "unlocked_icon_url": string
-                }
-              ]
-            }
+              "attributes": {
+                "description": "Kill your enemy in a ranked 1v1 game in under 15 minutes",
+                "experience_points": 10,
+                "id": "02081bb0-3b7a-4a36-99ef-5ae5d92d7146",
+                "initial_state": "REVEALED",
+                "name": "Rusher",
+                "revealed_icon_url": "http://content.faforever.com/achievements/02081bb0-3b7a-4a36-99ef-5ae5d92d7146.png",
+                "total_steps": null,
+                "type": "STANDARD",
+                "unlocked_icon_url": "http://content.faforever.com/achievements/02081bb0-3b7a-4a36-99ef-5ae5d92d7146.png"
+              },
+              "id": "02081bb0-3b7a-4a36-99ef-5ae5d92d7146",
+              "type": "achievement"
+            },
+            ...
+          ]
+        }
+
+
+    :query string language: The preferred language to use for strings returned by this method. default is en.
+    :query string region: The preferred region to use for strings returned by this method. default is US.
+    :status 200: No error
     """
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
@@ -91,29 +108,46 @@ def achievements_list():
 
 @app.route('/achievements/<achievement_id>')
 def achievements_get(achievement_id):
-    """Gets an achievement definition.
+    """
+    Gets an achievement definition.
 
-    HTTP Parameters::
+    **Example Request**:
 
-        language    string  The preferred language to use for strings returned by this method
-        region      string  The preferred region to use for strings returned by this method
+    .. sourcecode:: http
 
-    :param achievement_id: ID of the achievement to get
+       GET /achievement/02081bb0-3b7a-4a36-99ef-5ae5d92d7146
 
-    :return:
-        If successful, this method returns a response body with the following structure::
+    **Example Response**:
 
-            {
-              "id": string,
-              "name": string,
-              "description": string,
-              "type": string,
-              "total_steps": integer,
-              "initial_state": string,
-              "experience_points": integer,
-              "revealed_icon_url": string,
-              "unlocked_icon_url": string
-            }
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": {
+            "attributes": {
+              "description": "Kill your enemy in a ranked 1v1 game in under 15 minutes",
+              "experience_points": 10,
+              "id": "02081bb0-3b7a-4a36-99ef-5ae5d92d7146",
+              "initial_state": "REVEALED",
+              "name": "Rusher",
+              "revealed_icon_url": "http://content.faforever.com/achievements/02081bb0-3b7a-4a36-99ef-5ae5d92d7146.png",
+              "total_steps": null,
+              "type": "STANDARD",
+              "unlocked_icon_url": "http://content.faforever.com/achievements/02081bb0-3b7a-4a36-99ef-5ae5d92d7146.png"
+            },
+            "id": "02081bb0-3b7a-4a36-99ef-5ae5d92d7146",
+            "type": "achievement"
+          }
+        }
+
+
+    :query string language: The preferred language to use for strings returned by this method. default is en.
+    :query string region: The preferred region to use for strings returned by this method. default is US.
+    :status 200: No error
+    :status 404: achievement
     """
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
@@ -127,22 +161,32 @@ def achievements_get(achievement_id):
 @app.route('/achievements/<achievement_id>/increment', methods=['POST'])
 @oauth.require_oauth('write_achievements')
 def achievements_increment(achievement_id):
-    """Increments the steps of the achievement with the given ID for the currently authenticated player.
+    """
+    Increments the steps of the achievement with the given ID for the currently authenticated player.
 
-    HTTP Parameters::
+    **Example Request**:
 
-        steps string  The number of steps to increment
+    .. sourcecode:: http
 
-    :param achievement_id: ID of the achievement to increment
+       POST /achievement/02081bb0-3b7a-4a36-99ef-5ae5d92d7146/increment
 
-    :return:
-        If successful, this method returns a response body with the following structure::
+    **Example Response**:
 
-            {
-              "current_steps": integer,
-              "current_state": string,
-              "newly_unlocked": boolean,
-            }
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "current_steps": integer,
+          "current_state": string,
+          "newly_unlocked": boolean,
+        }
+
+
+    :query string steps: The number of steps to increment.
+    :status 200: No error
     """
     steps = int(request.form.get('steps', 1))
 
@@ -160,23 +204,33 @@ def jwt_achievements_increment(achievement_id):
 @app.route('/achievements/<achievement_id>/setStepsAtLeast', methods=['POST'])
 @oauth.require_oauth('write_achievements')
 def achievements_set_steps_at_least(achievement_id):
-    """Sets the steps of an achievement. If the steps parameter is less than the current number of steps
+    """
+    Sets the steps of an achievement. If the steps parameter is less than the current number of steps
      that the player already gained for the achievement, the achievement is not modified.
 
-    HTTP Parameters::
+    **Example Request**:
 
-        steps string  The number of steps to increment
+    .. sourcecode:: http
 
-    :param achievement_id: ID of the achievement to increment
+       POST /achievement/02081bb0-3b7a-4a36-99ef-5ae5d92d7146/setStepsAtLeast
 
-    :return
-        If successful, this method returns a response body with the following structure::
+    **Example Response**:
 
-            {
-              "current_steps": integer,
-              "current_state": string,
-              "newly_unlocked": boolean,
-            }
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "current_steps": integer,
+          "current_state": string,
+          "newly_unlocked": boolean,
+        }
+
+
+    :query string steps: The number of steps to increment.
+    :status 200: No error
     """
     steps = int(request.form.get('steps', 1))
 
@@ -194,16 +248,28 @@ def jwt_achievements_set_steps_at_least(achievement_id):
 @app.route('/achievements/<achievement_id>/unlock', methods=['POST'])
 @oauth.require_oauth('write_achievements')
 def achievements_unlock(achievement_id):
-    """Unlocks an achievement for the currently authenticated player.
+    """
+    Unlocks an achievement for the currently authenticated player.
 
-    :param achievement_id: ID of the achievement to unlock
+    **Example Request**:
 
-    :return:
-        If successful, this method returns a response body with the following structure::
+    .. sourcecode:: http
 
-            {
-              "newly_unlocked": boolean,
-            }
+       POST /achievement/02081bb0-3b7a-4a36-99ef-5ae5d92d7146/unlock
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "newly_unlocked": boolean,
+        }
+
+    :status 200: No error
     """
     return unlock_achievement(achievement_id, request.oauth.user.id)
 
@@ -217,16 +283,28 @@ def jwt_achievements_unlock(achievement_id):
 @app.route('/achievements/<achievement_id>/reveal', methods=['POST'])
 @oauth.require_oauth('write_achievements')
 def achievements_reveal(achievement_id):
-    """Reveals an achievement for the currently authenticated player.
+    """
+    Reveals an achievement for the currently authenticated player.
 
-    :param achievement_id: ID of the achievement to reveal
+    **Example Request**:
 
-    :return:
-        If successful, this method returns a response body with the following structure::
+    .. sourcecode:: http
 
-            {
-              "current_state": string,
-            }
+       POST /achievement/02081bb0-3b7a-4a36-99ef-5ae5d92d7146/reveal
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "current_state": string,
+        }
+
+    :status 200: No error
     """
     return reveal_achievement(achievement_id, request.oauth.user.id)
 
@@ -240,37 +318,50 @@ def jwt_achievements_reveal(achievement_id):
 @app.route('/achievements/updateMultiple', methods=['POST'])
 @oauth.require_oauth('write_achievements')
 def achievements_update_multiple():
-    """Updates multiple achievements for the currently authenticated player.
+    """
+    Updates multiple achievements for the currently authenticated player.
 
-    HTTP Body:
-        In the request body, supply data with the following structure::
+    **Example Request**:
 
+    .. sourcecode:: http
+
+       POST /achievement/updateMultiple
+
+    .. sourcecode:: http
+
+        {
+          "updates": [
             {
-              "updates": [
-                {
-                    "achievement_id": string,
-                    "update_type": string,
-                    "steps": integer
-                }
-              ]
+                "achievement_id": string,
+                "update_type": string,
+                "steps": integer
             }
+          ]
+        }
 
         ``updateType`` being one of "REVEAL", "INCREMENT", "UNLOCK" or "SET_STEPS_AT_LEAST"
         ``steps`` being mandatory only for update type `` INCREMENT`` and ``SET_STEPS_AT_LEAST``
 
-    :return:
-        If successful, this method returns a response body with the following structure::
+    **Example Response**:
 
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "updated_achievements": [
             {
-              "updated_achievements": [
-                {
-                  "achievement_id": string,
-                  "current_state": string,
-                  "current_steps": integer,
-                  "newly_unlocked": boolean,
-                }
-              ],
+              "achievement_id": string,
+              "current_state": string,
+              "current_steps": integer,
+              "newly_unlocked": boolean,
             }
+          ],
+        }
+
+    :status 200: No error
     """
     player_id = request.oauth.user.id
 
@@ -288,25 +379,40 @@ def jwt_achievements_update_multiple():
 @app.route('/players/<int:player_id>/achievements')
 @oauth.require_oauth('read_achievements')
 def achievements_list_player(player_id):
-    """Lists the progress of achievements for a player.
+    """
+    Lists the progress of achievements for a player.
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       GET /players/781/achievements
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "items": [
+            {
+              "id": string,
+              "achievement_id": string,
+              "state": string,
+              "current_steps": integer,
+              "create_time": long,
+              "update_time": long
+            }
+          ]
+        }
+
 
     :param player_id: ID of the player.
-
-    :return:
-        If successful, this method returns a response body with the following structure::
-
-            {
-              "items": [
-                {
-                  "id": string,
-                  "achievement_id": string,
-                  "state": string,
-                  "current_steps": integer,
-                  "create_time": long,
-                  "update_time": long
-                }
-              ]
-            }
+    :type player_id: int
+    :status 200: No error
     """
     return fetch_data(PlayerAchievementSchema(), 'player_achievements', PLAYER_ACHIEVEMENT_SELECT_EXPRESSIONS,
                       MAX_PAGE_SIZE, request, where='player_id = %s', args=player_id)

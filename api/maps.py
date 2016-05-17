@@ -37,6 +37,29 @@ TABLE = 'table_map map LEFT JOIN table_map_features features ON features.map_id 
 
 @app.route('/maps/upload', methods=['POST'])
 def maps_upload():
+    """
+    Creates a new map in the system
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       POST /maps/upload
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        "ok"
+
+    :query file file: The file submitted (Must be ZIP)
+    :type: zip
+
+    """
     file = request.files.get('file')
     if not file:
         raise InvalidUsage("No file has been provided")
@@ -51,6 +74,52 @@ def maps_upload():
 
 @app.route('/maps')
 def maps():
+    """
+    Lists all map definitions.
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       GET /maps
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": [
+            {
+              "attributes": {
+                "battle_type": "FFA",
+                "description": "<LOC canis3v3_Description>",
+                "display_name": "canis3v3",
+                "download_url": "http://content.faforever.com/faf/vault/maps/canis3v3.v0001.zip",
+                "downloads": 5970,
+                "id": 0,
+                "map_type": "skirmish",
+                "max_players": 6,
+                "num_draws": 0,
+                "rating": 2.94119,
+                "technical_name": "canis3v3.v0001",
+                "thumbnail_url_large": "http://content.faforever.com/faf/vault/map_previews/large/maps/canis3v3.v0001.zip",
+                "thumbnail_url_small": "http://content.faforever.com/faf/vault/map_previews/small/maps/canis3v3.v0001.zip",
+                "times_played": 1955,
+                "version": "1"
+              },
+              "id": 0,
+              "type": "map"
+            },
+            ...
+          ]
+        }
+
+
+    """
     where = ''
     args = None
     many = True

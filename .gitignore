@@ -5,4 +5,5 @@
 .cache
 venv
 
+docs/build/
 config.py

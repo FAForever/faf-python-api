@@ -55,3 +55,8 @@ Logs are viewable by
 
 If you want to view the raw JSON on the website, then you will need to allow 'Allow-Control-Allow-Origin'' in the browser.
 Here is an example extension for Chrome - (https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi?hl=en)
+
+## Compiling and Building the Documentation
+Documentation is currently handled by Sphinx until there is a more solid API. The documentation can be built using the following command:
+
+    ./create_documentation.sh
