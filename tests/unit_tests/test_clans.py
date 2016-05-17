@@ -27,6 +27,7 @@ def clans(request):
 
     request.addfinalizer(finalizer)
 
+
 @pytest.fixture
 def clan_members(request):
     with db.connection:
@@ -41,6 +42,7 @@ def clan_members(request):
             cursor.execute("DELETE FROM clan_members")
 
     request.addfinalizer(finalizer)
+
 
 @pytest.fixture
 def clan_login(request):
@@ -64,6 +66,7 @@ def clan_login(request):
             cursor.execute("DELETE FROM login")
 
     request.addfinalizer(finalizer)
+
 
 def test_clan_list(test_client, clans, clan_members, clan_login):
     response = test_client.get('/clans')
@@ -89,6 +92,7 @@ def test_clan_list(test_client, clans, clan_members, clan_login):
 
     assert result['data'][0]['attributes']['clan_members'] == 3
 
+
 def test_clan_founder_names(test_client, clans, clan_login):
     response = test_client.get('/clans')
     result = json.loads(response.data.decode('utf-8'))
@@ -102,6 +106,7 @@ def test_clan_founder_names(test_client, clans, clan_login):
     assert result['data'][6]['attributes']['founder_name'] == 'Pathogen'
     assert result['data'][7]['attributes']['founder_name'] == 'Kammer'
     assert result['data'][8]['attributes']['founder_name'] == 'Dragonfire'
+
 
 def test_clan_leader_names(test_client, clans, clan_login):
     response = test_client.get('/clans')
@@ -117,6 +122,7 @@ def test_clan_leader_names(test_client, clans, clan_login):
     assert result['data'][7]['attributes']['leader_name'] == 'Kammer'
     assert result['data'][8]['attributes']['leader_name'] == 'Stromfresser'
 
+
 def test_invalid_clan(test_client):
     response = test_client.get('/clan/42')
 
@@ -127,6 +133,7 @@ def test_invalid_clan(test_client):
     result = json.loads(response.data.decode('utf-8'))
     assert {} == result
 
+
 def test_invalid_clan_with_data(test_client, clans, clan_members, clan_login):
     response = test_client.get('/clan/42')
 
@@ -136,6 +143,7 @@ def test_invalid_clan_with_data(test_client, clans, clan_members, clan_login):
 
     result = json.loads(response.data.decode('utf-8'))
     assert {} == result
+
 
 def test_clan_details(test_client, clans, clan_members, clan_login):
     response = test_client.get('/clan/21')
@@ -161,8 +169,6 @@ def test_clan_details(test_client, clans, clan_members, clan_login):
         assert 'leader_name' in item
         assert 'founder_name' in item
 
-    assert result['members'][0]['player_name'] == 'Dragonfire'    
-    assert result['members'][1]['player_name'] == 'Blackheart'    
-    assert result['members'][2]['player_name'] == 'Pathogen'    
-
-
+    assert result['members'][0]['player_name'] == 'Dragonfire'
+    assert result['members'][1]['player_name'] == 'Blackheart'
+    assert result['members'][2]['player_name'] == 'Pathogen'
