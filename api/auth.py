@@ -23,16 +23,10 @@ def _urlsafe_b64decode(b64string: Union[str, bytes]):
     padded = b64string + b'=' * (4 - len(b64string) % 4)
     return base64.urlsafe_b64decode(padded)
 
-
-@app.before_request
-def before_request():
-    g.user = current_user
-
-
 def require_login(function):
     @wraps(function)
     def decorated_function(*args, **kwargs):
-        if g.user is None or not g.user.is_authenticated:
+        if current_user is None or not current_user.is_authenticated:
             return redirect(url_for('login', next=request.url))
         return function(*args, **kwargs)
 

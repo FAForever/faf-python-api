@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from flask import g
+from flask_login import current_user
 from flask_oauthlib.contrib.cache import Cache
 
 from api import *
@@ -23,17 +25,18 @@ def get_token(access_token=None, refresh_token=None):
 def set_token(token, request, *args, **kwargs):
     with faf.db.connection:
         # make sure that every client has only one token connected to a user
-        OAuthToken.delete(request.client.client_id, request.user.id)
+        OAuthToken.delete(request.client.client_id, current_user.id)
 
         expires_in = token.get('expires_in')
         expires = datetime.utcnow() + timedelta(seconds=expires_in)
 
         return OAuthToken.insert(
             access_token=token['access_token'],
-            refresh_token=token['refresh_token'],
+            # TODO: Support refresh token?
+            refresh_token=token.get('refresh_token', ''),
             token_type=token['token_type'],
             scope=token.scope,
             expires=expires,
             client_id=request.client.client_id,
-            user_id=request.user.id
+            user_id=current_user.id
         )
