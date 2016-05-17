@@ -119,13 +119,25 @@ def test_clan_leader_names(test_client, clans, clan_login):
 
 def test_invalid_clan(test_client):
     response = test_client.get('/clan/42')
-    assert response.status_code == 404
+
+    # TODO: is this correct, or should we return 404?
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert {} == result
 
 def test_invalid_clan_with_data(test_client, clans, clan_members, clan_login):
     response = test_client.get('/clan/42')
-    assert response.status_code == 404
 
-def atest_clan_details(test_client, clans, clan_members, clan_login):
+    # TODO: is this correct, or should we return 404?
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert {} == result
+
+def test_clan_details(test_client, clans, clan_members, clan_login):
     response = test_client.get('/clan/21')
 
     assert response.status_code == 200
