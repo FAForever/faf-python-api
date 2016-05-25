@@ -61,16 +61,13 @@ def jwt_auth():
 @require_login
 @oauth.authorize_handler
 def authorize(*args, **kwargs):
+
     if request.method == 'GET':
-        client_id = kwargs.get('client_id')
-        client = get_client(client_id)
-        scopes = kwargs.get('scope')
-        kwargs['client'] = client
-        kwargs['user'] = current_user
-        kwargs['scopes'] = scopes.split() if scopes else client.default_scopes;
+        kwargs['client'] = kwargs['request'].client
         return render_template('authorize.html', **kwargs)
 
-    return request.form.get('allow', None) is not None
+    confirm = request.form.get('allow', 'no')
+    return confirm == 'yes'
 
 
 @app.route('/oauth/token', methods=['POST'])

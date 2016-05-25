@@ -3,6 +3,9 @@ import faf.db as db
 
 
 class OAuthClient(object):
+    """
+    Representation of database table
+    """
     def __init__(self, **kwargs):
         self.id = kwargs.get('id')
         self.name = kwargs.get('name')

@@ -124,30 +124,32 @@
 
     <div class="allow-card">
         <h2>{{ client.name }}</h2>
-        <p>This app would like to:</p>
-        <ul>
-            {% for scope in scopes %}
-            <li>
-                {% if scope == "read_achievements" %}
-                    Read your achievements
-                {% elif scope == "write_achievements" %}
-                    Update your achievements
-                {% elif scope == "read_events" %}
-                    Read events
-                {% elif scope == "write_events" %}
-                    Record events
-                {% endif %}
-            </li>
-            {% endfor %}
-        </ul>
-        <div class="button-bar">
-            <form action="" method="post">
-                <input type="submit" name="cancel" class="button" value="Cancel">
-            </form>
-            <form action="" method="post">
-                <input type="submit" name="allow" class="button allow-submit" value="Allow">
-            </form>
-        </div>
+        <form action="/oauth/authorize" method="post">
+            <p>This app would like to:</p>
+            <ul>
+                {% for scope in scopes %}
+                <li>
+                    {% if scope == "read_achievements" %}
+                        Read your achievements
+                    {% elif scope == "write_achievements" %}
+                        Update your achievements
+                    {% elif scope == "read_events" %}
+                        Read events
+                    {% elif scope == "write_events" %}
+                        Record events
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            <input type="hidden" name="scope" value="{{ ' '.join(scopes) }}">
+            <input type="hidden" name="client_id" value="{{ client.id }}">
+            <input type="hidden" name="redirect_uri" value="{{ redirect_uri }}">
+            <input type="hidden" name="response_type" value="{{ response_type }}">
+            <div class="button-bar">
+                <button name="allow" value="no" type="submit">Cancel</button>
+                <button name="allow" value="yes" type="submit">Allow</button>
+            </div>
+        </form>
     </div>
 </body>
 </html>
