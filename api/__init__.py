@@ -119,7 +119,7 @@ def api_init():
         def after_req(response):
             stats.timing('api.request', (time.time()-request._start_time)*1000)
             return response
-
+            
 
 # ======== Init OAuth =======
 
@@ -155,3 +155,4 @@ import api.events
 import api.query_commons
 import api.games
 import api.ranked1v1
+import api.clans
