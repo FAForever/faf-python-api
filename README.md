@@ -65,3 +65,17 @@ Here is an example extension for Chrome - (https://chrome.google.com/webstore/de
 Documentation is currently handled by Sphinx until there is a more solid API. The documentation can be built using the following command:
 
     ./create_documentation.sh
+
+# Using OAuth 2.0
+
+This API implements [OAuth 2.0](http://oauth.net/2/), you find a basic OAuth tutorial [here](https://aaronparecki.com/2012/07/29/2/oauth2-simplified). Here a FAF tutorial:
+
+## Request Authorization Code
+http://tools.ietf.org/html/rfc6749#section-4.1.1
+* Add your OAuth client into the table `oauth_clients`
+* Request it `/oauth/authorize?client_id=<YourClientId>&response_type=code`
+
+## Request Authorization Token
+https://tools.ietf.org/html/rfc6749#section-4.2.1
+* Add your OAuth client into the table `oauth_clients`
+* Request it `/oauth/authorize?client_id=<YourClientId>&response_type=token`
