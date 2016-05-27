@@ -1,0 +1,23 @@
+aiohttp
+aiohttp-wsgi
+Flask >= 0.10.1
+Flask-JWT
+Flask-Login
+Flask-OAuthlib
+iso8601
+PyJWT
+coveralls
+cryptography
+geoip2
+git+https://github.com/FAForever/faftools.git@feat/clan#egg=faftools
+marshmallow
+marshmallow_jsonapi
+peewee >= 2.4.2
+pyflakes
+pymysql
+pytest-cov
+pytest-mock
+python-geoip-geolite2
+requests
+statsd
+uritemplate.py

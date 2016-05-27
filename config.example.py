@@ -1,18 +1,38 @@
 """
 Configuration file for the FAForever Python Web Api
 """
+import os
 
 DATABASE = dict(
-    engine=  "playhouse.pool.PooledMySQLDatabase",
-    name=    "bob",
-    user=    "the",
-    passwd=  "dinosaur",
-    max_connections= 32, stale_timeout=600)
+    db=os.getenv("FAF_DB_NAME", "faf_test"),
+    user=os.getenv("FAF_DB_LOGIN", "root"),
+    password=os.getenv("FAF_DB_PASSWORD", "banana"),
+    host=os.getenv("DB_PORT_3306_TCP_ADDR", "127.0.0.1"),
+    port=int(os.getenv("DB_PORT_3306_TCP_PORT", "3306")))
 
-HOST_NAME = 'dinosaur.bob'
+HOST_NAME = os.getenv("VIRTUAL_HOST", 'dev.faforever.com')
 
-AVATAR_FOLDER = 'avatars'
-AVATAR_URL = 'http://content.faforever.com/faf/avatars'
+ENVIRONMENT = os.getenv("FAF_API_ENVIRONMENT", 'testing')
 
-GITHUB_TOKEN = 'some token'
-GITHUB_SECRET = 'some-secret'
+REPO_PATHS = {
+    "api": '.',
+    "patchnotes": '/opt/dev/www/patchnotes'
+}
+
+GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'
+MOD_UPLOAD_PATH = '/mods'
+MAP_UPLOAD_PATH = '/maps'
+CONTENT_URL = 'http://content.faforever.com'
+
+STATSD_SERVER = os.getenv('STATSD_SERVER', None)
+
+GITHUB_USER = 'some-user'
+GITHUB_TOKEN = 'some-token'
+
+AUTO_DEPLOY = ['patchnotes']
+
+FLASK_LOGIN_SECRET_KEY = os.getenv("FLASK_LOGIN_SECRET_KEY", '1234')
+SECRET_KEY = os.getenv("SECRET_KEY", '1234')
+JWT_AUTH_URL_RULE = None
+JWT_AUTH_HEADER_PREFIX = "Bearer"
+SLACK_HOOK_URL = 'http://example.com'

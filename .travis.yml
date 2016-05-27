@@ -1,0 +1,26 @@
+language: python
+
+python:
+  - "3.5"
+
+sudo: required
+dist: trusty
+
+services:
+  - docker
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get -y install liblua5.1-dev libffi-dev
+  - bash init_and_wait_for_db.sh
+  - cp config.example.py config.py
+
+install:
+  - docker build -t faf-api .
+
+script:
+  - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api py.test --cov-report term-missing --cov=api
+  - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api pyflakes . || true
+
+after_success:
+  - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api coveralls
