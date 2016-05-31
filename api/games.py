@@ -86,7 +86,7 @@ PLAYER_SELECT_EXPRESSIONS = {
 def games():
     """Searches for games.
 
-    HTTP Parameters::
+    :HTTP Parameters:
         Field                Type              Description
 
         players              string            A comma delimited list of the players to search for
@@ -103,42 +103,40 @@ def games():
         min_datetime         string            Inclusive earliest datetime (iso8601 format), based on game start time
 
     :return:
-        If successful, this method returns a response body with the following structure::
+        If successful, this method returns a response body with the following structure:
 
-            {
-              "data": [
-                {
-                  "attributes": {
-                    "game_name": string,
-                    "host": string,
-                    "id": string,
-                    "map_id": integer,
-                    "map_name": string,
-                    "mod_id": integer,
-                    "mod_name": string,
-                    "players": [
-                      {
-                        "color": integer,
-                        "deviation": float,
-                        "faction": string,
-                        "is_ai": boolean,
-                        "login": string,
-                        "mean": float,
-                        "place": integer,
-                        "player_id": string,
-                        "score": integer,
-                        "score_time": string,
-                        "team": integer
-                      }
-                    ],
-                    "start_time": string,
-                    "validity": string,
-                    "victory_condition": string
-                  }
-                ]
-                "id": string,
-                "type": strings
-              }
+        .. sourcecode:: javascript
+
+            { "data": [
+                { "attributes": {
+                    "game_name": string,
+                        "host": string,
+                        "id": string,
+                        "map_id": integer,
+                        "map_name": string,
+                        "mod_id": integer,
+                        "mod_name": string,
+                        "players": [{
+                                "color": integer,
+                                "deviation": float,
+                                "faction": string,
+                                "is_ai": boolean,
+                                "login": string,
+                                "mean": float,
+                                "place": integer,
+                                "player_id": string,
+                                "score": integer,
+                                "score_time": string,
+                                "team": integer
+                        }],
+                        "start_time": string,
+                        "validity": string,
+                        "victory_condition": string
+                    }
+                    "id": string,
+                    "type": string
+            }]}
+
     """
 
     player_list = request.args.get('filter[players]')
