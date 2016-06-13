@@ -23,9 +23,11 @@ def get_token(access_token=None, refresh_token=None):
 
 @oauth.tokensetter
 def set_token(token, request, *args, **kwargs):
-    with faf.db.connection:
+    if hasattr(current_user, 'id'):
         # make sure that every client has only one token connected to a user
         OAuthToken.delete(request.client.client_id, current_user.id)
+
+    with faf.db.connection:
 
         expires_in = token.get('expires_in')
         expires = datetime.utcnow() + timedelta(seconds=expires_in)
