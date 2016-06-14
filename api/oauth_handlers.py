@@ -28,7 +28,6 @@ def set_token(token, request, *args, **kwargs):
         OAuthToken.delete(request.client.client_id, current_user.id)
 
     with faf.db.connection:
-
         expires_in = token.get('expires_in')
         expires = datetime.utcnow() + timedelta(seconds=expires_in)
 
