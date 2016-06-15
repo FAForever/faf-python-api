@@ -22,6 +22,7 @@ def get_token(access_token=None, refresh_token=None):
 
 @oauth.tokensetter
 def set_token(token, request, *args, **kwargs):
+    # https://github.com/lepture/flask-oauthlib/issues/209
     user_id = request.user.id if hasattr(request.user, 'id') else current_user.id
 
     # make sure that every client has only one token connected to a user
