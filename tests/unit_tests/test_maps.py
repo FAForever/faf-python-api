@@ -1,32 +1,72 @@
+import datetime
+import importlib
 import json
+import os
 from io import BytesIO
+
+from unittest.mock import Mock
+
 import pytest
 import sys
+
+from pymysql.cursors import DictCursor
+
+import api
+from api import User
 from faf import db
 
 
 @pytest.fixture
-def maps(request, app):
-    app.debug = True
+def maps(request):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
-        cursor.execute("TRUNCATE TABLE table_map")
+        cursor.execute("TRUNCATE TABLE map")
+        cursor.execute("TRUNCATE TABLE map_version")
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
-        cursor.execute("""INSERT INTO table_map
-        (mapuid, max_players, name, filename, hidden) VALUES
-        (111, 4, 'a', 'maps/a.v0001.zip', 0),
-        (222, 8, 'b', 'maps/b.v0001.zip', 0),
-        (333, 12, 'c', 'maps/c.v0001.zip', 0)""")
+        cursor.execute("""insert into map (id, display_name, map_type, battle_type, uploader)
+        values
+        (1, 'SCMP_001', 'FFA', 'skirmish', 1),
+        (2, 'SCMP_002', 'FFA', 'skirmish', 1),
+        (3, 'SCMP_003', 'FFA', 'skirmish', 1);""")
+        cursor.execute("""insert into map_version
+        (description, max_players, size_x, size_y, version, filename, hidden, map_id)
+        values
+        ('SCMP 001', 4, 5, 5, 1, 'maps/scmp_001.v0001.zip', 0, 1),
+        ('SCMP 002', 6, 5, 5, 1, 'maps/scmp_002.v0001.zip', 0, 2),
+        ('SCMP 003', 8, 5, 5, 1, 'maps/scmp_003.v0001.zip', 0, 3);""")
 
     def finalizer():
         with db.connection:
             cursor = db.connection.cursor()
             cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
-            cursor.execute("TRUNCATE TABLE table_map")
+            cursor.execute("TRUNCATE TABLE map")
+            cursor.execute("TRUNCATE TABLE map_version")
             cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
 
     request.addfinalizer(finalizer)
+
+
+@pytest.fixture
+def oauth():
+    def get_token(access_token=None, refresh_token=None):
+        return Mock(
+            user=User(id=1),
+            expires=datetime.datetime.now() + datetime.timedelta(hours=1),
+            scopes=['read_achievements', 'write_achievements', 'upload_map']
+        )
+
+    importlib.reload(api)
+    importlib.reload(api.oauth_handlers)
+    importlib.reload(api.maps)
+
+    api.app.config.from_object('config')
+    api.api_init()
+    api.app.debug = True
+
+    api.oauth.tokengetter(get_token)
+
+    return api.app.test_client()
 
 
 def test_maps(test_client, maps):
@@ -103,7 +143,7 @@ def test_maps_page(test_client, maps):
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
     assert len(result['data']) == 1
-    assert result['data'][0]['attributes']['display_name'] == 'b'
+    assert result['data'][0]['attributes']['display_name'] == 'SCMP_002'
 
 
 def test_maps_invalid_page(test_client, maps):
@@ -122,10 +162,10 @@ def test_maps_sort_by_max_players(test_client, maps):
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['data']) > 0
 
-    previous_create_time = 0
+    previous_max_players = 0
     for item in result['data']:
-        assert item['attributes']['max_players'] > previous_create_time
-        previous_create_time = item['attributes']['max_players']
+        assert item['attributes']['max_players'] >= previous_max_players
+        previous_max_players = item['attributes']['max_players']
 
 
 def test_maps_sort_by_max_players_desc(test_client, maps):
@@ -137,10 +177,10 @@ def test_maps_sort_by_max_players_desc(test_client, maps):
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['data']) > 0
 
-    previous_create_time = sys.maxsize
+    previous_max_players = sys.maxsize
     for item in result['data']:
-        assert item['attributes']['max_players'] < previous_create_time
-        previous_create_time = item['attributes']['max_players']
+        assert item['attributes']['max_players'] < previous_max_players
+        previous_max_players = item['attributes']['max_players']
 
 
 def test_maps_inject_sql_sort(test_client):
@@ -150,45 +190,80 @@ def test_maps_inject_sql_sort(test_client):
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid sort field'
 
 
-def test_maps_upload(test_client, app, tmpdir):
+def test_maps_upload_is_ranked_missing(oauth, app, tmpdir):
     upload_dir = tmpdir.mkdir("map_upload")
     app.config['MAP_UPLOAD_PATH'] = upload_dir.strpath
-    response = test_client.post('/maps/upload',
-                                data={'file': (BytesIO('my file contents'.encode('utf-8')), 'map_name.zip')})
+    response = oauth.post('/maps/upload',
+                          data={'file': (BytesIO('my file contents'.encode('utf-8')), 'map_name.zip')})
 
-    assert response.status_code == 200
-    assert 'ok' == response.get_data(as_text=True)
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
 
-    with open(upload_dir.join('map_name.zip').strpath, 'r') as file:
-        assert file.read() == 'my file contents'
+    assert json.loads(response.get_data(as_text=True))['message'] == "Value 'is_ranked' is missing"
 
 
-def test_maps_upload_no_file_results_400(test_client, app, tmpdir):
-    response = test_client.post('/maps/upload')
+def test_maps_upload_no_file_results_400(oauth, app, tmpdir):
+    response = oauth.post('/maps/upload')
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True))['message'] == 'No file has been provided'
 
 
-def test_maps_upload_txt_results_400(test_client, app, tmpdir):
-    response = test_client.post('/maps/upload', data={'file': (BytesIO('1'.encode('utf-8')), 'map_name.txt')})
+def test_maps_upload_txt_results_400(oauth, app, tmpdir):
+    response = oauth.post('/maps/upload', data={'file': (BytesIO('1'.encode('utf-8')), 'map_name.txt'),
+                                                'is_ranked': 'true'})
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid file extension'
 
 
 def test_map_by_name(test_client, app, maps):
-    response = test_client.get('/maps?filter%5Btechnical_name%5D=b.v0001')
+    response = test_client.get('/maps?filter%5Btechnical_name%5D=scmp_002.v0001')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    assert result['data']['id'] == 222
-    assert result['data']['attributes']['display_name'] == 'b'
-    assert result['data']['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/maps/b.v0001.zip'
+    assert result['data']['id'] == 2
+    assert result['data']['attributes']['display_name'] == 'SCMP_002'
+    assert result['data']['attributes'][
+               'download_url'] == 'http://content.faforever.com/faf/vault/maps/scmp_002.v0001.zip'
     assert result['data']['attributes']['thumbnail_url_small'] == 'http://content.faforever.com/faf/vault' \
-                                                                  '/map_previews/small/maps/b.v0001.zip'
+                                                                  '/map_previews/small/maps/scmp_002.v0001.zip'
     assert result['data']['attributes']['thumbnail_url_large'] == 'http://content.faforever.com/faf/vault' \
-                                                                  '/map_previews/large/maps/b.v0001.zip'
+                                                                  '/map_previews/large/maps/scmp_002.v0001.zip'
+
+
+@pytest.mark.parametrize("ranked", [True, False])
+def test_map_upload(oauth, app, maps, tmpdir, ranked):
+    upload_dir = tmpdir.mkdir("map_upload")
+    small_preview_dir = tmpdir.mkdir("small_previews")
+    large_preview_dir = tmpdir.mkdir("large_previews")
+
+    app.config['MAP_UPLOAD_PATH'] = upload_dir.strpath
+    app.config['SMALL_PREVIEW_UPLOAD_PATH'] = small_preview_dir.strpath
+    app.config['LARGE_PREVIEW_UPLOAD_PATH'] = large_preview_dir.strpath
+
+    map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/scmp_037.zip')
+    with open(map_zip, 'rb') as file:
+        response = oauth.post('/maps/upload',
+                              data={'file': (file, 'map_name.zip'),
+                                    'is_ranked': str(ranked)})
+
+    assert response.status_code == 200, json.loads(response.get_data(as_text=True))['message']
+    assert 'ok' == response.get_data(as_text=True)
+    assert os.path.isfile(upload_dir.join('map_name.zip').strpath)
+    assert os.path.isfile(small_preview_dir.join('scmp_037.png').strpath)
+    assert os.path.isfile(large_preview_dir.join('scmp_037.png').strpath)
+
+    with db.connection:
+        cursor = db.connection.cursor(DictCursor)
+        cursor.execute("SELECT display_name, map_type, battle_type, ranked, uploader from map WHERE id = 4")
+        result = cursor.fetchone()
+
+        assert result['display_name'] == 'Sludge'
+        assert result['map_type'] == 'skirmish'
+        assert result['battle_type'] == 'FFA'
+        assert result['ranked'] == (1 if ranked else 0)
+        assert result['uploader'] == 1
