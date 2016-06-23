@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import tempfile
@@ -75,21 +76,23 @@ def maps_upload():
 
     """
     file = request.files.get('file')
-    is_ranked = request.form.get('is_ranked')
+    metadata_string = request.form.get('metadata')
 
     if not file:
         raise InvalidUsage("No file has been provided")
 
-    if not is_ranked:
-        raise InvalidUsage("Value 'is_ranked' is missing")
+    if not metadata_string:
+        raise InvalidUsage("Value 'metadata' is missing")
 
     if not file_allowed(file.filename):
         raise InvalidUsage("Invalid file extension")
 
+    metadata = json.loads(metadata_string)
+
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_map_path = os.path.join(temp_dir, secure_filename(file.filename))
         file.save(temp_map_path)
-        process_uploaded_map(temp_map_path, is_ranked.lower() == "true")
+        process_uploaded_map(temp_map_path, metadata.get('is_ranked', False))
 
     return "ok"
 
