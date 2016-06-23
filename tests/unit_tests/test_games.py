@@ -61,16 +61,26 @@ def game_player_stats(request):
 def maps(request):
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute("DELETE FROM table_map")
-        cursor.execute("""INSERT INTO table_map(id, name, mapuid) VALUES
-        (5091,'testMap1',1),
-        (5092,'testMap2',1),
-        (5093,'testMap3',1)""")
+        cursor.execute("DELETE FROM map")
+        cursor.execute("DELETE FROM map_version")
+        # TODO use common fixtures
+        cursor.execute("""insert into map (id, display_name, map_type, battle_type, uploader)
+        values
+        (5091, 'testMap1', 'FFA', 'skirmish', 1),
+        (5092, 'testMap2', 'FFA', 'skirmish', 1),
+        (5093, 'testMap3', 'FFA', 'skirmish', 1);""")
+        cursor.execute("""insert into map_version
+        (description, max_players, size_x, size_y, version, filename, hidden, map_id)
+        values
+        ('SCMP 001', 4, 5, 5, 1, 'maps/scmp_001.v0001.zip', 0, 5091),
+        ('SCMP 002', 6, 5, 5, 1, 'maps/scmp_002.v0001.zip', 0, 5092),
+        ('SCMP 003', 8, 5, 5, 1, 'maps/scmp_003.v0001.zip', 0, 5093);""")
 
     def finalizer():
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute("DELETE FROM table_map")
+            cursor.execute("DELETE FROM map")
+            cursor.execute("DELETE FROM map_version")
 
     request.addfinalizer(finalizer)
 
@@ -88,7 +98,7 @@ def mods(request):
     def finalizer():
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute("DELETE FROM table_map")
+            cursor.execute("DELETE FROM game_featuredMods")
 
     request.addfinalizer(finalizer)
 
@@ -207,7 +217,7 @@ def test_games_query_one_player(test_client, game_stats, game_player_stats, logi
     assert len(player_data_3) == 4
 
 
-def test_games_query_multiple_players(test_client, game_stats, game_player_stats, login, global_rating, maps):
+def test_games_query_multiple_players(test_client, game_stats, game_player_stats, login, global_rating, maps, mods):
     response = test_client.get('/games?filter[players]=testUser1,testUser3')
 
     assert response.status_code == 200
@@ -234,7 +244,7 @@ def test_games_query_player_no_result(test_client, game_stats, game_player_stats
     assert len(result['data']) == 0
 
 
-def test_games_query_map_name(test_client, maps, game_player_stats, game_stats, global_rating, login):
+def test_games_query_map_name(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
     response = test_client.get('/games?filter[map_name]=testMap1')
 
     assert response.status_code == 200
@@ -248,7 +258,7 @@ def test_games_query_map_name(test_client, maps, game_player_stats, game_stats, 
     assert results_data[0]['attributes']['map_name'] == 'testMap1'
 
 
-def test_games_query_map_name_exclude(test_client, maps, game_player_stats, game_stats, global_rating, login):
+def test_games_query_map_name_exclude(test_client, maps, game_player_stats, game_stats, global_rating, login, mods):
     response = test_client.get('/games?filter[map_name]=testMap1&filter[map_exclude]=true')
 
     assert response.status_code == 200
@@ -367,7 +377,7 @@ def test_games_query_malformed_min_date_bounds(test_client, maps, game_player_st
     assert 'message' in result
 
 
-def test_games_query_max_rating(test_client, game_stats, game_player_stats, global_rating, login, maps):
+def test_games_query_max_rating(test_client, game_stats, game_player_stats, global_rating, login, maps, mods):
     response = test_client.get('/games?filter[max_rating]=1000')
 
     assert response.status_code == 200
@@ -382,7 +392,7 @@ def test_games_query_max_rating(test_client, game_stats, game_player_stats, glob
                     for player in game['attributes']['players']])
 
 
-def test_games_query_min_rating(test_client, game_stats, game_player_stats, global_rating, login, maps):
+def test_games_query_min_rating(test_client, game_stats, game_player_stats, global_rating, login, maps, mods):
     response = test_client.get('/games?filter[min_rating]=1100')
 
     assert response.status_code == 200
@@ -397,7 +407,7 @@ def test_games_query_min_rating(test_client, game_stats, game_player_stats, glob
                     for player in game['attributes']['players']])
 
 
-def test_games_query_max_and_min_rating(test_client, game_stats, game_player_stats, global_rating, login, maps):
+def test_games_query_max_and_min_rating(test_client, game_stats, game_player_stats, global_rating, login, maps, mods):
     response = test_client.get('/games?filter[max_rating]=2000&filter[min_rating]=500')
 
     assert response.status_code == 200
@@ -434,7 +444,7 @@ def test_games_query_rating_type_ladder(test_client, game_stats, game_player_sta
             assert math.isclose(player['mean'], 700)
 
 
-def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_player_stats, ladder, login, maps):
+def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_player_stats, ladder, login, maps, mods):
     response = test_client.get('/games?filter[max_rating]=2000&filter[min_rating]=500&filter[rating_type]=ladder')
 
     assert response.status_code == 200
@@ -450,7 +460,7 @@ def test_games_query_min_and_max_rating_ladder(test_client, game_stats, game_pla
                     for player in game['attributes']['players']])
 
 
-def test_games_query_victory_condition(test_client, game_stats, game_player_stats, global_rating, login, maps):
+def test_games_query_victory_condition(test_client, game_stats, game_player_stats, global_rating, login, maps, mods):
     response = test_client.get('/games?filter[victory_condition]=domination')
 
     assert response.status_code == 200
@@ -474,7 +484,8 @@ def test_games_malformed_query_victory_condition(test_client):
     assert 'message' in result
 
 
-def test_games_query_max_player_count(test_client, maps, game_stats, game_player_stats, login, global_rating, app):
+def test_games_query_max_player_count(test_client, maps, game_stats, game_player_stats, login, global_rating, app,
+                                      mods):
     app.debug = True
     response = test_client.get('/games?filter[max_player_count]=2')
     assert response.status_code == 200
@@ -485,7 +496,7 @@ def test_games_query_max_player_count(test_client, maps, game_stats, game_player
     assert len(results_data) == 3
 
 
-def test_games_query_min_player_count(test_client, maps, game_stats, game_player_stats, login, global_rating):
+def test_games_query_min_player_count(test_client, maps, game_stats, game_player_stats, login, global_rating, mods):
     response = test_client.get('/games?filter[min_player_count]=4')
 
     assert response.status_code == 200
@@ -496,7 +507,7 @@ def test_games_query_min_player_count(test_client, maps, game_stats, game_player
     assert len(results_data) == 1
 
 
-def test_games_query_all_parameters(test_client, maps, game_stats, game_player_stats, ladder, login):
+def test_games_query_all_parameters(test_client, maps, game_stats, game_player_stats, ladder, login, mods):
     response = test_client.get('/games?filter[players]=testUser1,testUser3&filter[map_name]=testMap2'
                                '&filter[max_rating]=2000&filter[min_rating]=500&filter[game_type]=1'
                                '&filter[rating_type]=ladder&filter[map_exclude]=true&filter[max_player_count]=4'
@@ -523,7 +534,7 @@ def test_games_query_all_parameters(test_client, maps, game_stats, game_player_s
         '1997-07-25T19:20')
 
 
-def test_game_id_one_player(test_client, game_stats, game_player_stats, global_rating, login, maps):
+def test_game_id_one_player(test_client, game_stats, game_player_stats, global_rating, login, maps, mods):
     response = test_client.get('/games/235')
 
     assert response.status_code == 200

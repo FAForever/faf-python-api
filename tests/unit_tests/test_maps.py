@@ -24,6 +24,7 @@ def maps(request):
         cursor.execute("TRUNCATE TABLE map")
         cursor.execute("TRUNCATE TABLE map_version")
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+        # TODO use common fixtures
         cursor.execute("""insert into map (id, display_name, map_type, battle_type, uploader)
         values
         (1, 'SCMP_001', 'FFA', 'skirmish', 1),
