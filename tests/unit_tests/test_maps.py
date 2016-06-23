@@ -190,7 +190,7 @@ def test_maps_inject_sql_sort(test_client):
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid sort field'
 
 
-def test_maps_upload_is_ranked_missing(oauth, app, tmpdir):
+def test_maps_upload_is_metadata_missing(oauth, app, tmpdir):
     upload_dir = tmpdir.mkdir("map_upload")
     app.config['MAP_UPLOAD_PATH'] = upload_dir.strpath
     response = oauth.post('/maps/upload',
@@ -199,7 +199,7 @@ def test_maps_upload_is_ranked_missing(oauth, app, tmpdir):
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
-    assert json.loads(response.get_data(as_text=True))['message'] == "Value 'is_ranked' is missing"
+    assert json.loads(response.get_data(as_text=True))['message'] == "Value 'metadata' is missing"
 
 
 def test_maps_upload_no_file_results_400(oauth, app, tmpdir):
@@ -211,7 +211,7 @@ def test_maps_upload_no_file_results_400(oauth, app, tmpdir):
 
 def test_maps_upload_txt_results_400(oauth, app, tmpdir):
     response = oauth.post('/maps/upload', data={'file': (BytesIO('1'.encode('utf-8')), 'map_name.txt'),
-                                                'is_ranked': 'true'})
+                                                'metadata': json.dumps(dict(is_ranked=True))})
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid file extension'
@@ -249,7 +249,7 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
     with open(map_zip, 'rb') as file:
         response = oauth.post('/maps/upload',
                               data={'file': (file, 'map_name.zip'),
-                                    'is_ranked': str(ranked)})
+                                    'metadata': json.dumps(dict(is_ranked=ranked))})
 
     assert response.status_code == 200, json.loads(response.get_data(as_text=True))['message']
     assert 'ok' == response.get_data(as_text=True)
