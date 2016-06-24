@@ -35,9 +35,9 @@ SELECT_EXPRESSIONS = {
     # download_url will be URL encoded and made absolute in enricher
     'download_url': "version.filename",
     # thumbnail_url_small will be URL encoded and made absolute in enricher
-    'thumbnail_url_small': "REPLACE(version.filename, '.zip', '.png')",
+    'thumbnail_url_small': "REPLACE(REPLACE(version.filename, '.zip', '.png'), 'maps/', '')",
     # thumbnail_url_large will be URL encoded and made absolute in enricher
-    'thumbnail_url_large': "REPLACE(version.filename, '.zip', '.png')",
+    'thumbnail_url_large': "REPLACE(REPLACE(version.filename, '.zip', '.png'), 'maps/', '')",
     'technical_name': "SUBSTRING(version.filename, LOCATE('/', version.filename)+1, LOCATE('.zip', version.filename)-6)",
     'downloads': 'COALESCE(features.downloads, 0)',
     'num_draws': 'COALESCE(features.num_draws, 0)',
@@ -166,15 +166,15 @@ def enricher(map):
         if not map['thumbnail_url_small']:
             del map['thumbnail_url_small']
         else:
-            map['thumbnail_url_small'] = '{}/faf/vault/map_previews/small/{}' \
-                .format(app.config['CONTENT_URL'], map['thumbnail_url_small'].replace('.zip', '.png'))
+            map['thumbnail_url_small'] = '{}/faf/vault/map_previews/small/{}'.format(
+                app.config['CONTENT_URL'], map['thumbnail_url_small'])
 
     if 'thumbnail_url_large' in map:
         if not map['thumbnail_url_large']:
             del map['thumbnail_url_large']
         else:
-            map['thumbnail_url_large'] = '{}/faf/vault/map_previews/large/{}' \
-                .format(app.config['CONTENT_URL'], map['thumbnail_url_large'].replace('.zip', '.png'))
+            map['thumbnail_url_large'] = '{}/faf/vault/map_previews/large/{}'.format(
+                app.config['CONTENT_URL'], map['thumbnail_url_large'])
 
     if 'download_url' in map:
         map['download_url'] = '{}/faf/vault/{}'.format(app.config['CONTENT_URL'],
