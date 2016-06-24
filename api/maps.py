@@ -6,6 +6,7 @@ import urllib.parse
 import zipfile
 
 from faf.api.map_schema import MapSchema
+from faf.tools.fa.maps import generate_map_previews
 from flask import request
 from werkzeug.utils import secure_filename
 from api import app, InvalidUsage, oauth
@@ -31,12 +32,12 @@ SELECT_EXPRESSIONS = {
     'size_x': 'version.size_x',
     'size_y': 'version.size_y',
     'version': 'version.version',
-    # download_url will be URL encoded and made absolute in enrich_mod
+    # download_url will be URL encoded and made absolute in enricher
     'download_url': "version.filename",
-    # thumbnail_url_small will be URL encoded and made absolute in enrich_mod
-    'thumbnail_url_small': 'version.filename',
-    # thumbnail_url_large will be URL encoded and made absolute in enrich_mod
-    'thumbnail_url_large': 'version.filename',
+    # thumbnail_url_small will be URL encoded and made absolute in enricher
+    'thumbnail_url_small': "REPLACE(version.filename, '.zip', '.png')",
+    # thumbnail_url_large will be URL encoded and made absolute in enricher
+    'thumbnail_url_large': "REPLACE(version.filename, '.zip', '.png')",
     'technical_name': "SUBSTRING(version.filename, LOCATE('/', version.filename)+1, LOCATE('.zip', version.filename)-6)",
     'downloads': 'COALESCE(features.downloads, 0)',
     'num_draws': 'COALESCE(features.num_draws, 0)',
@@ -165,16 +166,15 @@ def enricher(map):
         if not map['thumbnail_url_small']:
             del map['thumbnail_url_small']
         else:
-            # FIXME replace .zip with .png
-            map['thumbnail_url_small'] = '{}/faf/vault/map_previews/small/{}'.format(app.config['CONTENT_URL'],
-                                                                                     map['thumbnail_url_small'])
+            map['thumbnail_url_small'] = '{}/faf/vault/map_previews/small/{}' \
+                .format(app.config['CONTENT_URL'], map['thumbnail_url_small'].replace('.zip', '.png'))
+
     if 'thumbnail_url_large' in map:
         if not map['thumbnail_url_large']:
             del map['thumbnail_url_large']
         else:
-            # FIXME replace .zip with .png
-            map['thumbnail_url_large'] = '{}/faf/vault/map_previews/large/{}'.format(app.config['CONTENT_URL'],
-                                                                                     map['thumbnail_url_large'])
+            map['thumbnail_url_large'] = '{}/faf/vault/map_previews/large/{}' \
+                .format(app.config['CONTENT_URL'], map['thumbnail_url_large'].replace('.zip', '.png'))
 
     if 'download_url' in map:
         map['download_url'] = '{}/faf/vault/{}'.format(app.config['CONTENT_URL'],
@@ -222,15 +222,6 @@ def process_uploaded_map(temp_map_path, is_ranked):
         if not filename:
             continue
 
-        # TODO Generate previews instead of expecting them from client
-        if filename.endswith(".small.png"):
-            extract_preview(zip, member, app.config['SMALL_PREVIEW_UPLOAD_PATH'],
-                            filename.replace(".small.png", ".png"))
-
-        elif filename.endswith(".large.png"):
-            extract_preview(zip, member, app.config['LARGE_PREVIEW_UPLOAD_PATH'],
-                            filename.replace(".large.png", ".png"))
-
         elif filename.endswith("_scenario.lua"):
             scenario_info = read_scenario_info(zip, member)
             validate_scenario_info(scenario_info)
@@ -257,7 +248,13 @@ def process_uploaded_map(temp_map_path, is_ranked):
     if map_exists(display_name, version, map_file_name):
         raise InvalidUsage('Map "{}" with version "{}" already exists'.format(display_name, version))
 
-    shutil.move(temp_map_path, os.path.join(app.config['MAP_UPLOAD_PATH'], secure_filename(map_file_name)))
+    target_map_path = os.path.join(app.config['MAP_UPLOAD_PATH'], secure_filename(map_file_name))
+    shutil.move(temp_map_path, target_map_path)
+
+    generate_map_previews(target_map_path, {
+        128: app.config['SMALL_PREVIEW_UPLOAD_PATH'],
+        1024: app.config['LARGE_PREVIEW_UPLOAD_PATH']
+    })
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
