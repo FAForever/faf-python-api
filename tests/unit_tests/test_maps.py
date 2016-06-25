@@ -54,7 +54,7 @@ def oauth():
         return Mock(
             user=User(id=1),
             expires=datetime.datetime.now() + datetime.timedelta(hours=1),
-            scopes=['read_achievements', 'write_achievements', 'upload_map']
+            scopes=['upload_map']
         )
 
     importlib.reload(api)
