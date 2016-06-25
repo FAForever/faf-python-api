@@ -54,7 +54,7 @@ def oauth():
         return Mock(
             user=User(id=1),
             expires=datetime.datetime.now() + datetime.timedelta(hours=1),
-            scopes=['upload_map']
+            scopes=['read_achievements', 'write_achievements', 'upload_map']
         )
 
     importlib.reload(api)
@@ -82,6 +82,7 @@ def test_maps(test_client, maps):
 
     for item in result['data']:
         assert 'type' in item
+        assert 'create_time' in item['attributes']
 
 
 def test_maps_fields(test_client, maps):
@@ -226,7 +227,7 @@ def test_map_by_name(test_client, app, maps):
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    assert result['data']['id'] == 2
+    assert result['data']['id'] == '2'
     assert result['data']['attributes']['display_name'] == 'SCMP_002'
     assert result['data']['attributes'][
                'download_url'] == 'http://content.faforever.com/faf/vault/maps/scmp_002.v0001.zip'

@@ -43,7 +43,8 @@ SELECT_EXPRESSIONS = {
     'downloads': 'COALESCE(features.downloads, 0)',
     'num_draws': 'COALESCE(features.num_draws, 0)',
     'rating': 'features.rating',
-    'times_played': 'COALESCE(features.times_played, 0)'
+    'times_played': 'COALESCE(features.times_played, 0)',
+    'create_time': 'version.create_time'
 }
 
 TABLE = 'map ' \
@@ -136,7 +137,8 @@ def maps():
                 "thumbnail_url_large": "http://content.faforever.com/faf/vault/map_previews/large/canis3v3.v0001.png",
                 "thumbnail_url_small": "http://content.faforever.com/faf/vault/map_previews/small/canis3v3.v0001.png",
                 "times_played": 1955,
-                "version": "1"
+                "version": "1",
+                "author": "Someone"
               },
               "id": 0,
               "type": "map"
@@ -151,16 +153,13 @@ def maps():
     args = None
     many = True
 
-    page_size = int(request.values.get('page[size]', MAX_PAGE_SIZE))
-    page_size = page_size if page_size < MAX_PAGE_SIZE else page_size
-
     filename_filter = request.values.get('filter[technical_name]')
     if filename_filter:
         where = ' filename = %s'
         args = 'maps/' + filename_filter + '.zip'
         many = False
 
-    results = fetch_data(MapSchema(), TABLE, SELECT_EXPRESSIONS, page_size, request, where=where, args=args,
+    results = fetch_data(MapSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, where=where, args=args,
                          many=many, enricher=enricher)
     return results
 
