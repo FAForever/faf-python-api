@@ -31,6 +31,7 @@ SELECT_EXPRESSIONS = {
     'battle_type': 'map.battle_type',
     'size_x': 'version.size_x',
     'size_y': 'version.size_y',
+    'author': 'version.version',
     'version': 'version.version',
     # download_url will be URL encoded and made absolute in enricher
     'download_url': "version.filename",
@@ -150,13 +151,16 @@ def maps():
     args = None
     many = True
 
+    page_size = int(request.values.get('page[size]', MAX_PAGE_SIZE))
+    page_size = page_size if page_size < MAX_PAGE_SIZE else page_size
+
     filename_filter = request.values.get('filter[technical_name]')
     if filename_filter:
         where = ' filename = %s'
         args = 'maps/' + filename_filter + '.zip'
         many = False
 
-    results = fetch_data(MapSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, where=where, args=args,
+    results = fetch_data(MapSchema(), TABLE, SELECT_EXPRESSIONS, page_size, request, where=where, args=args,
                          many=many, enricher=enricher)
     return results
 
