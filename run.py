@@ -30,5 +30,5 @@ if __name__ == '__main__':
         from aiohttp_wsgi import serve
         from concurrent.futures import ThreadPoolExecutor
 
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=1) as executor:
             serve(app, executor=executor)
