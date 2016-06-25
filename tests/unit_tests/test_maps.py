@@ -231,9 +231,9 @@ def test_map_by_name(test_client, app, maps):
     assert result['data']['attributes'][
                'download_url'] == 'http://content.faforever.com/faf/vault/maps/scmp_002.v0001.zip'
     assert result['data']['attributes']['thumbnail_url_small'] == 'http://content.faforever.com/faf/vault' \
-                                                                  '/map_previews/small/maps/scmp_002.v0001.zip'
+                                                                  '/map_previews/small/scmp_002.v0001.png'
     assert result['data']['attributes']['thumbnail_url_large'] == 'http://content.faforever.com/faf/vault' \
-                                                                  '/map_previews/large/maps/scmp_002.v0001.zip'
+                                                                  '/map_previews/large/scmp_002.v0001.png'
 
 
 @pytest.mark.parametrize("ranked", [True, False])
@@ -249,12 +249,12 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
     map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/scmp_037.zip')
     with open(map_zip, 'rb') as file:
         response = oauth.post('/maps/upload',
-                              data={'file': (file, 'map_name.zip'),
+                              data={'file': (file, os.path.basename(map_zip)),
                                     'metadata': json.dumps(dict(is_ranked=ranked))})
 
     assert response.status_code == 200, json.loads(response.get_data(as_text=True))['message']
     assert 'ok' == response.get_data(as_text=True)
-    assert os.path.isfile(upload_dir.join('map_name.zip').strpath)
+    assert os.path.isfile(upload_dir.join(os.path.basename(map_zip)).strpath)
     assert os.path.isfile(small_preview_dir.join('scmp_037.png').strpath)
     assert os.path.isfile(large_preview_dir.join('scmp_037.png').strpath)
 
