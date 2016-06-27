@@ -11,6 +11,7 @@ from flask import Flask, session, jsonify, request
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
 from flask_oauthlib.provider import OAuth2Provider
 from flask_login import LoginManager
+from flask_cors import CORS
 
 from api.invalid_usage import InvalidUsage
 from api.jwt_user import JwtUser
@@ -30,6 +31,7 @@ if sys.version_info.major != 3:
 # ======== Init Flask ==========
 
 app = Flask('api')
+CORS(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
