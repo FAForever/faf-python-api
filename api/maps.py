@@ -29,8 +29,8 @@ SELECT_EXPRESSIONS = {
     'max_players': 'version.max_players',
     'map_type': 'map.map_type',
     'battle_type': 'map.battle_type',
-    'size_x': 'version.size_x',
-    'size_y': 'version.size_y',
+    'width': 'version.width',
+    'height': 'version.height',
     'author': 'version.version',
     'version': 'version.version',
     # download_url will be URL encoded and made absolute in enricher
@@ -240,8 +240,8 @@ def process_uploaded_map(temp_map_path, is_ranked):
     battle_type = scenario_info["battle_type"].strip()
 
     size = scenario_info["map_size"]
-    size_x = int(size["0"])
-    size_y = int(size["1"])
+    width = int(size["0"])
+    height = int(size["1"])
 
     map_file_name = os.path.basename(temp_map_path)
     user_id = request.oauth.user.id
@@ -276,17 +276,17 @@ def process_uploaded_map(temp_map_path, is_ranked):
                        })
 
         cursor.execute("""INSERT INTO map_version (
-                            description, max_players, size_x, size_y, version, filename, map_id
+                            description, max_players, width, height, version, filename, map_id
                         )
                         VALUES (
-                            %(description)s, %(max_players)s, %(size_x)s, %(size_y)s, %(version)s, %(filename)s,
+                            %(description)s, %(max_players)s, %(width)s, %(height)s, %(version)s, %(filename)s,
                             (SELECT id FROM map WHERE display_name = %(display_name)s)
                         )""",
                        {
                            'description': description,
                            'max_players': max_players,
-                           'size_x': size_x,
-                           'size_y': size_y,
+                           'width': width,
+                           'height': height,
                            'version': version,
                            'filename': "maps/" + map_file_name,
                            'display_name': display_name

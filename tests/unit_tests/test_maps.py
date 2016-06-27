@@ -31,7 +31,7 @@ def maps(request):
         (2, 'SCMP_002', 'FFA', 'skirmish', 1),
         (3, 'SCMP_003', 'FFA', 'skirmish', 1);""")
         cursor.execute("""insert into map_version
-        (description, max_players, size_x, size_y, version, filename, hidden, map_id)
+        (description, max_players, width, height, version, filename, hidden, map_id)
         values
         ('SCMP 001', 4, 5, 5, 1, 'maps/scmp_001.v0001.zip', 0, 1),
         ('SCMP 002', 6, 5, 5, 1, 'maps/scmp_002.v0001.zip', 0, 2),
