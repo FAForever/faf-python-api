@@ -29,13 +29,17 @@ def maps(request):
         values
         (1, 'SCMP_001', 'FFA', 'skirmish', 1),
         (2, 'SCMP_002', 'FFA', 'skirmish', 1),
-        (3, 'SCMP_003', 'FFA', 'skirmish', 1);""")
+        (3, 'SCMP_003', 'FFA', 'skirmish', 1),
+        (4, 'Map with space', 'FFA', 'skirmish', 1);
+        """)
         cursor.execute("""insert into map_version
         (description, max_players, width, height, version, filename, hidden, map_id)
         values
         ('SCMP 001', 4, 5, 5, 1, 'maps/scmp_001.v0001.zip', 0, 1),
         ('SCMP 002', 6, 5, 5, 1, 'maps/scmp_002.v0001.zip', 0, 2),
-        ('SCMP 003', 8, 5, 5, 1, 'maps/scmp_003.v0001.zip', 0, 3);""")
+        ('SCMP 003', 8, 5, 5, 1, 'maps/scmp_003.v0001.zip', 0, 3),
+        ('Testing spaces', 8, 5, 5, 1, 'maps/map with space.zip', 0, 4);
+        """)
 
     def finalizer():
         with db.connection:
@@ -83,6 +87,8 @@ def test_maps(test_client, maps):
     for item in result['data']:
         assert 'type' in item
         assert 'create_time' in item['attributes']
+        assert 'thumbnail_url_small' in item['attributes']
+        assert 'thumbnail_url_large' in item['attributes']
 
 
 def test_maps_fields(test_client, maps):
@@ -93,7 +99,7 @@ def test_maps_fields(test_client, maps):
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    assert len(result['data']) == 3
+    assert len(result['data']) == 4
     assert len(result['data'][0]['attributes']) == 1
 
     for item in result['data']:
@@ -109,7 +115,7 @@ def test_maps_fields_two(test_client, maps):
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    assert len(result['data']) == 3
+    assert len(result['data']) == 4
     assert len(result['data'][0]['attributes']) == 2
 
     for item in result['data']:
@@ -181,7 +187,7 @@ def test_maps_sort_by_max_players_desc(test_client, maps):
 
     previous_max_players = sys.maxsize
     for item in result['data']:
-        assert item['attributes']['max_players'] < previous_max_players
+        assert item['attributes']['max_players'] <= previous_max_players
         previous_max_players = item['attributes']['max_players']
 
 
@@ -261,7 +267,7 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
 
     with db.connection:
         cursor = db.connection.cursor(DictCursor)
-        cursor.execute("SELECT display_name, map_type, battle_type, ranked, uploader from map WHERE id = 4")
+        cursor.execute("SELECT display_name, map_type, battle_type, ranked, uploader from map WHERE id = 5")
         result = cursor.fetchone()
 
         assert result['display_name'] == 'Sludge'

@@ -170,14 +170,14 @@ def enricher(map):
             del map['thumbnail_url_small']
         else:
             map['thumbnail_url_small'] = '{}/faf/vault/map_previews/small/{}'.format(
-                app.config['CONTENT_URL'], map['thumbnail_url_small'])
+                app.config['CONTENT_URL'], urllib.parse.quote(map['thumbnail_url_small']))
 
     if 'thumbnail_url_large' in map:
         if not map['thumbnail_url_large']:
             del map['thumbnail_url_large']
         else:
             map['thumbnail_url_large'] = '{}/faf/vault/map_previews/large/{}'.format(
-                app.config['CONTENT_URL'], map['thumbnail_url_large'])
+                app.config['CONTENT_URL'], urllib.parse.quote(map['thumbnail_url_large']))
 
     if 'download_url' in map:
         map['download_url'] = '{}/faf/vault/{}'.format(app.config['CONTENT_URL'],
