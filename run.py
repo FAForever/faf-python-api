@@ -31,4 +31,4 @@ if __name__ == '__main__':
         from concurrent.futures import ThreadPoolExecutor
 
         with ThreadPoolExecutor(max_workers=1) as executor:
-            serve(app, executor=executor)
+            serve(app, executor=executor, port=port)
