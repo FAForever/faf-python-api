@@ -1,19 +1,17 @@
 import json
+import logging
 import os
 import shutil
 import tempfile
 import urllib.parse
-import zipfile
 
 from faf.api.map_schema import MapSchema
-from faf.tools.fa.maps import generate_map_previews, validate_map_zip_file, parse_map_info
+from faf.tools.fa.maps import generate_map_previews, parse_map_info, generate_zip_file_name
 from flask import request
 from werkzeug.utils import secure_filename
+
 from api import app, InvalidUsage, oauth
 from api.query_commons import fetch_data
-
-import logging
-
 from faf import db
 
 logger = logging.getLogger(__name__)
@@ -191,7 +189,8 @@ def file_allowed(filename):
 def process_uploaded_map(temp_map_path, is_ranked):
     map_info = parse_map_info(temp_map_path)
 
-    display_name = map_info['name']
+    display_name = map_info['display_name']
+    name = map_info['name']
     version = map_info['version']
     description = map_info['description']
     max_players = map_info['max_players']
@@ -206,9 +205,7 @@ def process_uploaded_map(temp_map_path, is_ranked):
     if not can_upload_map(display_name, user_id):
         raise InvalidUsage('Only the original uploader is allowed to upload this map')
 
-    map_file_name = "{}.v{:0>4}.zip".format(
-        os.path.splitext(os.path.basename(temp_map_path))[0].lower().replace(' ', '_'),
-        version)
+    map_file_name = generate_zip_file_name(name, version)
     if map_exists(map_file_name):
         raise InvalidUsage('Map "{}" with version "{}" already exists'.format(display_name, version))
 
