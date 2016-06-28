@@ -185,7 +185,7 @@ def test_map_by_name(test_client, app, maps):
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    assert result['data']['id'] == 222
+    assert result['data']['id'] == '222'
     assert result['data']['attributes']['display_name'] == 'b'
     assert result['data']['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/maps/b.v0001.zip'
     assert result['data']['attributes']['thumbnail_url_small'] == 'http://content.faforever.com/faf/vault' \
