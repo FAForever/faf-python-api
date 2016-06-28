@@ -202,12 +202,14 @@ def process_uploaded_map(temp_map_path, is_ranked):
     width = int(size[0])
     height = int(size[1])
 
-    map_file_name = os.path.basename(temp_map_path)
     user_id = request.oauth.user.id
     if not can_upload_map(display_name, user_id):
         raise InvalidUsage('Only the original uploader is allowed to upload this map')
 
-    if map_exists(version, map_file_name):
+    map_file_name = "{}.v{:0>4}.zip".format(
+        os.path.splitext(os.path.basename(temp_map_path))[0].lower().replace(' ', '_'),
+        version)
+    if map_exists(map_file_name):
         raise InvalidUsage('Map "{}" with version "{}" already exists'.format(display_name, version))
 
     target_map_path = os.path.join(app.config['MAP_UPLOAD_PATH'], secure_filename(map_file_name))
@@ -270,7 +272,6 @@ def validate_scenario_info(scenario_info):
 
 
 def extract_preview(zip, member, target_folder, target_name):
-    filename = os.path.basename(member)
     with zip.open(member) as source:
         target_path = os.path.join(target_folder, target_name)
 
@@ -278,11 +279,10 @@ def extract_preview(zip, member, target_folder, target_name):
             shutil.copyfileobj(source, target)
 
 
-def map_exists(version, map_file_name):
+def map_exists(map_file_name):
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute('SELECT count(*) from map_version WHERE version = %s AND filename LIKE %s',
-                       (version, "%" + map_file_name + "%"))
+        cursor.execute('SELECT count(*) from map_version WHERE filename = %s', "maps/" + map_file_name)
 
         return cursor.fetchone()[0] > 0
 

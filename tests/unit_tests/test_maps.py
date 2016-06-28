@@ -261,9 +261,9 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
 
     assert response.status_code == 200, json.loads(response.get_data(as_text=True))['message']
     assert 'ok' == response.get_data(as_text=True)
-    assert os.path.isfile(upload_dir.join(os.path.basename(map_zip)).strpath)
-    assert os.path.isfile(small_preview_dir.join('scmp_037.png').strpath)
-    assert os.path.isfile(large_preview_dir.join('scmp_037.png').strpath)
+    assert os.path.isfile(upload_dir.join(os.path.basename('scmp_037.v0003.zip')).strpath)
+    assert os.path.isfile(small_preview_dir.join('scmp_037.v0003.png').strpath)
+    assert os.path.isfile(large_preview_dir.join('scmp_037.v0003.png').strpath)
 
     with db.connection:
         cursor = db.connection.cursor(DictCursor)
