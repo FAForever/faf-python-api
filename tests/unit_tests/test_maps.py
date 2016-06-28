@@ -19,11 +19,16 @@ def maps(request, app):
         (222, 8, 'b', 'maps/b.v0001.zip', 0),
         (333, 12, 'c', 'maps/c.v0001.zip', 0)""")
 
+        cursor.execute("TRUNCATE TABLE ladder_map;")
+        cursor.execute("""INSERT INTO ladder_map (id, idmap) VALUES
+        (0, (SELECT id FROM table_map WHERE mapuid = 222))""")
+
     def finalizer():
         with db.connection:
             cursor = db.connection.cursor()
             cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
-            cursor.execute("TRUNCATE TABLE table_map")
+            cursor.execute("TRUNCATE TABLE table_map;")
+            cursor.execute("TRUNCATE TABLE ladder_map;")
             cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
 
     request.addfinalizer(finalizer)
@@ -192,3 +197,15 @@ def test_map_by_name(test_client, app, maps):
                                                                   '/map_previews/small/maps/b.v0001.zip'
     assert result['data']['attributes']['thumbnail_url_large'] == 'http://content.faforever.com/faf/vault' \
                                                                   '/map_previews/large/maps/b.v0001.zip'
+
+def test_ladder_maps(test_client, maps):
+    response = test_client.get('maps/ladder1v1')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'data' in result
+    assert len(result['data']) == 1
+    assert 'type' in result['data'][0]
+    assert result['data'][0]['attributes']['id'] == '222'
