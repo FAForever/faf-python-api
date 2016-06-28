@@ -6,12 +6,11 @@ import urllib.parse
 import zipfile
 
 from faf.api.map_schema import MapSchema
-from faf.tools.fa.maps import generate_map_previews
+from faf.tools.fa.maps import generate_map_previews, validate_map_zip_file, parse_map_info
 from flask import request
 from werkzeug.utils import secure_filename
 from api import app, InvalidUsage, oauth
 from api.query_commons import fetch_data
-from api.lua import luaparser
 
 import logging
 
@@ -189,66 +188,26 @@ def file_allowed(filename):
            filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
 
 
-def read_scenario_info(zip, member):
-    with tempfile.TemporaryDirectory() as temp_dir:
-        scenario_file_path = zip.extract(member, temp_dir)
-
-        scenariolua = luaparser.luaParser(scenario_file_path)
-        scenario_infos = scenariolua.parse(
-            {'scenarioinfo>name': 'name',
-             'size': 'map_size',
-             'description': 'description',
-             'count:armies': 'max_players',
-             'map_version': 'version',
-             'type': 'map_type',
-             'teams>0>name': 'battle_type'
-             }, {'version': '1'})
-
-        if scenariolua.error:
-            raise InvalidUsage("Invalid map: " + scenariolua.errorMsg)
-
-        return scenario_infos
-
-
 def process_uploaded_map(temp_map_path, is_ranked):
-    if not zipfile.is_zipfile(temp_map_path):
-        raise InvalidUsage("Invalid ZIP file")
+    map_info = parse_map_info(temp_map_path)
 
-    zip = zipfile.ZipFile(temp_map_path, "r", zipfile.ZIP_DEFLATED)
+    display_name = map_info['name']
+    version = map_info['version']
+    description = map_info['description']
+    max_players = map_info['max_players']
+    map_type = map_info['type']
+    battle_type = map_info['battle_type']
 
-    if zip.testzip() is not None:
-        raise InvalidUsage("Invalid ZIP file")
-
-    scenario_info = None
-    for member in zip.namelist():
-        filename = os.path.basename(member)
-        if not filename:
-            continue
-
-        elif filename.endswith("_scenario.lua"):
-            scenario_info = read_scenario_info(zip, member)
-            validate_scenario_info(scenario_info)
-
-    if scenario_info is None:
-        raise InvalidUsage('Scenario file is missing')
-
-    display_name = scenario_info["name"].strip()
-    version = int(scenario_info["version"].strip())
-    description = scenario_info["description"].strip()
-    max_players = scenario_info["max_players"]
-    map_type = scenario_info["map_type"].strip()
-    battle_type = scenario_info["battle_type"].strip()
-
-    size = scenario_info["map_size"]
-    width = int(size["0"])
-    height = int(size["1"])
+    size = map_info['size']
+    width = int(size[0])
+    height = int(size[1])
 
     map_file_name = os.path.basename(temp_map_path)
     user_id = request.oauth.user.id
-    if not can_upload_map(display_name, map_file_name, user_id):
+    if not can_upload_map(display_name, user_id):
         raise InvalidUsage('Only the original uploader is allowed to upload this map')
 
-    if map_exists(display_name, version, map_file_name):
+    if map_exists(version, map_file_name):
         raise InvalidUsage('Map "{}" with version "{}" already exists'.format(display_name, version))
 
     target_map_path = os.path.join(app.config['MAP_UPLOAD_PATH'], secure_filename(map_file_name))
@@ -319,7 +278,7 @@ def extract_preview(zip, member, target_folder, target_name):
             shutil.copyfileobj(source, target)
 
 
-def map_exists(name, version, map_file_name):
+def map_exists(version, map_file_name):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute('SELECT count(*) from map_version WHERE version = %s AND filename LIKE %s',
@@ -328,7 +287,7 @@ def map_exists(name, version, map_file_name):
         return cursor.fetchone()[0] > 0
 
 
-def can_upload_map(name, map_file_name, user_id):
+def can_upload_map(name, user_id):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute('SELECT count(*) FROM map WHERE display_name = %s AND uploader != %s', (name, user_id))
