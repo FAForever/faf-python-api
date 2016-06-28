@@ -30,11 +30,6 @@ def test_report():
                      traceback='<empty>')
 
 
-def test_no_reports(test_client, app):
-    response = test_client.get('/bugs')
-    assert json.loads(response.data.decode()) == {"data": []}
-
-
 def test_manual_report(test_client, app):
     report = test_report()
 
@@ -44,11 +39,6 @@ def test_manual_report(test_client, app):
 
     response = test_client.post('/bugs', data=data)
     assert response.status_code == 201
-
-    s = BugReportSchema(many=True)
-    response = test_client.get('/bugs')
-    result, errors = s.loads(response.data.decode(), many=True)
-    assert not errors
 
 
 def test_add_status_update(test_client, app):
