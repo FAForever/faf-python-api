@@ -215,8 +215,8 @@ def process_uploaded_map(temp_map_path, is_ranked):
     shutil.move(temp_map_path, target_map_path)
 
     generate_map_previews(target_map_path, {
-        128: app.config['SMALL_PREVIEW_UPLOAD_PATH'],
-        1024: app.config['LARGE_PREVIEW_UPLOAD_PATH']
+        128: os.path.join(app.config['MAP_PREVIEW_PATH'], 'small'),
+        512: os.path.join(app.config['MAP_PREVIEW_PATH'], 'large')
     })
 
     with db.connection:

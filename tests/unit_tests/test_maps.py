@@ -254,12 +254,10 @@ def test_map_by_name(test_client, app, maps):
 @pytest.mark.parametrize("ranked", [True, False])
 def test_map_upload(oauth, app, maps, tmpdir, ranked):
     upload_dir = tmpdir.mkdir("map_upload")
-    small_preview_dir = tmpdir.mkdir("small_previews")
-    large_preview_dir = tmpdir.mkdir("large_previews")
+    preview_dir = tmpdir.mkdir("map_previews")
 
     app.config['MAP_UPLOAD_PATH'] = upload_dir.strpath
-    app.config['SMALL_PREVIEW_UPLOAD_PATH'] = small_preview_dir.strpath
-    app.config['LARGE_PREVIEW_UPLOAD_PATH'] = large_preview_dir.strpath
+    app.config['MAP_PREVIEW_PATH'] = preview_dir.strpath
 
     map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/scmp_037.zip')
     with open(map_zip, 'rb') as file:
@@ -270,8 +268,8 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
     assert response.status_code == 200, json.loads(response.get_data(as_text=True))['message']
     assert 'ok' == response.get_data(as_text=True)
     assert os.path.isfile(upload_dir.join(os.path.basename('scmp_037.v0003.zip')).strpath)
-    assert os.path.isfile(small_preview_dir.join('scmp_037.v0003.png').strpath)
-    assert os.path.isfile(large_preview_dir.join('scmp_037.v0003.png').strpath)
+    assert os.path.isfile(preview_dir.join('small', 'scmp_037.v0003.png').strpath)
+    assert os.path.isfile(preview_dir.join('large', 'scmp_037.v0003.png').strpath)
 
     with db.connection:
         cursor = db.connection.cursor(DictCursor)
