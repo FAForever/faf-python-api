@@ -48,7 +48,7 @@ def maps(request):
 
         cursor.execute("TRUNCATE TABLE ladder_map;")
         cursor.execute("""INSERT INTO ladder_map (id, idmap) VALUES
-        (0, (SELECT id FROM table_map WHERE mapuid = 222))""")
+        (0, 1)""")
 
     def finalizer():
         with db.connection:
@@ -298,4 +298,4 @@ def test_ladder_maps(test_client, maps):
     assert 'data' in result
     assert len(result['data']) == 1
     assert 'type' in result['data'][0]
-    assert result['data'][0]['attributes']['id'] == '222'
+    assert result['data'][0]['attributes']['id'] == '1'
