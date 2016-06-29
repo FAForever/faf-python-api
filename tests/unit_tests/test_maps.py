@@ -23,7 +23,7 @@ def maps(request):
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
         cursor.execute("TRUNCATE TABLE map_version")
         cursor.execute("TRUNCATE TABLE map")
-        cursor.execute("TRUNCATE TABLE login")
+        cursor.execute("DELETE FROM login")
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
         # TODO use common fixtures
         cursor.execute("""insert into login
@@ -52,7 +52,7 @@ def maps(request):
             cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
             cursor.execute("TRUNCATE TABLE map_version")
             cursor.execute("TRUNCATE TABLE map")
-            cursor.execute("TRUNCATE TABLE login")
+            cursor.execute("DELETE FROM login")
             cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
 
     request.addfinalizer(finalizer)
