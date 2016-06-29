@@ -28,7 +28,7 @@ SELECT_EXPRESSIONS = {
     'battle_type': 'map.battle_type',
     'width': 'version.width',
     'height': 'version.height',
-    'author': 'version.version',
+    'author': 'l.login',
     'version': 'version.version',
     # download_url will be URL encoded and made absolute in enricher
     'download_url': "version.filename",
@@ -44,9 +44,11 @@ SELECT_EXPRESSIONS = {
     'create_time': 'version.create_time'
 }
 
+# TODO rename `uploader` to `author` in DB.
 TABLE = 'map ' \
         'LEFT JOIN table_map_features features ON features.map_id = map.id ' \
-        'JOIN map_version version ON version.map_id = map.id'
+        'JOIN map_version version ON version.map_id = map.id ' \
+        'LEFT JOIN login l ON l.id = map.uploader'
 
 
 @app.route('/maps/upload', methods=['POST'])

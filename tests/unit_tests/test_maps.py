@@ -20,34 +20,40 @@ from faf import db
 def maps(request):
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
-        cursor.execute("TRUNCATE TABLE map")
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
         cursor.execute("TRUNCATE TABLE map_version")
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+        cursor.execute("TRUNCATE TABLE map")
+        cursor.execute("TRUNCATE TABLE login")
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
         # TODO use common fixtures
+        cursor.execute("""insert into login
+        (id, login, password, email)
+        values
+        (1, 'User 1', '', 'user1@example.com'),
+        (2, 'User 2', '', 'user2@example.com'),
+        (3, 'User 3', '', 'user3@example.com')""")
         cursor.execute("""insert into map (id, display_name, map_type, battle_type, uploader)
         values
         (1, 'SCMP_001', 'FFA', 'skirmish', 1),
-        (2, 'SCMP_002', 'FFA', 'skirmish', 1),
-        (3, 'SCMP_003', 'FFA', 'skirmish', 1),
-        (4, 'Map with space', 'FFA', 'skirmish', 1);
-        """)
+        (2, 'SCMP_002', 'FFA', 'skirmish', 2),
+        (3, 'SCMP_003', 'FFA', 'skirmish', 2),
+        (4, 'Map with space', 'FFA', 'skirmish', 3)""")
         cursor.execute("""insert into map_version
         (description, max_players, width, height, version, filename, hidden, map_id)
         values
         ('SCMP 001', 4, 5, 5, 1, 'maps/scmp_001.v0001.zip', 0, 1),
         ('SCMP 002', 6, 5, 5, 1, 'maps/scmp_002.v0001.zip', 0, 2),
         ('SCMP 003', 8, 5, 5, 1, 'maps/scmp_003.v0001.zip', 0, 3),
-        ('Testing spaces', 8, 5, 5, 1, 'maps/map with space.zip', 0, 4);
-        """)
+        ('Testing spaces', 8, 5, 5, 1, 'maps/map with space.zip', 0, 4)""")
 
     def finalizer():
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
-            cursor.execute("TRUNCATE TABLE map")
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
             cursor.execute("TRUNCATE TABLE map_version")
-            cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+            cursor.execute("TRUNCATE TABLE map")
+            cursor.execute("TRUNCATE TABLE login")
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
 
     request.addfinalizer(finalizer)
 
@@ -86,6 +92,7 @@ def test_maps(test_client, maps):
 
     for item in result['data']:
         assert 'type' in item
+        assert 'author' in item['attributes']
         assert 'create_time' in item['attributes']
         assert 'thumbnail_url_small' in item['attributes']
         assert 'thumbnail_url_large' in item['attributes']
@@ -234,6 +241,7 @@ def test_map_by_name(test_client, app, maps):
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
     assert result['data']['id'] == '2'
+    assert result['data']['attributes']['author'] == 'User 2'
     assert result['data']['attributes']['display_name'] == 'SCMP_002'
     assert result['data']['attributes'][
                'download_url'] == 'http://content.faforever.com/faf/vault/maps/scmp_002.v0001.zip'
