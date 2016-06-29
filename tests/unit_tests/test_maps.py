@@ -46,6 +46,10 @@ def maps(request):
         ('SCMP 003', 8, 5, 5, 1, 'maps/scmp_003.v0001.zip', 0, 3),
         ('Testing spaces', 8, 5, 5, 1, 'maps/map with space.zip', 0, 4)""")
 
+        cursor.execute("TRUNCATE TABLE ladder_map;")
+        cursor.execute("""INSERT INTO ladder_map (id, idmap) VALUES
+        (0, (SELECT id FROM table_map WHERE mapuid = 222))""")
+
     def finalizer():
         with db.connection:
             cursor = db.connection.cursor()
@@ -53,7 +57,8 @@ def maps(request):
             cursor.execute("TRUNCATE TABLE map_version")
             cursor.execute("TRUNCATE TABLE map")
             cursor.execute("DELETE FROM login")
-            cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+            cursor.execute("TRUNCATE TABLE ladder_map;")
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
 
     request.addfinalizer(finalizer)
 
@@ -281,3 +286,16 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
         assert result['battle_type'] == 'FFA'
         assert result['ranked'] == (1 if ranked else 0)
         assert result['uploader'] == 1
+
+
+def test_ladder_maps(test_client, maps):
+    response = test_client.get('maps/ladder1v1')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert 'data' in result
+    assert len(result['data']) == 1
+    assert 'type' in result['data'][0]
+    assert result['data'][0]['attributes']['id'] == '222'

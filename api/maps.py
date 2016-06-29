@@ -163,6 +163,60 @@ def maps():
     return results
 
 
+@app.route('/maps/ladder1v1', methods=['GET'])
+def laddermaps():
+    """
+    Lists all maps of the current ladder map pool ( for 1v1)
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       GET /maps/ladder1v1
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": [
+            {
+              "attributes": {
+                "battle_type": "FFA",
+                "description": "<LOC canis3v3_Description>",
+                "display_name": "canis3v3",
+                "download_url": "http://content.faforever.com/faf/vault/maps/canis3v3.v0001.zip",
+                "downloads": 5970,
+                "id": 0,
+                "map_type": "skirmish",
+                "max_players": 6,
+                "num_draws": 0,
+                "rating": 2.94119,
+                "technical_name": "canis3v3.v0001",
+                "thumbnail_url_large": "http://content.faforever.com/faf/vault/map_previews/large/maps/canis3v3.v0001.zip",
+                "thumbnail_url_small": "http://content.faforever.com/faf/vault/map_previews/small/maps/canis3v3.v0001.zip",
+                "times_played": 1955,
+                "version": "1"
+              },
+              "id": 0,
+              "type": "map"
+            },
+            ...
+          ]
+        }
+
+
+    """
+    LADDER_TABLE = "( {} ) JOIN ladder_map ON map.id = ladder_map.idmap".format(TABLE)
+
+    results = fetch_data(MapSchema(), LADDER_TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, enricher= enricher)
+    return results
+
+
 def enricher(map):
     if 'thumbnail_url_small' in map:
         if not map['thumbnail_url_small']:
