@@ -30,6 +30,7 @@ SELECT_EXPRESSIONS = {
     'height': 'version.height',
     'author': 'l.login',
     'version': 'version.version',
+    'ranked': "IF(version.ranked > 0, 'true', 'false')",
     # download_url will be URL encoded and made absolute in enricher
     'download_url': "version.filename",
     # thumbnail_url_small will be URL encoded and made absolute in enricher
@@ -44,11 +45,10 @@ SELECT_EXPRESSIONS = {
     'create_time': 'version.create_time'
 }
 
-# TODO rename `uploader` to `author` in DB.
 TABLE = 'map ' \
         'LEFT JOIN table_map_features features ON features.map_id = map.id ' \
         'JOIN map_version version ON version.map_id = map.id ' \
-        'LEFT JOIN login l ON l.id = map.uploader'
+        'LEFT JOIN login l ON l.id = map.author'
 
 
 @app.route('/maps/upload', methods=['POST'])
@@ -276,8 +276,8 @@ def process_uploaded_map(temp_map_path, is_ranked):
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
 
-        cursor.execute("""INSERT INTO map (display_name, map_type, battle_type, ranked, uploader)
-                        SELECT %(display_name)s, %(map_type)s, %(battle_type)s, %(ranked)s, %(uploader)s
+        cursor.execute("""INSERT INTO map (display_name, map_type, battle_type, author)
+                        SELECT %(display_name)s, %(map_type)s, %(battle_type)s, %(author)s
                         WHERE NOT EXISTS (
                             SELECT display_name FROM map WHERE display_name = %(display_name)s
                         ) LIMIT 1""",
@@ -285,15 +285,15 @@ def process_uploaded_map(temp_map_path, is_ranked):
                            'display_name': display_name,
                            'map_type': map_type,
                            'battle_type': battle_type,
-                           'ranked': 1 if is_ranked else 0,
-                           'uploader': user_id
+                           'author': user_id
                        })
 
         cursor.execute("""INSERT INTO map_version (
-                            description, max_players, width, height, version, filename, map_id
+                            description, max_players, width, height, version, filename, ranked, map_id
                         )
                         VALUES (
                             %(description)s, %(max_players)s, %(width)s, %(height)s, %(version)s, %(filename)s,
+                            %(ranked)s,
                             (SELECT id FROM map WHERE display_name = %(display_name)s)
                         )""",
                        {
@@ -303,7 +303,8 @@ def process_uploaded_map(temp_map_path, is_ranked):
                            'height': height,
                            'version': version,
                            'filename': "maps/" + map_file_name,
-                           'display_name': display_name
+                           'display_name': display_name,
+                           'ranked': 1 if is_ranked else 0
                        })
 
 
@@ -343,6 +344,6 @@ def map_exists(map_file_name):
 def can_upload_map(name, user_id):
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute('SELECT count(*) FROM map WHERE display_name = %s AND uploader != %s', (name, user_id))
+        cursor.execute('SELECT count(*) FROM map WHERE display_name = %s AND author != %s', (name, user_id))
 
         return cursor.fetchone()[0] == 0

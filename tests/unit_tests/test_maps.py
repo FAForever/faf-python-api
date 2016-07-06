@@ -32,7 +32,7 @@ def maps(request):
         (1, 'User 1', '', 'user1@example.com'),
         (2, 'User 2', '', 'user2@example.com'),
         (3, 'User 3', '', 'user3@example.com')""")
-        cursor.execute("""insert into map (id, display_name, map_type, battle_type, uploader)
+        cursor.execute("""insert into map (id, display_name, map_type, battle_type, author)
         values
         (1, 'SCMP_001', 'FFA', 'skirmish', 1),
         (2, 'SCMP_002', 'FFA', 'skirmish', 2),
@@ -46,9 +46,8 @@ def maps(request):
         ('SCMP 003', 8, 5, 5, 1, 'maps/scmp_003.v0001.zip', 0, 3),
         ('Testing spaces', 8, 5, 5, 1, 'maps/map with space.zip', 0, 4)""")
 
-        cursor.execute("TRUNCATE TABLE ladder_map;")
-        cursor.execute("""INSERT INTO ladder_map (id, idmap) VALUES
-        (0, 1)""")
+        cursor.execute("delete from ladder_map;")
+        cursor.execute("""INSERT INTO ladder_map (idmap) select min(id) from map_version""")
 
     def finalizer():
         with db.connection:
@@ -278,14 +277,27 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
 
     with db.connection:
         cursor = db.connection.cursor(DictCursor)
-        cursor.execute("SELECT display_name, map_type, battle_type, ranked, uploader from map WHERE id = 5")
+        cursor.execute("SELECT display_name, map_type, battle_type, author from map WHERE id = 5")
         result = cursor.fetchone()
 
         assert result['display_name'] == 'Sludge'
         assert result['map_type'] == 'skirmish'
         assert result['battle_type'] == 'FFA'
+        assert result['author'] == 1
+
+        cursor.execute("SELECT description, max_players, width, height, version, filename, ranked, hidden, map_id "
+                       "from map_version WHERE id = 5")
+        result = cursor.fetchone()
+
+        assert "The thick, brackish water clings" in result['description']
+        assert result['max_players'] == 3
+        assert result['width'] == 256
+        assert result['height'] == 256
+        assert result['version'] == 3
+        assert result['filename'] == 'maps/scmp_037.v0003.zip'
         assert result['ranked'] == (1 if ranked else 0)
-        assert result['uploader'] == 1
+        assert result['hidden'] == 0
+        assert result['map_id'] == 5
 
 
 def test_ladder_maps(test_client, maps):
