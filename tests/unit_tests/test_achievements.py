@@ -35,8 +35,8 @@ class AchievementsTestCase(unittest.TestCase):
 
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute('TRUNCATE TABLE login')
-            cursor.execute('TRUNCATE TABLE player_achievements')
+            cursor.execute('delete from login')
+            cursor.execute('delete from player_achievements')
 
     def tearDown(self):
         db.connection.close()

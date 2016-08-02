@@ -24,3 +24,5 @@ requests
 statsd
 uritemplate.py
 sqlalchemy
+lupa
+pillow
