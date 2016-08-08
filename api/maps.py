@@ -264,11 +264,11 @@ def process_uploaded_map(temp_map_path, is_ranked):
     if not can_upload_map(display_name, user_id):
         raise InvalidUsage('Only the original uploader is allowed to upload this map')
 
-    map_file_name = generate_zip_file_name(name, version)
-    if map_exists(map_file_name):
+    zip_file_name = generate_zip_file_name(name, version)
+    if map_exists(zip_file_name):
         raise InvalidUsage('Map "{}" with version "{}" already exists'.format(display_name, version))
 
-    target_map_path = os.path.join(app.config['MAP_UPLOAD_PATH'], secure_filename(map_file_name))
+    target_map_path = os.path.join(app.config['MAP_UPLOAD_PATH'], zip_file_name)
     shutil.move(temp_map_path, target_map_path)
 
     generate_map_previews(target_map_path, {
@@ -305,7 +305,7 @@ def process_uploaded_map(temp_map_path, is_ranked):
                            'width': width,
                            'height': height,
                            'version': version,
-                           'filename': "maps/" + map_file_name,
+                           'filename': "maps/" + zip_file_name,
                            'display_name': display_name,
                            'ranked': 1 if is_ranked else 0
                        })

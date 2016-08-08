@@ -1,5 +1,5 @@
-aiohttp == 0.4.0
-aiohttp-wsgi
+aiohttp
+aiohttp-wsgi == 0.4.0
 Flask >= 0.10.1
 flask-cors
 Flask-JWT
@@ -11,7 +11,7 @@ pillow
 coveralls
 cryptography
 geoip2
-git+https://github.com/FAForever/faftools.git@6022a75dd714c270840818a43c02c926de2bcfed#egg=faftools
+git+https://github.com/FAForever/faftools.git@1c9bab7bf1ec0dcda8221be2ea04a3122dbcccbb#egg=faftools
 marshmallow
 marshmallow_jsonapi
 peewee >= 2.4.2

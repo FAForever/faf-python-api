@@ -263,7 +263,7 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
     app.config['MAP_UPLOAD_PATH'] = upload_dir.strpath
     app.config['MAP_PREVIEW_PATH'] = preview_dir.strpath
 
-    map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/scmp_037.zip')
+    map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/scmp 037.zip')
     with open(map_zip, 'rb') as file:
         response = oauth.post('/maps/upload',
                               data={'file': (file, os.path.basename(map_zip)),
@@ -271,9 +271,9 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
 
     assert response.status_code == 200, json.loads(response.get_data(as_text=True))['message']
     assert 'ok' == response.get_data(as_text=True)
-    assert os.path.isfile(upload_dir.join(os.path.basename('scmp_037.v0003.zip')).strpath)
-    assert os.path.isfile(preview_dir.join('small', 'scmp_037.v0003.png').strpath)
-    assert os.path.isfile(preview_dir.join('large', 'scmp_037.v0003.png').strpath)
+    assert os.path.isfile(upload_dir.join(os.path.basename('scmp_037.v0001.zip')).strpath)
+    assert os.path.isfile(preview_dir.join('small', 'scmp_037.v0001.png').strpath)
+    assert os.path.isfile(preview_dir.join('large', 'scmp_037.v0001.png').strpath)
 
     with db.connection:
         cursor = db.connection.cursor(DictCursor)
@@ -293,8 +293,8 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
         assert result['max_players'] == 3
         assert result['width'] == 256
         assert result['height'] == 256
-        assert result['version'] == 3
-        assert result['filename'] == 'maps/scmp_037.v0003.zip'
+        assert result['version'] == 1
+        assert result['filename'] == 'maps/scmp_037.v0001.zip'
         assert result['ranked'] == (1 if ranked else 0)
         assert result['hidden'] == 0
         assert result['map_id'] == 5
