@@ -1,4 +1,4 @@
-aiohttp
+aiohttp == 0.4.0
 aiohttp-wsgi
 Flask >= 0.10.1
 flask-cors
