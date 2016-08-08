@@ -257,6 +257,9 @@ def process_uploaded_map(temp_map_path, is_ranked):
     width = int(size[0])
     height = int(size[1])
 
+    if len(display_name) > 100:
+        raise InvalidUsage('Maximum map name length is 100, was: {}'.format(len(display_name)))
+
     user_id = request.oauth.user.id
     if not can_upload_map(display_name, user_id):
         raise InvalidUsage('Only the original uploader is allowed to upload this map')
