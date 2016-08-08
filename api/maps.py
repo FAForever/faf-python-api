@@ -1,41 +1,58 @@
+import json
+import logging
 import os
+import shutil
+import tempfile
 import urllib.parse
+
 from faf.api.map_schema import MapSchema
+from faf.tools.fa.maps import generate_map_previews, parse_map_info, generate_zip_file_name
 from flask import request
 from werkzeug.utils import secure_filename
-from api import app, InvalidUsage
+
+from api import app, InvalidUsage, oauth
 from api.query_commons import fetch_data
+from faf import db
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {'zip'}
 MAX_PAGE_SIZE = 1000
 
 SELECT_EXPRESSIONS = {
-    'id': 'map.mapuid',
-    'display_name': 'map.name',
-    'description': 'map.description',
-    'max_players': 'COALESCE(map.max_players, 0)',
+    'id': 'map.id',
+    'display_name': 'map.display_name',
+    'description': 'version.description',
+    'max_players': 'version.max_players',
     'map_type': 'map.map_type',
     'battle_type': 'map.battle_type',
-    'size_x': 'COALESCE(map.map_sizeX, 0)',
-    'size_y': 'COALESCE(map.map_sizeY, 0)',
-    'version': 'map.version',
-    # download_url will be URL encoded and made absolute in enrich_mod
-    'download_url': "map.filename",
-    # thumbnail_url_small will be URL encoded and made absolute in enrich_mod
-    'thumbnail_url_small': 'map.filename',
-    # thumbnail_url_large will be URL encoded and made absolute in enrich_mod
-    'thumbnail_url_large': 'map.filename',
-    'technical_name': "SUBSTRING(map.filename, LOCATE('/', map.filename)+1, LOCATE('.zip', map.filename)-6)",
+    'width': 'version.width',
+    'height': 'version.height',
+    'author': 'l.login',
+    'version': 'version.version',
+    'ranked': "IF(version.ranked > 0, 'true', 'false')",
+    # download_url will be URL encoded and made absolute in enricher
+    'download_url': "version.filename",
+    # thumbnail_url_small will be URL encoded and made absolute in enricher
+    'thumbnail_url_small': "REPLACE(REPLACE(version.filename, '.zip', '.png'), 'maps/', '')",
+    # thumbnail_url_large will be URL encoded and made absolute in enricher
+    'thumbnail_url_large': "REPLACE(REPLACE(version.filename, '.zip', '.png'), 'maps/', '')",
+    'technical_name': "SUBSTRING(version.filename, LOCATE('/', version.filename)+1, LOCATE('.zip', version.filename)-6)",
     'downloads': 'COALESCE(features.downloads, 0)',
     'num_draws': 'COALESCE(features.num_draws, 0)',
     'rating': 'features.rating',
-    'times_played': 'COALESCE(features.times_played, 0)'
+    'times_played': 'COALESCE(features.times_played, 0)',
+    'create_time': 'version.create_time'
 }
 
-TABLE = 'table_map map LEFT JOIN table_map_features features ON features.map_id = map.id'
+TABLE = 'map ' \
+        'LEFT JOIN table_map_features features ON features.map_id = map.id ' \
+        'JOIN map_version version ON version.map_id = map.id ' \
+        'LEFT JOIN login l ON l.id = map.author'
 
 
 @app.route('/maps/upload', methods=['POST'])
+@oauth.require_oauth('upload_map')
 def maps_upload():
     """
     Creates a new map in the system
@@ -61,14 +78,24 @@ def maps_upload():
 
     """
     file = request.files.get('file')
+    metadata_string = request.form.get('metadata')
+
     if not file:
         raise InvalidUsage("No file has been provided")
+
+    if not metadata_string:
+        raise InvalidUsage("Value 'metadata' is missing")
 
     if not file_allowed(file.filename):
         raise InvalidUsage("Invalid file extension")
 
-    filename = secure_filename(file.filename)
-    file.save(os.path.join(app.config['MAP_UPLOAD_PATH'], filename))
+    metadata = json.loads(metadata_string)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_map_path = os.path.join(temp_dir, secure_filename(file.filename))
+        file.save(temp_map_path)
+        process_uploaded_map(temp_map_path, metadata.get('is_ranked', False))
+
     return "ok"
 
 
@@ -82,6 +109,70 @@ def maps():
     .. sourcecode:: http
 
        GET /maps
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": [
+            {
+              "attributes": {
+                "battle_type": "FFA",
+                "description": "<LOC canis3v3_Description>",
+                "display_name": "canis3v3",
+                "download_url": "http://content.faforever.com/faf/vault/maps/canis3v3.v0001.zip",
+                "downloads": 5970,
+                "id": 0,
+                "map_type": "skirmish",
+                "max_players": 6,
+                "num_draws": 0,
+                "rating": 2.94119,
+                "technical_name": "canis3v3.v0001",
+                "thumbnail_url_large": "http://content.faforever.com/faf/vault/map_previews/large/canis3v3.v0001.png",
+                "thumbnail_url_small": "http://content.faforever.com/faf/vault/map_previews/small/canis3v3.v0001.png",
+                "times_played": 1955,
+                "version": "1",
+                "author": "Someone"
+              },
+              "id": 0,
+              "type": "map"
+            },
+            ...
+          ]
+        }
+
+
+    """
+    where = ''
+    args = None
+    many = True
+
+    filename_filter = request.values.get('filter[technical_name]')
+    if filename_filter:
+        where = ' filename = %s'
+        args = 'maps/' + filename_filter + '.zip'
+        many = False
+
+    results = fetch_data(MapSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, where=where, args=args,
+                         many=many, enricher=enricher)
+    return results
+
+
+@app.route('/maps/ladder1v1', methods=['GET'])
+def laddermaps():
+    """
+    Lists all maps of the current ladder map pool ( for 1v1)
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       GET /maps/ladder1v1
 
     **Example Response**:
 
@@ -120,18 +211,9 @@ def maps():
 
 
     """
-    where = ''
-    args = None
-    many = True
+    LADDER_TABLE = "( {} ) JOIN ladder_map ON map.id = ladder_map.idmap".format(TABLE)
 
-    filename_filter = request.values.get('filter[technical_name]')
-    if filename_filter:
-        where = ' filename = %s'
-        args = 'maps/' + filename_filter + '.zip'
-        many = False
-
-    results = fetch_data(MapSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, where=where, args=args,
-                         many=many, enricher=enricher)
+    results = fetch_data(MapSchema(), LADDER_TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, enricher= enricher)
     return results
 
 
@@ -140,14 +222,15 @@ def enricher(map):
         if not map['thumbnail_url_small']:
             del map['thumbnail_url_small']
         else:
-            map['thumbnail_url_small'] = '{}/faf/vault/map_previews/small/{}'.format(app.config['CONTENT_URL'],
-                                                                                     map['thumbnail_url_small'])
+            map['thumbnail_url_small'] = '{}/faf/vault/map_previews/small/{}'.format(
+                app.config['CONTENT_URL'], urllib.parse.quote(map['thumbnail_url_small']))
+
     if 'thumbnail_url_large' in map:
         if not map['thumbnail_url_large']:
             del map['thumbnail_url_large']
         else:
-            map['thumbnail_url_large'] = '{}/faf/vault/map_previews/large/{}'.format(app.config['CONTENT_URL'],
-                                                                                     map['thumbnail_url_large'])
+            map['thumbnail_url_large'] = '{}/faf/vault/map_previews/large/{}'.format(
+                app.config['CONTENT_URL'], urllib.parse.quote(map['thumbnail_url_large']))
 
     if 'download_url' in map:
         map['download_url'] = '{}/faf/vault/{}'.format(app.config['CONTENT_URL'],
@@ -157,3 +240,110 @@ def enricher(map):
 def file_allowed(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+
+
+def process_uploaded_map(temp_map_path, is_ranked):
+    map_info = parse_map_info(temp_map_path)
+
+    display_name = map_info['display_name']
+    name = map_info['name']
+    version = map_info['version']
+    description = map_info['description']
+    max_players = map_info['max_players']
+    map_type = map_info['type']
+    battle_type = map_info['battle_type']
+
+    size = map_info['size']
+    width = int(size[0])
+    height = int(size[1])
+
+    user_id = request.oauth.user.id
+    if not can_upload_map(display_name, user_id):
+        raise InvalidUsage('Only the original uploader is allowed to upload this map')
+
+    map_file_name = generate_zip_file_name(name, version)
+    if map_exists(map_file_name):
+        raise InvalidUsage('Map "{}" with version "{}" already exists'.format(display_name, version))
+
+    target_map_path = os.path.join(app.config['MAP_UPLOAD_PATH'], secure_filename(map_file_name))
+    shutil.move(temp_map_path, target_map_path)
+
+    generate_map_previews(target_map_path, {
+        128: os.path.join(app.config['MAP_PREVIEW_PATH'], 'small'),
+        512: os.path.join(app.config['MAP_PREVIEW_PATH'], 'large')
+    })
+
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+
+        cursor.execute("""INSERT INTO map (display_name, map_type, battle_type, author)
+                        SELECT %(display_name)s, %(map_type)s, %(battle_type)s, %(author)s
+                        WHERE NOT EXISTS (
+                            SELECT display_name FROM map WHERE display_name = %(display_name)s
+                        ) LIMIT 1""",
+                       {
+                           'display_name': display_name,
+                           'map_type': map_type,
+                           'battle_type': battle_type,
+                           'author': user_id
+                       })
+
+        cursor.execute("""INSERT INTO map_version (
+                            description, max_players, width, height, version, filename, ranked, map_id
+                        )
+                        VALUES (
+                            %(description)s, %(max_players)s, %(width)s, %(height)s, %(version)s, %(filename)s,
+                            %(ranked)s,
+                            (SELECT id FROM map WHERE display_name = %(display_name)s)
+                        )""",
+                       {
+                           'description': description,
+                           'max_players': max_players,
+                           'width': width,
+                           'height': height,
+                           'version': version,
+                           'filename': "maps/" + map_file_name,
+                           'display_name': display_name,
+                           'ranked': 1 if is_ranked else 0
+                       })
+
+
+def validate_scenario_info(scenario_info):
+    if 'name' not in scenario_info:
+        raise InvalidUsage('Map name has to be specified')
+    if 'description' not in scenario_info:
+        raise InvalidUsage('Map description has to be specified')
+    if 'max_players' not in scenario_info \
+            or 'battle_type' not in scenario_info \
+            or scenario_info['battle_type'] != 'FFA':
+        raise InvalidUsage('Name of first team has to be "FFA"')
+    if 'map_type' not in scenario_info:
+        raise InvalidUsage('Map type has to be specified')
+    if 'map_size' not in scenario_info:
+        raise InvalidUsage('Map size has to be specified')
+    if 'version' not in scenario_info:
+        raise InvalidUsage('Map version has to be specified')
+
+
+def extract_preview(zip, member, target_folder, target_name):
+    with zip.open(member) as source:
+        target_path = os.path.join(target_folder, target_name)
+
+        with open(target_path, "wb") as target:
+            shutil.copyfileobj(source, target)
+
+
+def map_exists(map_file_name):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute('SELECT count(*) from map_version WHERE filename = %s', "maps/" + map_file_name)
+
+        return cursor.fetchone()[0] > 0
+
+
+def can_upload_map(name, user_id):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute('SELECT count(*) FROM map WHERE display_name = %s AND author != %s', (name, user_id))
+
+        return cursor.fetchone()[0] == 0

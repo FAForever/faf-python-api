@@ -12,7 +12,7 @@ def ranked1v1_ratings(request, app):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute("TRUNCATE TABLE ladder1v1_rating")
-        cursor.execute("TRUNCATE TABLE login")
+        cursor.execute("delete from login")
         cursor.execute("""INSERT INTO login
         (id, login, password, email) VALUES
         (1, 'a', '', 'a'),

@@ -1,15 +1,17 @@
 aiohttp
 aiohttp-wsgi
 Flask >= 0.10.1
+flask-cors
 Flask-JWT
 Flask-Login
 Flask-OAuthlib
 iso8601
 PyJWT
+pillow
 coveralls
 cryptography
 geoip2
-git+https://github.com/FAForever/faftools.git@feat/clan#egg=faftools
+git+https://github.com/FAForever/faftools.git@38fc8e10f3cbd50d3f6abe9168e9040c08ad26cf#egg=faftools
 marshmallow
 marshmallow_jsonapi
 peewee >= 2.4.2
@@ -21,3 +23,5 @@ python-geoip-geolite2
 requests
 statsd
 uritemplate.py
+sqlalchemy
+lupa

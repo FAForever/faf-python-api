@@ -14,13 +14,17 @@ before_install:
   - sudo apt-get -y install liblua5.1-dev libffi-dev
   - bash init_and_wait_for_db.sh
   - cp config.example.py config.py
+  - python -m pip install coveralls
 
 install:
   - docker build -t faf-api .
 
 script:
-  - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api py.test --cov-report term-missing --cov=api
+  - docker run --name faf_db --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api py.test --cov-report term-missing --cov=api
   - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api pyflakes . || true
 
 after_success:
   - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api coveralls
+  - docker cp faf_db:/code/.coverage .coverage
+  - sed -i.bak s#/code/#$(pwd)/#g .coverage
+  - coveralls

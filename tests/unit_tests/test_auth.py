@@ -22,9 +22,9 @@ class OAuthTestCase(unittest.TestCase):
 
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute('TRUNCATE TABLE login')
-            cursor.execute('TRUNCATE TABLE oauth_clients')
-            cursor.execute('TRUNCATE TABLE oauth_tokens')
+            cursor.execute('delete from login')
+            cursor.execute('delete from oauth_clients')
+            cursor.execute('delete from oauth_tokens')
 
     def tearDown(self):
         db.connection.close()

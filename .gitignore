@@ -6,3 +6,4 @@
 venv
 docs/build/
 config.py
+*.iml

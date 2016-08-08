@@ -131,12 +131,10 @@
                 <li>
                     {% if scope == "read_achievements" %}
                         Read your achievements
-                    {% elif scope == "write_achievements" %}
-                        Update your achievements
                     {% elif scope == "read_events" %}
                         Read events
-                    {% elif scope == "write_events" %}
-                        Record events
+                    {% elif scope == "upload_map" %}
+                    Upload maps
                     {% endif %}
                 </li>
                 {% endfor %}

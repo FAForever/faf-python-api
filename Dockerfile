@@ -2,7 +2,7 @@ FROM python:3.5
 
 RUN pip install --upgrade pip
 RUN apt-get update
-RUN yes | apt-get install liblua5.1
+RUN yes | apt-get install liblua5.1 liblua5.1-dev libmagickwand-dev
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 

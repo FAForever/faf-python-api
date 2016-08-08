@@ -11,12 +11,13 @@ from flask import Flask, session, jsonify, request
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
 from flask_oauthlib.provider import OAuth2Provider
 from flask_login import LoginManager
+from flask_cors import CORS
 
 from api.invalid_usage import InvalidUsage
 from api.jwt_user import JwtUser
 from api.user import User
 
-__version__ = '0.2'
+__version__ = '0.4'
 __author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus, Michel Jung'
 __contact__ = 'admin@faforever.com'
 __license__ = 'GPLv3'
@@ -30,6 +31,7 @@ if sys.version_info.major != 3:
 # ======== Init Flask ==========
 
 app = Flask('api')
+CORS(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -143,7 +145,6 @@ import api.deploy
 import api.auth
 import api.avatars
 import api.bugreports
-import api.games
 import api.mods
 import api.maps
 import api.github
@@ -153,6 +154,5 @@ import api.slack
 import api.achievements
 import api.events
 import api.query_commons
-import api.games
 import api.ranked1v1
 import api.clans
