@@ -21,8 +21,8 @@ REPO_PATHS = {
 
 GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'
 MOD_UPLOAD_PATH = '/mods'
-MAP_UPLOAD_PATH = '/maps'
-MAP_PREVIEW_PATH = '/map_previews'
+MAP_UPLOAD_PATH = '/content/faf/vault/maps'
+MAP_PREVIEW_PATH = '/content/faf/vault/map_previews'
 CONTENT_URL = 'http://content.faforever.com'
 
 STATSD_SERVER = os.getenv('STATSD_SERVER', None)
