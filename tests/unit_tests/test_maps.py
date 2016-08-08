@@ -293,7 +293,7 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
         assert result['max_players'] == 3
         assert result['width'] == 256
         assert result['height'] == 256
-        assert result['version'] == 3
+        assert result['version'] == 1
         assert result['filename'] == 'maps/scmp_037.v0003.zip'
         assert result['ranked'] == (1 if ranked else 0)
         assert result['hidden'] == 0
