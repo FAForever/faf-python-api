@@ -264,11 +264,14 @@ def process_uploaded_map(temp_map_path, is_ranked):
     if not can_upload_map(display_name, user_id):
         raise InvalidUsage('Only the original uploader is allowed to upload this map')
 
-    zip_file_name = generate_zip_file_name(name, version)
-    if map_exists(zip_file_name):
+    if map_exists(display_name, version):
         raise InvalidUsage('Map "{}" with version "{}" already exists'.format(display_name, version))
 
+    zip_file_name = generate_zip_file_name(name, version)
     target_map_path = os.path.join(app.config['MAP_UPLOAD_PATH'], zip_file_name)
+    if os.path.isfile(target_map_path):
+        raise InvalidUsage('Map with file name "{}" already exists'.format(zip_file_name))
+
     shutil.move(temp_map_path, target_map_path)
 
     generate_map_previews(target_map_path, {
@@ -336,10 +339,11 @@ def extract_preview(zip, member, target_folder, target_name):
             shutil.copyfileobj(source, target)
 
 
-def map_exists(map_file_name):
+def map_exists(display_name, version):
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute('SELECT count(*) from map_version WHERE filename = %s', "maps/" + map_file_name)
+        cursor.execute('''select count(*) from map_version v join map m on m.id = v.map_id
+                          where m.display_name = %s and v.version = %s''', (display_name, version))
 
         return cursor.fetchone()[0] > 0
 

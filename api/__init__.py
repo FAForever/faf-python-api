@@ -17,7 +17,7 @@ from api.invalid_usage import InvalidUsage
 from api.jwt_user import JwtUser
 from api.user import User
 
-__version__ = '0.4.3'
+__version__ = '0.4.4'
 __author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus, Michel Jung'
 __contact__ = 'admin@faforever.com'
 __license__ = 'GPLv3'

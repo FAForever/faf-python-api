@@ -84,6 +84,20 @@ def oauth():
     return api.app.test_client()
 
 
+@pytest.fixture
+def upload_dir(tmpdir, app):
+    upload_dir = tmpdir.mkdir("map_upload")
+    app.config['MAP_UPLOAD_PATH'] = upload_dir.strpath
+    return upload_dir
+
+
+@pytest.fixture
+def preview_dir(tmpdir, app):
+    preview_dir = tmpdir.mkdir("map_previews")
+    app.config['MAP_PREVIEW_PATH'] = preview_dir.strpath
+    return preview_dir
+
+
 def test_maps(test_client, maps):
     response = test_client.get('/maps')
 
@@ -256,13 +270,7 @@ def test_map_by_name(test_client, app, maps):
 
 
 @pytest.mark.parametrize("ranked", [True, False])
-def test_map_upload(oauth, app, maps, tmpdir, ranked):
-    upload_dir = tmpdir.mkdir("map_upload")
-    preview_dir = tmpdir.mkdir("map_previews")
-
-    app.config['MAP_UPLOAD_PATH'] = upload_dir.strpath
-    app.config['MAP_PREVIEW_PATH'] = preview_dir.strpath
-
+def test_map_upload(oauth, ranked, maps, upload_dir, preview_dir):
     map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/scmp 037.zip')
     with open(map_zip, 'rb') as file:
         response = oauth.post('/maps/upload',
@@ -280,7 +288,7 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
         cursor.execute("SELECT display_name, map_type, battle_type, author from map WHERE id = 5")
         result = cursor.fetchone()
 
-        assert result['display_name'] == 'Sludge'
+        assert result['display_name'] == 'Sludge Test'
         assert result['map_type'] == 'skirmish'
         assert result['battle_type'] == 'FFA'
         assert result['author'] == 1
@@ -298,6 +306,43 @@ def test_map_upload(oauth, app, maps, tmpdir, ranked):
         assert result['ranked'] == (1 if ranked else 0)
         assert result['hidden'] == 0
         assert result['map_id'] == 5
+
+
+def test_upload_existing_map(oauth, maps, upload_dir, preview_dir):
+    map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/scmp 037.zip')
+    with open(map_zip, 'rb') as file:
+        oauth.post('/maps/upload',
+                   data={'file': (file, os.path.basename(map_zip)),
+                         'metadata': json.dumps(dict(is_ranked=True))})
+
+    with open(map_zip, 'rb') as file:
+        response = oauth.post('/maps/upload',
+                              data={'file': (file, os.path.basename(map_zip)),
+                                    'metadata': json.dumps(dict(is_ranked=True))})
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    assert response.status_code == 400
+    assert result['message'] == 'Map "Sludge Test" with version "1" already exists'
+
+
+def test_upload_map_with_name_clash(oauth, maps, upload_dir, preview_dir):
+    map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/scmp_037.zip')
+    with open(map_zip, 'rb') as file:
+        oauth.post('/maps/upload',
+                   data={'file': (file, os.path.basename(map_zip)),
+                         'metadata': json.dumps(dict(is_ranked=True))})
+
+    map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/scmp 037.zip')
+    with open(map_zip, 'rb') as file:
+        response = oauth.post('/maps/upload',
+                              data={'file': (file, os.path.basename(map_zip)),
+                                    'metadata': json.dumps(dict(is_ranked=True))})
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    assert response.status_code == 400
+    assert result['message'] == 'Map with file name "scmp_037.v0001.zip" already exists'
 
 
 def test_ladder_maps(test_client, maps):
