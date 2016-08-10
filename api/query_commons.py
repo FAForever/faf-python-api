@@ -1,6 +1,6 @@
 from pymysql.cursors import DictCursor
 
-from api import InvalidUsage
+from api.error import ApiException, Error, ErrorCode
 from faf import db
 
 
@@ -81,7 +81,7 @@ def get_order_by(sort_expression, valid_fields):
             column = expression
 
         if column not in valid_fields:
-            raise InvalidUsage("Invalid sort field")
+            raise ApiException([Error(ErrorCode.QUERY_INVALID_SORT_FIELD, column)])
 
         order_bys.append('`{}` {}'.format(column, order))
 
@@ -187,16 +187,20 @@ def fetch_data(schema, table, root_select_expression_dict, max_page_size, reques
 
 
 def get_page_attributes(max_page_size, request):
+    raw_page_size = request.values.get('page[size]', max_page_size)
     try:
-        page_size = int(request.values.get('page[size]', max_page_size))
+        page_size = int(raw_page_size)
         if page_size > max_page_size:
-            raise InvalidUsage("Invalid page size")
+            raise ApiException([Error(ErrorCode.QUERY_INVALID_PAGE_SIZE, page_size)])
     except ValueError:
-        raise InvalidUsage("Invalid page size")
+        raise ApiException([Error(ErrorCode.QUERY_INVALID_PAGE_SIZE, raw_page_size)])
+
+    raw_page = request.values.get('page[number]', 1)
     try:
-        page = int(request.values.get('page[number]', 1))
+        page = int(raw_page)
         if page < 1:
-            raise InvalidUsage("Invalid page number")
+            raise ApiException([Error(ErrorCode.QUERY_INVALID_PAGE_NUMBER, page)])
     except ValueError:
-        raise InvalidUsage("Invalid page number")
+        raise ApiException([Error(ErrorCode.QUERY_INVALID_PAGE_NUMBER, raw_page)])
+
     return page, page_size

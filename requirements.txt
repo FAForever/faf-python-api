@@ -11,7 +11,7 @@ pillow
 coveralls
 cryptography
 geoip2
-git+https://github.com/FAForever/faftools.git@777cf36c815b5aaf83faede713334f37196be106#egg=faftools
+git+https://github.com/FAForever/faftools.git@ad446d8bd6228a605de288c91e3fba01bb07e01d#egg=faftools
 marshmallow
 marshmallow_jsonapi
 peewee >= 2.4.2

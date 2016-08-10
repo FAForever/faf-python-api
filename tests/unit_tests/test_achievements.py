@@ -11,6 +11,8 @@ from api import User
 import faf.db as db
 import unittest
 
+from api.error import ErrorCode
+
 
 class AchievementsTestCase(unittest.TestCase):
     def get_token(self, access_token=None, refresh_token=None):
@@ -101,10 +103,12 @@ class AchievementsTestCase(unittest.TestCase):
 
     def test_achievements_increment_standard_achievement_fails(self):
         response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/increment', data=dict(steps=10))
-        self.assertEqual(400, response.status_code)
-        data = json.loads(response.get_data(as_text=True))
 
-        self.assertTrue('message' in data)
+        result = json.loads(response.data.decode('utf-8'))
+
+        assert response.status_code == 400
+        assert result['errors'][0]['code'] == ErrorCode.ACHIEVEMENT_CANT_INCREMENT_STANDARD.value['code']
+        assert result['errors'][0]['meta']['args'] == ['50260d04-90ff-45c8-816b-4ad8d7b97ecd']
 
     def test_achievements_increment_caps_at_max(self):
         response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(steps=11))
@@ -217,10 +221,12 @@ class AchievementsTestCase(unittest.TestCase):
 
     def test_achievements_unlock_unlocking_incremental_fails(self):
         response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/unlock', data=dict())
-        self.assertEqual(400, response.status_code)
-        data = json.loads(response.get_data(as_text=True))
 
-        self.assertTrue('message' in data)
+        result = json.loads(response.data.decode('utf-8'))
+
+        assert response.status_code == 400
+        assert result['errors'][0]['code'] == ErrorCode.ACHIEVEMENT_CANT_UNLOCK_INCREMENTAL.value['code']
+        assert result['errors'][0]['meta']['args'] == ['c6e6039f-c543-424e-ab5f-b34df1336e81']
 
     def test_achievements_reveal(self):
         response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/reveal', data=dict())

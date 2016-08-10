@@ -3,6 +3,8 @@ from faf.api.player_achievement_schema import PlayerAchievementSchema
 from flask_jwt import jwt_required, current_identity
 from api import *
 import faf.db as db
+
+from api.error import ApiException, Error, ErrorCode
 from api.query_commons import fetch_data
 
 MAX_PAGE_SIZE = 1000
@@ -448,8 +450,7 @@ def update_steps(achievement_id, player_id, steps, steps_function):
     """
     achievement = achievements_get(achievement_id)['data']['attributes']
     if achievement['type'] != 'INCREMENTAL':
-        raise InvalidUsage('Only incremental achievements can be incremented ({})'.format(achievement_id),
-                           status_code=400)
+        raise ApiException([Error(ErrorCode.ACHIEVEMENT_CANT_INCREMENT_STANDARD, achievement_id)])
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
@@ -510,8 +511,7 @@ def unlock_achievement(achievement_id, player_id):
         cursor.execute('SELECT type FROM achievement_definitions WHERE id = %s', achievement_id)
         achievement = cursor.fetchone()
         if achievement['type'] != 'STANDARD':
-            raise InvalidUsage('Only standard achievements can be unlocked directly ({})'.format(achievement_id),
-                               status_code=400)
+            raise ApiException([Error(ErrorCode.ACHIEVEMENT_CANT_UNLOCK_INCREMENTAL, achievement_id)])
 
         cursor.execute("""SELECT
                             state

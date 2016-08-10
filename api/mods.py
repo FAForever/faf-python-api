@@ -5,10 +5,12 @@ from faf.api import ModSchema
 from flask import request
 from werkzeug.utils import secure_filename
 
-from api import app, InvalidUsage
+from api import app
+from api.error import ApiException, ErrorCode
+from api.error import Error
 from api.query_commons import fetch_data
 
-ALLOWED_EXTENSIONS = {'zip'}
+ALLOWED_EXTENSIONS = ['zip']
 MAX_PAGE_SIZE = 1000
 
 SELECT_EXPRESSIONS = {
@@ -57,10 +59,10 @@ def mods_upload():
     """
     file = request.files.get('file')
     if not file:
-        raise InvalidUsage("No file has been provided")
+        raise ApiException([Error(ErrorCode.UPLOAD_FILE_MISSING)])
 
     if not file_allowed(file.filename):
-        raise InvalidUsage("Invalid file extension")
+        raise ApiException([Error(ErrorCode.UPLOAD_INVALID_FILE_EXTENSION, *ALLOWED_EXTENSIONS)])
 
     filename = secure_filename(file.filename)
     file.save(os.path.join(app.config['MOD_UPLOAD_PATH'], filename))

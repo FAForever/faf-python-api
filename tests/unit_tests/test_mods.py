@@ -6,6 +6,7 @@ import pytest
 import sys
 
 from api import app
+from api.error import ErrorCode
 from faf import db
 from faf.api import ModSchema
 
@@ -113,8 +114,11 @@ def test_mods_page_size(test_client, mods):
 def test_mods_invalid_page_size(test_client, mods):
     response = test_client.get('/mods?page[size]=1001')
 
+    result = json.loads(response.data.decode('utf-8'))
+
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page size'
+    assert result['errors'][0]['code'] == ErrorCode.QUERY_INVALID_PAGE_SIZE.value['code']
+    assert result['errors'][0]['meta']['args'] == [1001]
 
 
 def test_mods_page(test_client, mods):
@@ -132,8 +136,11 @@ def test_mods_page(test_client, mods):
 def test_mods_invalid_page(test_client, mods):
     response = test_client.get('/mods?page[number]=-1')
 
+    result = json.loads(response.data.decode('utf-8'))
+
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page number'
+    assert result['errors'][0]['code'] == ErrorCode.QUERY_INVALID_PAGE_NUMBER.value['code']
+    assert result['errors'][0]['meta']['args'] == [-1]
 
 
 def test_mods_download_url(test_client, mods):
@@ -215,8 +222,11 @@ def test_mods_sort_by_likes_desc(test_client, mods):
 def test_mods_inject_sql_order(test_client):
     response = test_client.get("/mods?sort=' or%201=1; --")
 
+    result = json.loads(response.data.decode('utf-8'))
+
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid sort field'
+    assert result['errors'][0]['code'] == ErrorCode.QUERY_INVALID_SORT_FIELD.value['code']
+    assert result['errors'][0]['meta']['args'] == ["' or 1=1; --"]
 
 
 def test_mods_upload(test_client, app, tmpdir):
@@ -235,12 +245,17 @@ def test_mods_upload(test_client, app, tmpdir):
 def test_mods_upload_no_file_results_400(test_client, app, tmpdir):
     response = test_client.post('/mods/upload')
 
+    result = json.loads(response.data.decode('utf-8'))
+
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'No file has been provided'
+    assert result['errors'][0]['code'] == ErrorCode.UPLOAD_FILE_MISSING.value['code']
 
 
 def test_mods_upload_txt_results_400(test_client, app, tmpdir):
     response = test_client.post('/mods/upload', data={'file': (BytesIO('1'.encode('utf-8')), 'mod_name.txt')})
 
+    result = json.loads(response.data.decode('utf-8'))
+
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid file extension'
+    assert result['errors'][0]['code'] == ErrorCode.UPLOAD_INVALID_FILE_EXTENSION.value['code']
+    assert result['errors'][0]['meta']['args'] == ['zip']
