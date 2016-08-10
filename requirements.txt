@@ -25,3 +25,6 @@ statsd
 uritemplate.py
 sqlalchemy
 lupa
+jinja2
+itsdangerous
+click
