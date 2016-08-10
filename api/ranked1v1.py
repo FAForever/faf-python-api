@@ -3,11 +3,12 @@ from faf.api.ranked1v1_stats_schema import Ranked1v1StatsSchema
 from flask import request
 from pymysql.cursors import DictCursor
 
-from api import app, InvalidUsage
+from api import app
+from api.error import ApiException, ErrorCode
+from api.error import Error
 from api.query_commons import fetch_data
 from faf import db
 
-ALLOWED_EXTENSIONS = {'zip'}
 MAX_PAGE_SIZE = 5000
 
 SELECT_EXPRESSIONS = {
@@ -82,8 +83,9 @@ def ranked1v1():
     :status 200: No error
 
     """
-    if request.values.get('sort'):
-        raise InvalidUsage('Sorting is not supported for ranked1v1')
+    sort_field = request.values.get('sort')
+    if sort_field:
+        raise ApiException([Error(ErrorCode.QUERY_INVALID_SORT_FIELD, sort_field)])
 
     page = int(request.values.get('page[number]', 1))
     page_size = int(request.values.get('page[size]', MAX_PAGE_SIZE))

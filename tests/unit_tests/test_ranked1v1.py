@@ -3,6 +3,7 @@ import json
 import pytest
 from faf.api import Ranked1v1Schema
 
+from api.error import ErrorCode
 from faf import db
 
 
@@ -86,8 +87,11 @@ def test_ranked1v1_page_size(test_client, ranked1v1_ratings):
 def test_ranked1v1_invalid_page_size(test_client, ranked1v1_ratings):
     response = test_client.get('/ranked1v1?page[size]=5001')
 
+    result = json.loads(response.data.decode('utf-8'))
+
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page size'
+    assert result['errors'][0]['code'] == ErrorCode.QUERY_INVALID_PAGE_SIZE.value['code']
+    assert result['errors'][0]['meta']['args'] == [5001]
 
 
 def test_ranked1v1_page(test_client, ranked1v1_ratings):
@@ -106,15 +110,21 @@ def test_ranked1v1_page(test_client, ranked1v1_ratings):
 def test_ranked1v1_invalid_page(test_client):
     response = test_client.get('/ranked1v1?page[number]=-1')
 
+    result = json.loads(response.data.decode('utf-8'))
+
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page number'
+    assert result['errors'][0]['code'] == ErrorCode.QUERY_INVALID_PAGE_NUMBER.value['code']
+    assert result['errors'][0]['meta']['args'] == [-1]
 
 
 def test_ranked1v1_sort_disallowed(test_client):
     response = test_client.get('/ranked1v1?sort=mean')
 
+    result = json.loads(response.data.decode('utf-8'))
+
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Sorting is not supported for ranked1v1'
+    assert result['errors'][0]['code'] == ErrorCode.QUERY_INVALID_SORT_FIELD.value['code']
+    assert result['errors'][0]['meta']['args'] == ['mean']
 
 
 def test_ranked1v1_filter_active(test_client, ranked1v1_ratings):

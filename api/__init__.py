@@ -13,7 +13,7 @@ from flask_oauthlib.provider import OAuth2Provider
 from flask_login import LoginManager
 from flask_cors import CORS
 
-from api.invalid_usage import InvalidUsage
+from api.error import ApiException
 from api.jwt_user import JwtUser
 from api.user import User
 
@@ -44,8 +44,8 @@ def after_request(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE'
     return response
 
-@app.errorhandler(InvalidUsage)
-def handle_invalid_usage(error):
+@app.errorhandler(ApiException)
+def handle_api_exception(error):
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
     response.headers['content-type'] = 'application/vnd.api+json'

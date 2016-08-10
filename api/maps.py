@@ -10,13 +10,14 @@ from faf.tools.fa.maps import generate_map_previews, parse_map_info, generate_zi
 from flask import request
 from werkzeug.utils import secure_filename
 
-from api import app, InvalidUsage, oauth
+from api import app, oauth
+from api.error import ApiException, Error, ErrorCode
 from api.query_commons import fetch_data
 from faf import db
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_EXTENSIONS = {'zip'}
+ALLOWED_EXTENSIONS = ['zip']
 MAX_PAGE_SIZE = 1000
 
 SELECT_EXPRESSIONS = {
@@ -81,13 +82,13 @@ def maps_upload():
     metadata_string = request.form.get('metadata')
 
     if not file:
-        raise InvalidUsage("No file has been provided")
+        raise ApiException([Error(ErrorCode.UPLOAD_FILE_MISSING)])
 
     if not metadata_string:
-        raise InvalidUsage("Value 'metadata' is missing")
+        raise ApiException([Error(ErrorCode.UPLOAD_METADATA_MISSING)])
 
     if not file_allowed(file.filename):
-        raise InvalidUsage("Invalid file extension")
+        raise ApiException([Error(ErrorCode.UPLOAD_INVALID_FILE_EXTENSION, *ALLOWED_EXTENSIONS)])
 
     metadata = json.loads(metadata_string)
 
@@ -243,7 +244,8 @@ def file_allowed(filename):
 
 
 def process_uploaded_map(temp_map_path, is_ranked):
-    map_info = parse_map_info(temp_map_path)
+    map_info = parse_map_info(temp_map_path, validate=False)
+    validate_map_info(map_info)
 
     display_name = map_info['display_name']
     name = map_info['name']
@@ -258,19 +260,19 @@ def process_uploaded_map(temp_map_path, is_ranked):
     height = int(size[1])
 
     if len(display_name) > 100:
-        raise InvalidUsage('Maximum map name length is 100, was: {}'.format(len(display_name)))
+        raise ApiException([Error(ErrorCode.MAP_NAME_TOO_LONG, 100, len(display_name))])
 
     user_id = request.oauth.user.id
     if not can_upload_map(display_name, user_id):
-        raise InvalidUsage('Only the original uploader is allowed to upload this map')
+        raise ApiException([Error(ErrorCode.MAP_NOT_ORIGINAL_AUTHOR, display_name)])
 
     if map_exists(display_name, version):
-        raise InvalidUsage('Map "{}" with version "{}" already exists'.format(display_name, version))
+        raise ApiException([Error(ErrorCode.MAP_VERSION_EXISTS, display_name, version)])
 
     zip_file_name = generate_zip_file_name(name, version)
     target_map_path = os.path.join(app.config['MAP_UPLOAD_PATH'], zip_file_name)
     if os.path.isfile(target_map_path):
-        raise InvalidUsage('Map with file name "{}" already exists'.format(zip_file_name))
+        raise ApiException([Error(ErrorCode.MAP_NAME_CONFLICT, zip_file_name)])
 
     shutil.move(temp_map_path, target_map_path)
 
@@ -314,21 +316,24 @@ def process_uploaded_map(temp_map_path, is_ranked):
                        })
 
 
-def validate_scenario_info(scenario_info):
-    if 'name' not in scenario_info:
-        raise InvalidUsage('Map name has to be specified')
-    if 'description' not in scenario_info:
-        raise InvalidUsage('Map description has to be specified')
-    if 'max_players' not in scenario_info \
-            or 'battle_type' not in scenario_info \
-            or scenario_info['battle_type'] != 'FFA':
-        raise InvalidUsage('Name of first team has to be "FFA"')
-    if 'map_type' not in scenario_info:
-        raise InvalidUsage('Map type has to be specified')
-    if 'map_size' not in scenario_info:
-        raise InvalidUsage('Map size has to be specified')
-    if 'version' not in scenario_info:
-        raise InvalidUsage('Map version has to be specified')
+def validate_map_info(map_info):
+    errors = []
+    if not map_info.get('display_name'):
+        errors.append(Error(ErrorCode.MAP_NAME_MISSING))
+    if not map_info.get('description'):
+        errors.append(Error(ErrorCode.MAP_DESCRIPTION_MISSING))
+    if not map_info.get('max_players') \
+            or map_info.get('battle_type') != 'FFA':
+        errors.append(Error(ErrorCode.MAP_FIRST_TEAM_FFA))
+    if not map_info.get('type'):
+        errors.append(Error(ErrorCode.MAP_TYPE_MISSING))
+    if not map_info.get('size'):
+        errors.append(Error(ErrorCode.MAP_SIZE_MISSING))
+    if not map_info.get('version'):
+        errors.append(Error(ErrorCode.MAP_VERSION_MISSING))
+
+    if errors:
+        raise ApiException(errors)
 
 
 def extract_preview(zip, member, target_folder, target_name):

@@ -13,6 +13,7 @@ from pymysql.cursors import DictCursor
 
 import api
 from api import User
+from api.error import ErrorCode
 from faf import db
 
 
@@ -164,7 +165,9 @@ def test_maps_invalid_page_size(test_client, maps):
     response = test_client.get('/maps?page[size]=1001')
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page size'
+    result = json.loads(response.get_data(as_text=True))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.QUERY_INVALID_PAGE_SIZE.value['code']
 
 
 def test_maps_page(test_client, maps):
@@ -183,7 +186,9 @@ def test_maps_invalid_page(test_client, maps):
     response = test_client.get('/maps?page[number]=-1')
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid page number'
+    result = json.loads(response.get_data(as_text=True))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.QUERY_INVALID_PAGE_NUMBER.value['code']
 
 
 def test_maps_sort_by_max_players(test_client, maps):
@@ -220,7 +225,10 @@ def test_maps_inject_sql_sort(test_client):
     response = test_client.get('/maps?sort=or%201=1')
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid sort field'
+    result = json.loads(response.get_data(as_text=True))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.QUERY_INVALID_SORT_FIELD.value['code']
+    assert result['errors'][0]['meta']['args'] == ['or 1=1']
 
 
 def test_maps_upload_is_metadata_missing(oauth, app, tmpdir):
@@ -232,14 +240,18 @@ def test_maps_upload_is_metadata_missing(oauth, app, tmpdir):
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
-    assert json.loads(response.get_data(as_text=True))['message'] == "Value 'metadata' is missing"
+    result = json.loads(response.get_data(as_text=True))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.UPLOAD_METADATA_MISSING.value['code']
 
 
 def test_maps_upload_no_file_results_400(oauth, app, tmpdir):
     response = oauth.post('/maps/upload')
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'No file has been provided'
+    result = json.loads(response.get_data(as_text=True))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.UPLOAD_FILE_MISSING.value['code']
 
 
 def test_maps_upload_txt_results_400(oauth, app, tmpdir):
@@ -247,7 +259,9 @@ def test_maps_upload_txt_results_400(oauth, app, tmpdir):
                                                 'metadata': json.dumps(dict(is_ranked=True))})
 
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'Invalid file extension'
+    result = json.loads(response.get_data(as_text=True))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.UPLOAD_INVALID_FILE_EXTENSION.value['code']
 
 
 def test_map_by_name(test_client, app, maps):
@@ -323,7 +337,8 @@ def test_upload_existing_map(oauth, maps, upload_dir, preview_dir):
     result = json.loads(response.data.decode('utf-8'))
 
     assert response.status_code == 400
-    assert result['message'] == 'Map "Sludge Test" with version "1" already exists'
+    assert result['errors'][0]['code'] == ErrorCode.MAP_VERSION_EXISTS.value['code']
+    assert result['errors'][0]['meta']['args'] == ['Sludge Test', 1]
 
 
 def test_upload_map_with_name_clash(oauth, maps, upload_dir, preview_dir):
@@ -342,7 +357,27 @@ def test_upload_map_with_name_clash(oauth, maps, upload_dir, preview_dir):
     result = json.loads(response.data.decode('utf-8'))
 
     assert response.status_code == 400
-    assert result['message'] == 'Map with file name "scmp_037.v0001.zip" already exists'
+    assert result['errors'][0]['code'] == ErrorCode.MAP_NAME_CONFLICT.value['code']
+    assert result['errors'][0]['meta']['args'] == ['scmp_037.v0001.zip']
+
+
+def test_upload_map_with_invalid_scenario(oauth, maps, upload_dir, preview_dir):
+    map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/invalid_scenario.zip')
+    with open(map_zip, 'rb') as file:
+        response = oauth.post('/maps/upload',
+                              data={'file': (file, os.path.basename(map_zip)),
+                                    'metadata': json.dumps(dict(is_ranked=True))})
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    assert response.status_code == 400
+    assert len(result['errors']) == 6
+    assert result['errors'][0]['code'] == 109
+    assert result['errors'][1]['code'] == 110
+    assert result['errors'][2]['code'] == 111
+    assert result['errors'][3]['code'] == 112
+    assert result['errors'][4]['code'] == 113
+    assert result['errors'][5]['code'] == 114
 
 
 def test_ladder_maps(test_client, maps):

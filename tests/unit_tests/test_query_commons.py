@@ -1,6 +1,7 @@
 import pytest
 
-from api import InvalidUsage
+from api import ApiException
+from api.error import Error, ErrorCode
 from api.query_commons import get_select_expressions, get_order_by, get_limit
 
 FIELD_EXPRESSION_DICT = {
@@ -82,10 +83,11 @@ def test_get_order_by_none_fields():
 
 
 def test_get_order_by_invalid_column():
-    with pytest.raises(InvalidUsage) as exception:
+    with pytest.raises(ApiException) as exception:
         get_order_by('foobar', FIELD_EXPRESSION_DICT)
 
-    assert exception.value.message == 'Invalid sort field'
+    assert exception.value.errors[0].code == ErrorCode.QUERY_INVALID_SORT_FIELD
+    assert exception.value.errors[0].args == ('foobar',)
 
 
 def test_get_limit():
