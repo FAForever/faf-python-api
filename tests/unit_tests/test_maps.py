@@ -358,7 +358,7 @@ def test_upload_map_with_name_clash(oauth, maps, upload_dir, preview_dir):
 
     assert response.status_code == 400
     assert result['errors'][0]['code'] == ErrorCode.MAP_NAME_CONFLICT.value['code']
-    assert result['errors'][0]['meta']['args'] == ['scmp_037.v0001.zip']
+    assert result['errors'][0]['meta']['args'] == ['sludge_test.v0001.zip']
 
 
 def test_upload_map_with_invalid_scenario(oauth, maps, upload_dir, preview_dir):
