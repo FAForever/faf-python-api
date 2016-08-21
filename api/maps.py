@@ -6,8 +6,9 @@ import tempfile
 import urllib.parse
 
 from faf.api.map_schema import MapSchema
-from faf.tools.fa.maps import generate_map_previews, parse_map_info, generate_zip_file_name
+from faf.tools.fa.maps import generate_map_previews, parse_map_info, generate_folder_name, generate_zip
 from flask import request
+from pathlib import Path
 from werkzeug.utils import secure_filename
 
 from api import app, oauth
@@ -248,7 +249,6 @@ def process_uploaded_map(temp_map_path, is_ranked):
     validate_map_info(map_info)
 
     display_name = map_info['display_name']
-    name = map_info['name']
     version = map_info['version']
     description = map_info['description']
     max_players = map_info['max_players']
@@ -269,7 +269,8 @@ def process_uploaded_map(temp_map_path, is_ranked):
     if map_exists(display_name, version):
         raise ApiException([Error(ErrorCode.MAP_VERSION_EXISTS, display_name, version)])
 
-    zip_file_name = generate_zip_file_name(name, version)
+    zip_file_path = generate_zip(temp_map_path, str(Path(temp_map_path).parent))
+    zip_file_name = os.path.basename(zip_file_path)
     target_map_path = os.path.join(app.config['MAP_UPLOAD_PATH'], zip_file_name)
     if os.path.isfile(target_map_path):
         raise ApiException([Error(ErrorCode.MAP_NAME_CONFLICT, zip_file_name)])
