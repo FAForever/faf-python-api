@@ -275,7 +275,7 @@ def process_uploaded_map(temp_map_path, is_ranked):
     if os.path.isfile(target_map_path):
         raise ApiException([Error(ErrorCode.MAP_NAME_CONFLICT, zip_file_name)])
 
-    shutil.move(temp_map_path, target_map_path)
+    shutil.move(zip_file_path, target_map_path)
 
     generate_map_previews(target_map_path, {
         128: os.path.join(app.config['MAP_PREVIEW_PATH'], 'small'),
