@@ -61,6 +61,42 @@ Logs are viewable by
 If you want to view the raw JSON on the website, then you will need to allow 'Allow-Control-Allow-Origin'' in the browser.
 Here is an example extension for Chrome - (https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi?hl=en)
 
+## Installation on Ubuntu VM - Local (Without Docker)
+The following install guide is a walkthrough of installing the API without docker.
+
+Git clone repository WITH submodules
+
+###Python 3.5 is required to run the API code, 2.7 will not...
+If Python3 and pip3 are not installed, then you can install them with these instructions.
+
+`sudo apt-get install python-setuptools python-dev build-essential`
+`sudo easy_install pip`
+`sudo pip install --upgrade virtualenv`
+`pip install --upgrade pip`
+
+pip3 will now be aliased to the pip 3.5 version
+
+Install some pre-requisites for python dependencies
+
+`sudo apt-get -y install liblua5.1 liblua5.1-dev libmagickwand-dev python-dev libffi-dev libssl-dev libxml2-dev libxslt1-dev libjpeg8-dev zlib1g-dev`
+
+Install the python requirements
+
+`sudo pip3 install --upgrade --trusted-host content.dev.faforever.com -r requirements.txt`
+
+Install the database
+
+`sudo pip3 install -e db`
+
+Compile and install code base
+
+`sudo pip3 install -e .`
+
+Copy the config.example.py to config.py and configure the database that you need setup
+
+Run the program by doing the following
+`python3 run.py`
+
 ## Compiling and Building the Documentation
 Documentation is currently handled by Sphinx until there is a more solid API. The documentation can be built using the following command:
 
