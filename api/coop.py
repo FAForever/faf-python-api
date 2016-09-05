@@ -18,6 +18,7 @@ SELECT_EXPRESSIONS = {
     'thumbnail_url_small': "REPLACE(REPLACE(filename, '.zip', '.png'), 'missions/', '')",
     # thumbnail_url_large will be URL encoded and made absolute in enricher
     'thumbnail_url_large': "REPLACE(REPLACE(filename, '.zip', '.png'), 'missions/', '')",
+    'folder_name': "SUBSTRING(filename, LOCATE('/', filename)+1, LOCATE('.zip', filename)-6)"
 }
 
 MAX_PAGE_SIZE = 1000
