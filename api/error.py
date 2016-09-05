@@ -110,6 +110,10 @@ class ErrorCode(Enum):
         code=126,
         title='Missing mod author',
         detail='The file mod_info.lua must contain a property "author".')
+    QUERY_INVALID_RATING_TYPE = dict(
+        code=127,
+        title='Invalid rating type',
+        detail='Rating type is not valid: {0}. Please pick 1v1 or global.')
 
 
 class Error:
