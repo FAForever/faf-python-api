@@ -8,7 +8,7 @@ from faf import db
 
 
 @pytest.fixture
-def ranked1v1_ratings(request, app):
+def rating_ratings(request, app):
     app.debug = True
     with db.connection:
         cursor = db.connection.cursor()
@@ -42,8 +42,8 @@ def ranked1v1_ratings(request, app):
     request.addfinalizer(finalizer)
 
 
-def test_ranked1v1(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1')
+def test_rating_1v1(test_client, rating_ratings):
+    response = test_client.get('/rating/1v1')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -56,8 +56,8 @@ def test_ranked1v1(test_client, ranked1v1_ratings):
         assert 'type' in item
 
 
-def test_ranked1v1(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1/4')
+def test_rating_global(test_client, rating_ratings):
+    response = test_client.get('/rating/1v1/4')
     schema = Ranked1v1Schema()
 
     result, errors = schema.loads(response.data.decode('utf-8'))
@@ -66,11 +66,11 @@ def test_ranked1v1(test_client, ranked1v1_ratings):
     assert response.content_type == 'application/vnd.api+json'
     assert not errors
     assert result['login'] == 'd'
-    assert result['ranking'] == 3
+    assert result['ranking'] == 1
 
 
-def test_ranked1v1_not_found(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1/999')
+def test_rating_not_found(test_client, rating_ratings):
+    response = test_client.get('/rating/1v1/999')
 
     assert response.status_code == 404
     assert response.content_type == 'application/vnd.api+json'
@@ -80,8 +80,8 @@ def test_ranked1v1_not_found(test_client, ranked1v1_ratings):
     assert 'errors' in data
 
 
-def test_ranked1v1_page_size(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1?page[size]=1')
+def test_rating_page_size(test_client, rating_ratings):
+    response = test_client.get('/rating/1v1?page[size]=1')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -91,8 +91,8 @@ def test_ranked1v1_page_size(test_client, ranked1v1_ratings):
     assert len(result['data']) == 1
 
 
-def test_ranked1v1_invalid_page_size(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1?page[size]=5001')
+def test_rating_invalid_page_size(test_client, rating_ratings):
+    response = test_client.get('/rating/1v1?page[size]=5001')
 
     result = json.loads(response.data.decode('utf-8'))
 
@@ -101,8 +101,8 @@ def test_ranked1v1_invalid_page_size(test_client, ranked1v1_ratings):
     assert result['errors'][0]['meta']['args'] == [5001]
 
 
-def test_ranked1v1_page(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1?page[size]=1&page[number]=2')
+def test_rating_page(test_client, rating_ratings):
+    response = test_client.get('/rating/1v1?page[size]=1&page[number]=2')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -114,8 +114,8 @@ def test_ranked1v1_page(test_client, ranked1v1_ratings):
     assert result['data'][0]['attributes']['ranking'] == 2
 
 
-def test_ranked1v1_invalid_page(test_client):
-    response = test_client.get('/ranked1v1?page[number]=-1')
+def test_rating_invalid_page(test_client):
+    response = test_client.get('/rating/1v1?page[number]=-1')
 
     result = json.loads(response.data.decode('utf-8'))
 
@@ -124,8 +124,8 @@ def test_ranked1v1_invalid_page(test_client):
     assert result['errors'][0]['meta']['args'] == [-1]
 
 
-def test_ranked1v1_sort_disallowed(test_client):
-    response = test_client.get('/ranked1v1?sort=mean')
+def test_rating_sort_disallowed(test_client):
+    response = test_client.get('/rating/1v1?sort=mean')
 
     result = json.loads(response.data.decode('utf-8'))
 
@@ -134,8 +134,8 @@ def test_ranked1v1_sort_disallowed(test_client):
     assert result['errors'][0]['meta']['args'] == ['mean']
 
 
-def test_ranked1v1_filter_active(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1?filter[is_active]=true')
+def test_rating_filter_active(test_client, rating_ratings):
+    response = test_client.get('/rating/1v1?filter[is_active]=true')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -147,8 +147,8 @@ def test_ranked1v1_filter_active(test_client, ranked1v1_ratings):
     for item in result['data']:
         assert item['attributes']['is_active'] == True
 
-def test_ranked1v1_filter_inactive(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1?filter[is_active]=false')
+def test_rating_filter_inactive(test_client, rating_ratings):
+    response = test_client.get('/rating/1v1?filter[is_active]=false')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -158,12 +158,12 @@ def test_ranked1v1_filter_inactive(test_client, ranked1v1_ratings):
     assert len(result['data']) == 1
     assert result['data'][0]['attributes']['is_active'] == 0
 
-def test_ranked1v1_filter_player(test_client, ranked1v1_ratings):
+def test_rating_filter_player(test_client, rating_ratings):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute("""UPDATE login SET login="test" WHERE login = 'a';""")
 
-    response = test_client.get('/ranked1v1?filter[player]=te')
+    response = test_client.get('/rating/1v1?filter[player]=te')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -179,8 +179,8 @@ def test_ranked1v1_filter_player(test_client, ranked1v1_ratings):
         cursor = db.connection.cursor()
         cursor.execute("""UPDATE login SET login="a" WHERE login = 'test';""")
 
-def test_ranked1v1_stats(test_client, ranked1v1_ratings):
-    response = test_client.get('/ranked1v1/stats')
+def test_rating_stats(test_client, rating_ratings):
+    response = test_client.get('/rating/1v1/stats')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -188,12 +188,21 @@ def test_ranked1v1_stats(test_client, ranked1v1_ratings):
     result = json.loads(response.data.decode('utf-8'))
     assert result['data']['attributes']['rating_distribution'] == {'1200': 1, '1400': 2}
 
-def test_rating_invalid(test_client, ranked1v1_ratings):
+def test_rating_global_stats(test_client, rating_ratings):
+    response = test_client.get('/rating/global/stats')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert result['data']['attributes']['rating_distribution'] == {'1000': 1, '1600': 1}
+
+def test_rating_invalid(test_client, rating_ratings):
     response = test_client.get('/rating/')
 
     assert response.status_code == 404
 
-def test_rating_1v1(test_client, ranked1v1_ratings):
+def test_rating_1v1(test_client, rating_ratings):
     response = test_client.get('/rating/1v1')
 
     assert response.status_code == 200
@@ -207,7 +216,7 @@ def test_rating_1v1(test_client, ranked1v1_ratings):
         assert 'type' in item
 
 
-def test_rating_global(test_client, ranked1v1_ratings):
+def test_rating_global(test_client, rating_ratings):
     response = test_client.get('/rating/global')
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -219,7 +228,7 @@ def test_rating_global(test_client, ranked1v1_ratings):
     for item in result['data']:
         assert 'type' in item
 
-def test_rating_get_player_invalid(test_client, ranked1v1_ratings):
+def test_rating_get_player_invalid(test_client, rating_ratings):
     response = test_client.get('/rating/lol/1')
 
     result = json.loads(response.data.decode('utf-8'))
@@ -229,7 +238,7 @@ def test_rating_get_player_invalid(test_client, ranked1v1_ratings):
     assert result['errors'][0]['title'] == ErrorCode.QUERY_INVALID_RATING_TYPE.value['title']
     assert result['errors'][0]['meta']['args'] == ['lol']
 
-def test_rating_get_player_1v1(test_client, ranked1v1_ratings):
+def test_rating_get_player_1v1(test_client, rating_ratings):
     response = test_client.get('/rating/1v1/1')
 
     schema = Ranked1v1Schema()
@@ -243,7 +252,7 @@ def test_rating_get_player_1v1(test_client, ranked1v1_ratings):
     assert result['ranking'] == 1
 
 
-def test_rating_get_player_global(test_client, ranked1v1_ratings):
+def test_rating_get_player_global(test_client, rating_ratings):
     response = test_client.get('/rating/global/1')
 
     schema = Ranked1v1Schema()
@@ -254,4 +263,4 @@ def test_rating_get_player_global(test_client, ranked1v1_ratings):
     assert response.content_type == 'application/vnd.api+json'
     assert not errors
     assert result['login'] == 'a'
-    assert result['ranking'] == 3
+    assert result['ranking'] == 2
