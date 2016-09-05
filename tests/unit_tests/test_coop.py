@@ -78,6 +78,7 @@ def test_coop_missions(test_client, maps):
         assert 'download_url' in item['attributes']
         assert 'thumbnail_url_small' in item['attributes']
         assert 'thumbnail_url_large' in item['attributes']
+        assert 'folder_name' in item['attributes']
 
 
 def test_coop_missions_fields(test_client, maps):
