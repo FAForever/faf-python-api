@@ -17,7 +17,7 @@ from api.error import ApiException
 from api.jwt_user import JwtUser
 from api.user import User
 
-__version__ = '0.4.9'
+__version__ = '0.4.10'
 __author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus, Michel Jung'
 __contact__ = 'admin@faforever.com'
 __license__ = 'GPLv3'
@@ -156,3 +156,4 @@ import api.events
 import api.query_commons
 import api.ranked1v1
 import api.clans
+import api.coop
