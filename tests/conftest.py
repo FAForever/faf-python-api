@@ -14,6 +14,7 @@ def app():
     importlib.reload(api.achievements)
     importlib.reload(api.ranked1v1)
     importlib.reload(api.clans)
+    importlib.reload(api.coop)
 
     api.app.config.from_object('config')
     api.app.debug = True
