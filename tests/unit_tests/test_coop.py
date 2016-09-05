@@ -59,8 +59,8 @@ def oauth():
     return api.app.test_client()
 
 
-def test_coop_maps(test_client, maps):
-    response = test_client.get('/coop/maps')
+def test_coop_missions(test_client, maps):
+    response = test_client.get('/coop/missions')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -80,8 +80,8 @@ def test_coop_maps(test_client, maps):
         assert 'thumbnail_url_large' in item['attributes']
 
 
-def test_coop_maps_fields(test_client, maps):
-    response = test_client.get('/coop/maps?fields[coop_map]=name')
+def test_coop_missions_fields(test_client, maps):
+    response = test_client.get('/coop/missions?fields[coop_mission]=name')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -96,8 +96,8 @@ def test_coop_maps_fields(test_client, maps):
         assert 'version' not in item['attributes']
 
 
-def test_coop_maps_fields_two(test_client, maps):
-    response = test_client.get('/coop/maps?fields[coop_map]=name,version')
+def test_coop_missions_fields_two(test_client, maps):
+    response = test_client.get('/coop/missions?fields[coop_mission]=name,version')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -114,8 +114,8 @@ def test_coop_maps_fields_two(test_client, maps):
         assert 'description' not in item['attributes']
 
 
-def test_coop_maps_page_size(test_client, maps):
-    response = test_client.get('/coop/maps?page[size]=1')
+def test_coop_missions_page_size(test_client, maps):
+    response = test_client.get('/coop/missions?page[size]=1')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -125,8 +125,8 @@ def test_coop_maps_page_size(test_client, maps):
     assert len(result['data']) == 1
 
 
-def test_coop_maps_invalid_page_size(test_client, maps):
-    response = test_client.get('/coop/maps?page[size]=1001')
+def test_coop_missions_invalid_page_size(test_client, maps):
+    response = test_client.get('/coop/missions?page[size]=1001')
 
     assert response.status_code == 400
     result = json.loads(response.get_data(as_text=True))
@@ -134,8 +134,8 @@ def test_coop_maps_invalid_page_size(test_client, maps):
     assert result['errors'][0]['code'] == ErrorCode.QUERY_INVALID_PAGE_SIZE.value['code']
 
 
-def test_coop_maps_page(test_client, maps):
-    response = test_client.get('/coop/maps?page[size]=1&page[number]=2')
+def test_coop_missions_page(test_client, maps):
+    response = test_client.get('/coop/missions?page[size]=1&page[number]=2')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -146,8 +146,8 @@ def test_coop_maps_page(test_client, maps):
     assert result['data'][0]['attributes']['name'] == 'SCMP 002'
 
 
-def test_coop_maps_invalid_page(test_client, maps):
-    response = test_client.get('/coop/maps?page[number]=-1')
+def test_coop_missions_invalid_page(test_client, maps):
+    response = test_client.get('/coop/missions?page[number]=-1')
 
     result = json.loads(response.data.decode('utf-8'))
 
@@ -156,8 +156,8 @@ def test_coop_maps_invalid_page(test_client, maps):
     assert result['errors'][0]['meta']['args'] == [-1]
 
 
-def test_coop_maps_sort_by_version(test_client, maps):
-    response = test_client.get('/coop/maps?sort=-version')
+def test_coop_missions_sort_by_version(test_client, maps):
+    response = test_client.get('/coop/missions?sort=-version')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -171,8 +171,8 @@ def test_coop_maps_sort_by_version(test_client, maps):
         previous_version = item['attributes']['version']
 
 
-def test_coop_maps_inject_sql_sort(test_client):
-    response = test_client.get('/coop/maps?sort=or%201=1')
+def test_coop_missions_inject_sql_sort(test_client):
+    response = test_client.get('/coop/missions?sort=or%201=1')
 
     assert response.status_code == 400
     result = json.loads(response.get_data(as_text=True))

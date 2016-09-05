@@ -1,4 +1,4 @@
-from faf.api.coop_map_schema import CoopMapSchema
+from faf.api.coop_mission_schema import CoopMissionSchema
 from flask import request
 
 from api import app
@@ -15,18 +15,18 @@ SELECT_EXPRESSIONS = {
     # download_url will be URL encoded and made absolute in enricher
     'download_url': "filename",
     # thumbnail_url_small will be URL encoded and made absolute in enricher
-    'thumbnail_url_small': "REPLACE(REPLACE(filename, '.zip', '.png'), 'maps/', '')",
+    'thumbnail_url_small': "REPLACE(REPLACE(filename, '.zip', '.png'), 'missions/', '')",
     # thumbnail_url_large will be URL encoded and made absolute in enricher
-    'thumbnail_url_large': "REPLACE(REPLACE(filename, '.zip', '.png'), 'maps/', '')",
+    'thumbnail_url_large': "REPLACE(REPLACE(filename, '.zip', '.png'), 'missions/', '')",
 }
 
 MAX_PAGE_SIZE = 1000
 
 
-@app.route('/coop/maps')
-def coop_maps():
+@app.route('/coop/missions')
+def coop_missions():
     """
-    Lists all coop maps.
+    Lists all coop missions.
 
     **Example Request**:
 
@@ -56,7 +56,7 @@ def coop_maps():
                 "version": 6
               },
               "id": "26",
-              "type": "coop_map"
+              "type": "coop_mission"
             },
             ...
           ]
@@ -64,24 +64,24 @@ def coop_maps():
 
 
     """
-    return fetch_data(CoopMapSchema(), 'coop_map', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, enricher=enricher)
+    return fetch_data(CoopMissionSchema(), 'coop_map', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, enricher=enricher)
 
 
-def enricher(map):
-    if 'thumbnail_url_small' in map:
-        if not map['thumbnail_url_small']:
-            del map['thumbnail_url_small']
+def enricher(mission):
+    if 'thumbnail_url_small' in mission:
+        if not mission['thumbnail_url_small']:
+            del mission['thumbnail_url_small']
         else:
-            map['thumbnail_url_small'] = '{}/faf/vault/map_previews/small/{}'.format(
-                app.config['CONTENT_URL'], urllib.parse.quote(map['thumbnail_url_small']))
+            mission['thumbnail_url_small'] = '{}/faf/vault/map_previews/small/{}'.format(
+                app.config['CONTENT_URL'], urllib.parse.quote(mission['thumbnail_url_small']))
 
-    if 'thumbnail_url_large' in map:
-        if not map['thumbnail_url_large']:
-            del map['thumbnail_url_large']
+    if 'thumbnail_url_large' in mission:
+        if not mission['thumbnail_url_large']:
+            del mission['thumbnail_url_large']
         else:
-            map['thumbnail_url_large'] = '{}/faf/vault/map_previews/large/{}'.format(
-                app.config['CONTENT_URL'], urllib.parse.quote(map['thumbnail_url_large']))
+            mission['thumbnail_url_large'] = '{}/faf/vault/map_previews/large/{}'.format(
+                app.config['CONTENT_URL'], urllib.parse.quote(mission['thumbnail_url_large']))
 
-    if 'download_url' in map:
-        map['download_url'] = '{}/faf/vault/{}'.format(app.config['CONTENT_URL'],
-                                                       urllib.parse.quote(map['download_url']))
+    if 'download_url' in mission:
+        mission['download_url'] = '{}/faf/vault/{}'.format(app.config['CONTENT_URL'],
+                                                       urllib.parse.quote(mission['download_url']))

@@ -12,7 +12,7 @@ pillow == 3.3.1
 coveralls
 cryptography == 1.5
 geoip2 == 2.4.0
-git+https://github.com/FAForever/faftools.git@4579fe1bee6af6869d376781343ad8847c42c26a#egg=faftools
+git+https://github.com/FAForever/faftools.git@087e412da6d8c4c1a774c3222287eaedfa3b6361#egg=faftools
 marshmallow == 2.9.1
 marshmallow_jsonapi == 0.8.0
 peewee >= 2.4.2
