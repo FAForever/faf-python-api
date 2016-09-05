@@ -1,27 +1,27 @@
-aiohttp
+aiohttp == 0.22.5
 aiohttp-wsgi == 0.4.0
-Flask >= 0.10.1
-flask-cors
-Flask-JWT
-Flask-Login
-Flask-OAuthlib
-iso8601
-PyJWT
-pillow
+Flask == 0.10.1
+flask-cors == 3.0.0
+Flask-JWT == 0.3.2
+Flask-Login == 0.3.2
+Flask-OAuthlib == 0.9.3
+iso8601 == 0.1.11
+PyJWT == 1.4.2
+pillow == 3.3.1
 coveralls
-cryptography
-geoip2
+cryptography == 1.5
+geoip2 == 2.4.0
 git+https://github.com/FAForever/faftools.git@4579fe1bee6af6869d376781343ad8847c42c26a#egg=faftools
-marshmallow
-marshmallow_jsonapi
+marshmallow == 2.9.1
+marshmallow_jsonapi == 0.8.0
 peewee >= 2.4.2
-pyflakes
-pymysql
+pyflakes == 1.2.3
+pymysql == 0.7.6
 pytest-cov
 pytest-mock
-python-geoip-geolite2
-requests
-statsd
-uritemplate.py
-sqlalchemy
-lupa
+python-geoip-geolite2 == 2015.0303
+requests == 2.11.1
+statsd == 3.2.1
+uritemplate.py == 2.0.0
+sqlalchemy == 1.0.14
+lupa == 1.3
