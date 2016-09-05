@@ -279,7 +279,7 @@ class AchievementsTestCase(unittest.TestCase):
         response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/unlock', data=dict(player_id=1))
         self.assertEqual(200, response.status_code)
 
-        response = self.app.get('/players/1/achievements')
+        response = self.app.get('/players/1/achievements?sort=create_time')
         self.assertEqual(200, response.status_code)
         result, errors = PlayerAchievementSchema().loads(response.get_data(as_text=True), many=True)
 
