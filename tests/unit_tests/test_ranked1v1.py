@@ -222,8 +222,12 @@ def test_rating_global(test_client, ranked1v1_ratings):
 def test_rating_get_player_invalid(test_client, ranked1v1_ratings):
     response = test_client.get('/rating/lol/1')
 
+    result = json.loads(response.data.decode('utf-8'))
+
     assert response.status_code == 400
-    assert json.loads(response.get_data(as_text=True))['message'] == 'The rating type should be either 1v1 or global.'
+    assert result['errors'][0]['detail'] == 'Rating type is not valid: lol. Please pick 1v1 or global.'
+    assert result['errors'][0]['title'] == ErrorCode.QUERY_INVALID_RATING_TYPE.value['title']
+    assert result['errors'][0]['meta']['args'] == ['lol']
 
 def test_rating_get_player_1v1(test_client, ranked1v1_ratings):
     response = test_client.get('/rating/1v1/1')

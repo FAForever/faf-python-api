@@ -110,8 +110,9 @@ def ranked1v1():
 
 @app.route('/rating/<string:rating_type>')
 def rating_type(rating_type):
-    if request.values.get('sort'):
-        raise InvalidUsage('Sorting is not supported for ranked1v1')
+    sort_field = request.values.get('sort')
+    if sort_field:
+        raise ApiException([Error(ErrorCode.QUERY_INVALID_SORT_FIELD, sort_field)])
 
     page = int(request.values.get('page[number]', 1))
     page_size = int(request.values.get('page[size]', MAX_PAGE_SIZE))
@@ -136,7 +137,7 @@ def rating_type(rating_type):
     elif rating_type == 'global':
         table = TABLEGLOBAL
     else:
-        raise InvalidUsage('The rating type should be either 1v1 or global.')
+        raise ApiException([Error(ErrorCode.QUERY_INVALID_RATING_TYPE, rating_type)])
 
     return fetch_data(Ranked1v1Schema(), table, select, MAX_PAGE_SIZE, request, sort='-rating',
                       args=args, where=where)
@@ -217,7 +218,7 @@ def rating_type_get_player(rating_type, player_id):
     elif rating_type == 'global':
         table = TABLEGLOBAL
     else:
-        raise InvalidUsage('The rating type should be either 1v1 or global.')
+        raise ApiException([Error(ErrorCode.QUERY_INVALID_RATING_TYPE, rating_type)])
 
     result = fetch_data(Ranked1v1Schema(), table, select, MAX_PAGE_SIZE, request,
                         many=False, where='r.id=%(id)s', args=dict(id=player_id, row_num=0))
