@@ -147,6 +147,7 @@ def test_rating_filter_active(test_client, rating_ratings):
     for item in result['data']:
         assert item['attributes']['is_active'] == True
 
+
 def test_rating_filter_inactive(test_client, rating_ratings):
     response = test_client.get('/rating/1v1?filter[is_active]=false')
 
@@ -157,6 +158,7 @@ def test_rating_filter_inactive(test_client, rating_ratings):
     assert 'data' in result
     assert len(result['data']) == 1
     assert result['data'][0]['attributes']['is_active'] == 0
+
 
 def test_rating_filter_player(test_client, rating_ratings):
     with db.connection:
@@ -179,7 +181,8 @@ def test_rating_filter_player(test_client, rating_ratings):
         cursor = db.connection.cursor()
         cursor.execute("""UPDATE login SET login="a" WHERE login = 'test';""")
 
-def test_rating_stats(test_client, rating_ratings):
+
+def test_rating_1v1_stats(test_client, rating_ratings):
     response = test_client.get('/rating/1v1/stats')
 
     assert response.status_code == 200
@@ -187,6 +190,7 @@ def test_rating_stats(test_client, rating_ratings):
 
     result = json.loads(response.data.decode('utf-8'))
     assert result['data']['attributes']['rating_distribution'] == {'1200': 1, '1400': 2}
+
 
 def test_rating_global_stats(test_client, rating_ratings):
     response = test_client.get('/rating/global/stats')
@@ -197,36 +201,12 @@ def test_rating_global_stats(test_client, rating_ratings):
     result = json.loads(response.data.decode('utf-8'))
     assert result['data']['attributes']['rating_distribution'] == {'1000': 1, '1600': 1}
 
+
 def test_rating_invalid(test_client, rating_ratings):
     response = test_client.get('/rating/')
 
     assert response.status_code == 404
 
-def test_rating_1v1(test_client, rating_ratings):
-    response = test_client.get('/rating/1v1')
-
-    assert response.status_code == 200
-    assert response.content_type == 'application/vnd.api+json'
-
-    result = json.loads(response.data.decode('utf-8'))
-    assert 'data' in result
-    assert len(result['data']) == 4
-
-    for item in result['data']:
-        assert 'type' in item
-
-
-def test_rating_global(test_client, rating_ratings):
-    response = test_client.get('/rating/global')
-    assert response.status_code == 200
-    assert response.content_type == 'application/vnd.api+json'
-
-    result = json.loads(response.data.decode('utf-8'))
-    assert 'data' in result
-    assert len(result['data']) == 4
-
-    for item in result['data']:
-        assert 'type' in item
 
 def test_rating_get_player_invalid(test_client, rating_ratings):
     response = test_client.get('/rating/lol/1')
@@ -237,6 +217,7 @@ def test_rating_get_player_invalid(test_client, rating_ratings):
     assert result['errors'][0]['detail'] == 'Rating type is not valid: lol. Please pick 1v1 or global.'
     assert result['errors'][0]['title'] == ErrorCode.QUERY_INVALID_RATING_TYPE.value['title']
     assert result['errors'][0]['meta']['args'] == ['lol']
+
 
 def test_rating_get_player_1v1(test_client, rating_ratings):
     response = test_client.get('/rating/1v1/1')
