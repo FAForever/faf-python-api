@@ -77,8 +77,6 @@ def rating_type(rating_type):
         :type page[size]: int
         :param filter[isActive]: Whether or not to filter active players or not (true or false) (EX.: /rating/1v1?filter[is_active]=true)
         :type filter[isActive]: boolean
-        :param filter[player]: Allows search functionality in the ranked1v1 endpoint based upon the players login name (EX.: /rating/1v1?filter[player]=Zock)
-        :type filter[player]: name
         :param rating_type: Finds players in the 1v1 or global rating
         :type rating_type: 1v1 OR global
         :status 200: No error
@@ -90,7 +88,6 @@ def rating_type(rating_type):
 
     page = int(request.values.get('page[number]', 1))
     page_size = int(request.values.get('page[size]', MAX_PAGE_SIZE))
-    player = request.args.get('filter[player]')
     row_num = (page - 1) * page_size
     select = SELECT_EXPRESSIONS
 
@@ -101,9 +98,6 @@ def rating_type(rating_type):
     if active_filter:
         where += 'is_active = ' + ('1' if active_filter.lower() == 'true' else '0') + ' AND r.numGames > 0'
 
-    if player:
-        where += " l.login LIKE %(player)s"
-        args['player'] = '%' + player + '%'
     rating = find_rating_type(rating_type, select)
 
     return fetch_data(Ranked1v1Schema(), rating['table'], rating['select'], MAX_PAGE_SIZE, request, sort='-rating',
