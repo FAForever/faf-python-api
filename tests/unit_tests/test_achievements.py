@@ -39,11 +39,19 @@ class AchievementsTestCase(unittest.TestCase):
             cursor = db.connection.cursor()
             cursor.execute('delete from login')
             cursor.execute('delete from player_achievements')
+            # TODO use common fixtures
+            cursor.execute("""insert into login
+            (id, login, password, email)
+            values
+            (1, 'User 1', '', 'user1@example.com')""")
 
     def tearDown(self):
         db.connection.close()
 
     def test_achievements_list(self):
+        response = self.app.post('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81/increment', data=dict(steps=10))
+        self.assertEqual(200, response.status_code)
+
         response = self.app.get('/achievements?sort=order')
         self.assertEqual(200, response.status_code)
         result, errors = AchievementSchema().loads(response.get_data(as_text=True), many=True)
@@ -57,6 +65,11 @@ class AchievementsTestCase(unittest.TestCase):
         self.assertEqual(10, result[0]['total_steps'])
         self.assertEqual("http://content.faforever.com/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81.png", result[0]['revealed_icon_url'])
         self.assertEqual("http://content.faforever.com/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81.png", result[0]['unlocked_icon_url'])
+        self.assertEqual(1, result[0]['unlockers_count'])
+        self.assertEqual(100.00, result[0]['unlockers_percent'])
+        self.assertGreaterEqual(0, result[0]['unlockers_min_duration'])
+        self.assertGreaterEqual(0, result[0]['unlockers_avg_duration'])
+        self.assertGreaterEqual(0, result[0]['unlockers_max_duration'])
 
     def test_achievements_get(self):
         response = self.app.get('/achievements/c6e6039f-c543-424e-ab5f-b34df1336e81')
