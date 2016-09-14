@@ -9,6 +9,27 @@ from api.query_commons import fetch_data
 
 MAX_PAGE_SIZE = 1000
 
+ACHIEVERS_COUNT_TABLE = """
+(SELECT count(*) as count FROM login WHERE id IN (SELECT player_id FROM player_achievements)) AS achievers_count
+"""
+
+UNLOCK_STATS_TABLE = """
+(SELECT
+    achievement_id,
+    count(*) AS count,
+    ROUND(MIN(TIMESTAMPDIFF(SECOND, GREATEST(ach.create_time, login.create_time), pa.update_time))) AS min_time,
+    ROUND(AVG(TIMESTAMPDIFF(SECOND, GREATEST(ach.create_time, login.create_time), pa.update_time))) AS avg_time,
+    ROUND(MAX(TIMESTAMPDIFF(SECOND, GREATEST(ach.create_time, login.create_time), pa.update_time))) AS max_time
+ FROM achievement_definitions ach
+ LEFT JOIN player_achievements pa
+    ON pa.achievement_id = ach.id
+ LEFT JOIN login
+    ON login.id = pa.player_id
+ WHERE pa.state = 'UNLOCKED'
+ GROUP BY achievement_id
+) AS unlock_stats
+"""
+
 ACHIEVEMENTS_TABLE = """achievement_definitions ach
                 LEFT OUTER JOIN messages name_langReg
                     ON ach.name_key = name_langReg.key
@@ -31,7 +52,10 @@ ACHIEVEMENTS_TABLE = """achievement_definitions ach
                 LEFT OUTER JOIN messages desc_def
                     ON ach.description_key = desc_def.key
                         AND desc_def.language = 'en'
-                        AND desc_def.region = 'US'"""
+                        AND desc_def.region = 'US'
+                LEFT OUTER JOIN """ + UNLOCK_STATS_TABLE + """
+                     ON unlock_stats.achievement_id = ach.id,
+                """ + ACHIEVERS_COUNT_TABLE
 
 ACHIEVEMENT_SELECT_EXPRESSIONS = {
     'id': 'ach.id',
@@ -44,6 +68,12 @@ ACHIEVEMENT_SELECT_EXPRESSIONS = {
     'initial_state': 'ach.initial_state',
     'name': 'COALESCE(name_langReg.value, name_lang.value, name_def.value)',
     'description': 'COALESCE(desc_langReg.value, desc_lang.value, desc_def.value)',
+    'create_time': 'create_time',
+    'unlockers_count': 'COALESCE(unlock_stats.count, 0)',
+    'unlockers_percent': 'COALESCE(ROUND(100 * (unlock_stats.count / achievers_count.count), 2), 0)',
+    'unlockers_min_duration': 'unlock_stats.min_time',
+    'unlockers_avg_duration': 'unlock_stats.avg_time',
+    'unlockers_max_duration': 'unlock_stats.max_time'
 }
 
 PLAYER_ACHIEVEMENT_SELECT_EXPRESSIONS = {
@@ -87,7 +117,12 @@ def achievements_list():
                 "revealed_icon_url": "http://content.faforever.com/achievements/02081bb0-3b7a-4a36-99ef-5ae5d92d7146.png",
                 "total_steps": null,
                 "type": "STANDARD",
-                "unlocked_icon_url": "http://content.faforever.com/achievements/02081bb0-3b7a-4a36-99ef-5ae5d92d7146.png"
+                "unlocked_icon_url": "http://content.faforever.com/achievements/02081bb0-3b7a-4a36-99ef-5ae5d92d7146.png",
+                "unlockers_count": 416,
+                "unlockers_percent": 0.49,
+                "unlockers_min_duration": 1000,
+                "unlockers_avg_duration": 2000,
+                "unlockers_max_duration": 3000
               },
               "id": "02081bb0-3b7a-4a36-99ef-5ae5d92d7146",
               "type": "achievement"
@@ -103,9 +138,10 @@ def achievements_list():
     """
     language = request.args.get('language', 'en')
     region = request.args.get('region', 'US')
+    sort = request.args.get('sort', 'order')
 
     return fetch_data(AchievementSchema(), ACHIEVEMENTS_TABLE, ACHIEVEMENT_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
-                      args={'language': language, 'region': region})
+                      args={'language': language, 'region': region}, sort=sort)
 
 
 @app.route('/achievements/<achievement_id>')
@@ -138,7 +174,12 @@ def achievements_get(achievement_id):
               "revealed_icon_url": "http://content.faforever.com/achievements/02081bb0-3b7a-4a36-99ef-5ae5d92d7146.png",
               "total_steps": null,
               "type": "STANDARD",
-              "unlocked_icon_url": "http://content.faforever.com/achievements/02081bb0-3b7a-4a36-99ef-5ae5d92d7146.png"
+              "unlocked_icon_url": "http://content.faforever.com/achievements/02081bb0-3b7a-4a36-99ef-5ae5d92d7146.png",
+              "unlockers_count": 416,
+              "unlockers_percent": 0.49,
+              "unlockers_min_duration": 1000,
+              "unlockers_avg_duration": 2000,
+              "unlockers_max_duration": 3000
             },
             "id": "02081bb0-3b7a-4a36-99ef-5ae5d92d7146",
             "type": "achievement"
@@ -521,19 +562,19 @@ def unlock_achievement(achievement_id, player_id):
 
         player_achievement = cursor.fetchone()
 
-        new_state = 'UNLOCKED'
         newly_unlocked = not player_achievement or player_achievement['state'] != 'UNLOCKED'
 
-        cursor.execute("""INSERT INTO player_achievements (player_id, achievement_id, state)
-                        VALUES
-                            (%(player_id)s, %(achievement_id)s, %(state)s)
-                        ON DUPLICATE KEY UPDATE
-                            state = VALUES(state)""",
-                       {
-                           'player_id': player_id,
-                           'achievement_id': achievement_id,
-                           'state': new_state,
-                       })
+        if newly_unlocked:
+            cursor.execute("""INSERT INTO player_achievements (player_id, achievement_id, state)
+                            VALUES
+                                (%(player_id)s, %(achievement_id)s, %(state)s)
+                            ON DUPLICATE KEY UPDATE
+                                state = VALUES(state)""",
+                           {
+                               'player_id': player_id,
+                               'achievement_id': achievement_id,
+                               'state': 'UNLOCKED',
+                           })
 
     return dict(newly_unlocked=newly_unlocked)
 
