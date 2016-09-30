@@ -12,7 +12,7 @@ services:
 before_install:
   - sudo apt-get update
   - sudo apt-get -y install liblua5.1-dev libffi-dev
-  - bash db/setup_db.sh
+  - pushd db && ./setup_db.sh && popd
   - cp config.example.py config.py
   - python -m pip install coveralls
 
