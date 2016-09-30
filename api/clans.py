@@ -17,6 +17,7 @@ SELECT_EXPRESSIONS = {
     'clan_tag': 'clan_tag',
     'clan_leader_id': 'clan_leader_id',
     'clan_founder_id': 'clan_founder_id',
+    'clan_tag_color': 'clan_tag_color',
     'clan_desc': 'clan_desc',
     'create_date': 'create_date',
     'leader_name': 'leader.login',
@@ -34,8 +35,8 @@ def clans():
 def clan_get(id):
     with db.connection.cursor(db.pymysql.cursors.DictCursor) as cursor:
         cursor.execute(
-            'SELECT clan_id, status, clan_name, clan_tag, clan_leader_id, clan_founder_id, clan_desc, create_date, '
-            + 'leader.login leader_name, founder.login founder_name, ' + COUNT_MEMBERS + ' clan_members '
+            'SELECT clan_id, status, clan_name, clan_tag, clan_leader_id, clan_founder_id, clan_tag_color, clan_desc, '
+            + 'create_date, leader.login leader_name, founder.login founder_name, ' + COUNT_MEMBERS + ' clan_members '
             + 'FROM ' + CLAN_LIST + 'WHERE clan_id = %s LIMIT 1', id)
         if cursor.rowcount == 1:
             clan_details = cursor.fetchall()
