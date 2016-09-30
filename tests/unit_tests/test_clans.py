@@ -9,7 +9,7 @@ def clans(request):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute("DELETE FROM clan_list")
-        cursor.execute("""INSERT INTO clan_list VALUES
+        cursor.execute("""INSERT INTO clan_list (clan_id, create_date, status, clan_name, clan_tag, clan_founder_id, clan_leader_id, clan_desc) VALUES
         (21,'2014-02-16 19:26:41',1,'FAF_Developer','DEV',447,447,'Developers, that try to improve FAF.'),
         (24,'2014-02-16 21:05:31',1,'Bad Company','BC',449,449,'This clan was founded by a player called Epic, who is sadly not active anymore. It is classified by its democratic system (new members need to pass a vote), and also a minimum rating of 1500 is required (exceptions under special circumstances are possible). Bad Company developed into a clan regularly hosting high class teamgames and consisting of high-level players. It won the clan tournament \"Intergalactic Colosseum 6\" ahead of any other participating clan. To join BC, you should pm any of our members.'),
         (25,'2014-02-16 21:05:46',1,'Obliterating Wave','O-W',450,450,NULL),
