@@ -337,14 +337,6 @@ def validate_map_info(map_info):
         raise ApiException(errors)
 
 
-def extract_preview(zip, member, target_folder, target_name):
-    with zip.open(member) as source:
-        target_path = os.path.join(target_folder, target_name)
-
-        with open(target_path, "wb") as target:
-            shutil.copyfileobj(source, target)
-
-
 def map_exists(display_name, version):
     with db.connection:
         cursor = db.connection.cursor()
