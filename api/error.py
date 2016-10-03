@@ -74,6 +74,42 @@ class ErrorCode(Enum):
         code=117,
         title='Invalid page number',
         detail='Page number is not valid: {0}')
+    MOD_NAME_MISSING = dict(
+        code=118,
+        title='Missing mod name',
+        detail='The file mod_info.lua must contain a property "name".')
+    MOD_UID_MISSING = dict(
+        code=119,
+        title='Missing mod UID',
+        detail='The file mod_info.lua must contain a property "uid".')
+    MOD_VERSION_MISSING = dict(
+        code=120,
+        title='Missing mod version',
+        detail='The file mod_info.lua must contain a property "version".')
+    MOD_DESCRIPTION_MISSING = dict(
+        code=121,
+        title='Missing mod description',
+        detail='The file mod_info.lua must contain a property "description".')
+    MOD_UI_ONLY_MISSING = dict(
+        code=122,
+        title='Missing mod type',
+        detail='The file mod_info.lua must contain a property "ui_only".')
+    MOD_NAME_TOO_LONG = dict(
+        code=123,
+        title='Invalid mod name',
+        detail='The mod name must not exceed {0} characters, was: {1}')
+    MOD_NOT_ORIGINAL_AUTHOR = dict(
+        code=124,
+        title='Permission denied',
+        detail='Only the original author is allowed to upload new versions of mod: {0}.')
+    MOD_VERSION_EXISTS = dict(
+        code=125,
+        title='Duplicate mod version',
+        detail='Mod "{0}" with version "{1}" already exists.')
+    MOD_AUTHOR_MISSING = dict(
+        code=126,
+        title='Missing mod author',
+        detail='The file mod_info.lua must contain a property "author".')
 
 
 class Error:

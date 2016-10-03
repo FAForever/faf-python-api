@@ -1,14 +1,20 @@
+import json
 import os
+import shutil
+import tempfile
 import urllib.parse
+from zipfile import ZipFile
 
 from faf.api import ModSchema
+from faf.tools.fa.mods import parse_mod_info, generate_thumbnail_file_name, generate_zip_file_name
 from flask import request
 from werkzeug.utils import secure_filename
 
-from api import app
+from api import app, oauth
 from api.error import ApiException, ErrorCode
 from api.error import Error
 from api.query_commons import fetch_data
+from faf import db
 
 ALLOWED_EXTENSIONS = ['zip']
 MAX_PAGE_SIZE = 1000
@@ -33,9 +39,10 @@ SELECT_EXPRESSIONS = {
 
 
 @app.route('/mods/upload', methods=['POST'])
+@oauth.require_oauth('upload_mod')
 def mods_upload():
     """
-    Creates a new mod in the system
+    Uploads a new mod into the system.
 
     **Example Request**:
 
@@ -58,14 +65,24 @@ def mods_upload():
 
     """
     file = request.files.get('file')
+    metadata_string = request.form.get('metadata')
+
     if not file:
         raise ApiException([Error(ErrorCode.UPLOAD_FILE_MISSING)])
+
+    if not metadata_string:
+        raise ApiException([Error(ErrorCode.UPLOAD_METADATA_MISSING)])
 
     if not file_allowed(file.filename):
         raise ApiException([Error(ErrorCode.UPLOAD_INVALID_FILE_EXTENSION, *ALLOWED_EXTENSIONS)])
 
-    filename = secure_filename(file.filename)
-    file.save(os.path.join(app.config['MOD_UPLOAD_PATH'], filename))
+    metadata = json.loads(metadata_string)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_mod_path = os.path.join(temp_dir, secure_filename(file.filename))
+        file.save(temp_mod_path)
+        process_uploaded_mod(temp_mod_path, metadata.get('is_ranked', False))
+
     return "ok"
 
 
@@ -180,3 +197,116 @@ def enricher(mod):
 def file_allowed(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+
+
+def process_uploaded_mod(temp_mod_path, is_ranked):
+    mod_info = parse_mod_info(temp_mod_path)
+    validate_mod_info(mod_info)
+
+    display_name = mod_info['name']
+    uid = mod_info['uid']
+    version = mod_info['version']
+    description = mod_info['description']
+    author = mod_info['author']
+    mod_type = 'UI' if mod_info['ui_only'] else 'SIM'
+
+    user_id = request.oauth.user.id
+    if not can_upload_mod(display_name, user_id):
+        raise ApiException([Error(ErrorCode.MOD_NOT_ORIGINAL_AUTHOR, display_name)])
+
+    if mod_exists(display_name, version):
+        raise ApiException([Error(ErrorCode.MOD_VERSION_EXISTS, display_name, version)])
+
+    zip_file_name = generate_zip_file_name(display_name, version)
+    target_mod_path = os.path.join(app.config['MOD_UPLOAD_PATH'], zip_file_name)
+    if os.path.isfile(target_mod_path):
+        raise ApiException([Error(ErrorCode.MOD_NAME_CONFLICT, zip_file_name)])
+
+    thumbnail_path = extract_thumbnail(temp_mod_path, mod_info)
+    shutil.move(temp_mod_path, target_mod_path)
+
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+
+        cursor.execute("""INSERT INTO `mod` (display_name, author, uploader)
+                        SELECT %(display_name)s, %(author)s, %(uploader)s
+                        WHERE NOT EXISTS (
+                            SELECT display_name FROM `mod`WHERE display_name = %(display_name)s
+                        ) LIMIT 1""",
+                       {
+                           'display_name': display_name,
+                           'author': author,
+                           'uploader': user_id
+                       })
+
+        cursor.execute("""INSERT INTO mod_version (
+                            uid, type, description, version, filename, icon, ranked, mod_id
+                        )
+                        VALUES (
+                            %(uid)s, %(type)s, %(description)s, %(version)s, %(filename)s, %(icon)s, %(ranked)s,
+                            (SELECT id FROM `mod`WHERE display_name = %(display_name)s)
+                        )""",
+                       {
+                           'uid': uid,
+                           'type': mod_type,
+                           'description': description,
+                           'version': version,
+                           'filename': 'mods/' + zip_file_name,
+                           'icon': os.path.basename(thumbnail_path) if thumbnail_path else None,
+                           'ranked': 1 if is_ranked else 0,
+                           'display_name': display_name,
+                       })
+
+
+def validate_mod_info(mod_info):
+    errors = []
+    name = mod_info.get('name')
+    if not name:
+        errors.append(Error(ErrorCode.MOD_NAME_MISSING))
+    if len(name) > 100:
+        raise ApiException([Error(ErrorCode.MOD_NAME_TOO_LONG, 100, len(name))])
+    if not mod_info.get('uid'):
+        errors.append(Error(ErrorCode.MOD_UID_MISSING))
+    if not mod_info.get('version'):
+        errors.append(Error(ErrorCode.MOD_VERSION_MISSING))
+    if not mod_info.get('description'):
+        errors.append(Error(ErrorCode.MOD_DESCRIPTION_MISSING))
+    if not mod_info.get('author'):
+        errors.append(Error(ErrorCode.MOD_DESCRIPTION_MISSING))
+    if 'ui_only' not in mod_info:
+        errors.append(Error(ErrorCode.MOD_UI_ONLY_MISSING))
+
+    if errors:
+        raise ApiException(errors)
+
+
+def extract_thumbnail(zip_file, mod_info):
+    if 'icon' not in mod_info:
+        return
+
+    with ZipFile(zip_file) as zip:
+        for member in zip.namelist():
+            if member.endswith(mod_info['icon']):
+                thumbnail_file_name = generate_thumbnail_file_name(mod_info['name'], mod_info['version'])
+                target_path = os.path.join(app.config['MOD_THUMBNAIL_PATH'], thumbnail_file_name)
+                with zip.open(member) as source, open(target_path, "wb") as target:
+                    shutil.copyfileobj(source, target)
+
+                return target_path
+
+
+def mod_exists(display_name, version):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute('''select count(*) from mod_version v join `mod` m on m.id = v.mod_id
+                          where m.display_name = %s and v.version = %s''', (display_name, version))
+
+        return cursor.fetchone()[0] > 0
+
+
+def can_upload_mod(name, user_id):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute('SELECT count(*) FROM `mod` WHERE display_name = %s AND uploader != %s', (name, user_id))
+
+        return cursor.fetchone()[0] == 0
