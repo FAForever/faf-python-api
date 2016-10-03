@@ -26,6 +26,10 @@ def mods(request):
         cursor.execute("DELETE FROM mod_version")
         cursor.execute("""DELETE FROM mod_stats""")
         cursor.execute("""DELETE FROM mod_version""")
+        cursor.execute("DELETE FROM login")
+        # TODO use common fixtures
+        cursor.execute("""insert into login (id, login, password, email)
+            values (1, 'User 1', '', 'user1@example.com')""")
         cursor.execute("""DELETE FROM `mod`""")
         cursor.execute("""insert into `mod` (id, display_name, author)
             VALUES (1, 'test-mod', 'baz'),
