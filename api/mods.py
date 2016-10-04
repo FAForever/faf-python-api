@@ -20,22 +20,24 @@ ALLOWED_EXTENSIONS = ['zip']
 MAX_PAGE_SIZE = 1000
 
 SELECT_EXPRESSIONS = {
-    'id': 'uid',
-    'name': 'name',
-    'description': 'description',
-    'version': 'version',
-    'author': 'author',
-    'is_ui': 'ui',
-    'create_time': 'date',
-    'downloads': 'downloads',
-    'likes': 'likes',
-    'times_played': 'played',
-    'is_ranked': 'ranked',
+    'id': 'v.uid',
+    'display_name': 'm.display_name',
+    'description': 'v.description',
+    'version': 'v.version',
+    'author': 'm.author',
+    'type': 'v.type',
+    'create_time': 'v.create_time',
+    'downloads': 's.downloads',
+    'likes': 's.likes',
+    'times_played': 's.times_played',
+    'is_ranked': 'v.ranked',
     # download_url will be URL encoded and made absolute in enrich_mod
-    'download_url': 'filename',
+    'download_url': 'v.filename',
     # thumbnail_url will be URL encoded and made absolute in enrich_mod
-    'thumbnail_url': 'icon'
+    'thumbnail_url': 'v.icon'
 }
+
+MODS_TABLE = '`mod` m JOIN mod_version v ON m.id = v.mod_id JOIN mod_stats s ON m.id = s.mod_id'
 
 
 @app.route('/mods/upload', methods=['POST'])
@@ -127,7 +129,7 @@ def mod(mod_uid):
 
 
     """
-    result = fetch_data(ModSchema(), 'table_mod', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+    result = fetch_data(ModSchema(), MODS_TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
                         where="`uid` = %s", args=mod_uid, many=False, enricher=enricher)
 
     if 'id' not in result['data']:
@@ -180,7 +182,8 @@ def mods():
 
 
     """
-    return fetch_data(ModSchema(), 'table_mod', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, enricher=enricher)
+    return fetch_data(ModSchema(), MODS_TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, enricher=enricher,
+                      where='v.hidden = 0')
 
 
 def enricher(mod):

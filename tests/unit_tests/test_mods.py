@@ -97,7 +97,7 @@ def test_mods(test_client, mods):
 
 
 def test_mods_fields(test_client, mods):
-    response = test_client.get('/mods?fields[mod]=name')
+    response = test_client.get('/mods?fields[mod]=display_name')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -108,13 +108,13 @@ def test_mods_fields(test_client, mods):
     assert len(result['data'][0]['attributes']) == 1
 
     for item in result['data']:
-        assert 'name' in item['attributes']
+        assert 'display_name' in item['attributes']
         assert 'version' not in item['attributes']
         assert 'author' not in item['attributes']
 
 
 def test_mods_fields_two(test_client, mods):
-    response = test_client.get('/mods?fields[mod]=name,author')
+    response = test_client.get('/mods?fields[mod]=display_name,author')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -125,7 +125,7 @@ def test_mods_fields_two(test_client, mods):
     assert len(result['data'][0]['attributes']) == 2
 
     for item in result['data']:
-        assert 'name' in item['attributes']
+        assert 'display_name' in item['attributes']
         assert 'author' in item['attributes']
         assert 'version' not in item['attributes']
 
@@ -183,7 +183,7 @@ def test_mods_page(test_client, mods):
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
     assert len(result['data']) == 1
-    assert result['data'][0]['attributes']['name'] == 'test-mod'
+    assert result['data'][0]['attributes']['display_name'] == 'test-mod'
 
 
 def test_mods_invalid_page(test_client, mods):
@@ -197,7 +197,7 @@ def test_mods_invalid_page(test_client, mods):
 
 
 def test_mods_download_url(test_client, mods):
-    response = test_client.get('/mods?sort=name')
+    response = test_client.get('/mods?sort=display_name')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -212,7 +212,7 @@ def test_mods_download_url(test_client, mods):
 
 
 def test_mods_thumbnail_url(test_client, mods):
-    response = test_client.get('/mods?sort=name')
+    response = test_client.get('/mods?sort=display_name')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
