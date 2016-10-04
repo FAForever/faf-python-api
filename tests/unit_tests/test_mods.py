@@ -90,7 +90,7 @@ def test_mods(test_client, mods):
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    assert len(result['data']) == 4
+    assert len(result['data']) == 3
 
     for item in result['data']:
         assert 'type' in item
@@ -104,7 +104,7 @@ def test_mods_fields(test_client, mods):
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    assert len(result['data']) == 4
+    assert len(result['data']) == 3
     assert len(result['data'][0]['attributes']) == 1
 
     for item in result['data']:
@@ -121,7 +121,7 @@ def test_mods_fields_two(test_client, mods):
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    assert len(result['data']) == 4
+    assert len(result['data']) == 3
     assert len(result['data'][0]['attributes']) == 2
 
     for item in result['data']:
@@ -183,7 +183,7 @@ def test_mods_page(test_client, mods):
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
     assert len(result['data']) == 1
-    assert result['data'][0]['attributes']['display_name'] == 'test-mod'
+    assert result['data'][0]['attributes']['display_name'] == 'test-mod2'
 
 
 def test_mods_invalid_page(test_client, mods):
@@ -206,9 +206,9 @@ def test_mods_download_url(test_client, mods):
     assert len(result['data']) > 0
 
     mod = result['data']
-    assert mod[0]['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/foobar.zip'
-    assert mod[1]['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/foobar2.zip'
-    assert mod[2]['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/foobar3.zip'
+    assert mod[0]['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/foobar2.zip'
+    assert mod[1]['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/foobar3.zip'
+    assert mod[2]['attributes']['download_url'] == 'http://content.faforever.com/faf/vault/foobar4.zip'
 
 
 def test_mods_thumbnail_url(test_client, mods):
@@ -221,9 +221,9 @@ def test_mods_thumbnail_url(test_client, mods):
     assert len(result['data']) > 0
 
     mod = result['data']
-    assert 'thumbnail_url' not in mod[0]['attributes']
-    assert mod[1]['attributes']['thumbnail_url'] == 'http://content.faforever.com/faf/vault/mods_thumbs/foobar.png'
-    assert mod[2]['attributes']['thumbnail_url'] == 'http://content.faforever.com/faf/vault/mods_thumbs/foobar3.png'
+    assert mod[0]['attributes']['thumbnail_url'] == 'http://content.faforever.com/faf/vault/mods_thumbs/foobar.png'
+    assert mod[1]['attributes']['thumbnail_url'] == 'http://content.faforever.com/faf/vault/mods_thumbs/foobar3.png'
+    assert mod[2]['attributes']['thumbnail_url'] == 'http://content.faforever.com/faf/vault/mods_thumbs/foobar4.png'
 
 
 def test_mods_sort_by_create_time(test_client, mods):
@@ -292,8 +292,7 @@ def test_mods_upload_no_file_results_400(oauth, app, tmpdir):
 
 
 def test_mods_upload_txt_results_400(oauth, app, tmpdir):
-    response = oauth.post('/mods/upload', data={'file': (BytesIO('1'.encode('utf-8')), 'mod_name.txt'),
-                                                'metadata': json.dumps(dict(is_ranked=True))})
+    response = oauth.post('/mods/upload', data={'file': (BytesIO('1'.encode('utf-8')), 'mod_name.txt')})
 
     assert response.status_code == 400
     result = json.loads(response.get_data(as_text=True))
@@ -301,27 +300,11 @@ def test_mods_upload_txt_results_400(oauth, app, tmpdir):
     assert result['errors'][0]['code'] == ErrorCode.UPLOAD_INVALID_FILE_EXTENSION.value['code']
 
 
-def test_mods_upload_is_metadata_missing(oauth, app, tmpdir):
-    upload_dir = tmpdir.mkdir("mod_upload")
-    app.config['MOD_UPLOAD_PATH'] = upload_dir.strpath
-    response = oauth.post('/mods/upload',
-                          data={'file': (BytesIO('my file contents'.encode('utf-8')), 'mod_name.zip')})
-
-    assert response.status_code == 400
-    assert response.content_type == 'application/vnd.api+json'
-
-    result = json.loads(response.get_data(as_text=True))
-    assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.UPLOAD_METADATA_MISSING.value['code']
-
-
-@pytest.mark.parametrize("ranked", [True, False])
-def test_mod_upload(oauth, ranked, mods, upload_dir, thumbnail_dir):
+def test_mod_upload(oauth, mods, upload_dir, thumbnail_dir):
     mod_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/No Friendly Fire.zip')
     with open(mod_zip, 'rb') as file:
         response = oauth.post('/mods/upload',
-                              data={'file': (file, os.path.basename(mod_zip)),
-                                    'metadata': json.dumps(dict(is_ranked=ranked))})
+                              data={'file': (file, os.path.basename(mod_zip))})
 
     assert response.status_code == 200
     assert 'ok' == response.get_data(as_text=True)
@@ -349,6 +332,6 @@ def test_mod_upload(oauth, ranked, mods, upload_dir, thumbnail_dir):
         assert result['version'] == 3
         assert result['filename'] == 'mods/no_friendly_fire.v0003.zip'
         assert result['icon'] == 'no_friendly_fire.v0003.png'
-        assert result['ranked'] == (1 if ranked else 0)
+        assert result['ranked'] == 0
         assert result['hidden'] == 0
         assert result['mod_id'] == mod_id

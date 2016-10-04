@@ -72,23 +72,17 @@ def mods_upload():
 
     """
     file = request.files.get('file')
-    metadata_string = request.form.get('metadata')
 
     if not file:
         raise ApiException([Error(ErrorCode.UPLOAD_FILE_MISSING)])
 
-    if not metadata_string:
-        raise ApiException([Error(ErrorCode.UPLOAD_METADATA_MISSING)])
-
     if not file_allowed(file.filename):
         raise ApiException([Error(ErrorCode.UPLOAD_INVALID_FILE_EXTENSION, *ALLOWED_EXTENSIONS)])
-
-    metadata = json.loads(metadata_string)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_mod_path = os.path.join(temp_dir, secure_filename(file.filename))
         file.save(temp_mod_path)
-        process_uploaded_mod(temp_mod_path, metadata.get('is_ranked', False))
+        process_uploaded_mod(temp_mod_path)
 
     return "ok"
 
@@ -122,9 +116,9 @@ def mod(mod_uid):
               "downloads": 93,
               "id": "DF8825E2-DDB0-11DC-90F3-3F9B55D89593",
               "is_ranked": false,
-              "is_ui": false,
+              "type": "UI",
               "likes": 1,
-              "name": "Terrain Deform for FA",
+              "display_name": "Terrain Deform for FA",
               "version": "1"
             },
             "id": "DF8825E2-DDB0-11DC-90F3-3F9B55D89593",
@@ -208,7 +202,7 @@ def file_allowed(filename):
            filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
 
 
-def process_uploaded_mod(temp_mod_path, is_ranked):
+def process_uploaded_mod(temp_mod_path):
     mod_info = parse_mod_info(temp_mod_path)
     validate_mod_info(mod_info)
 
@@ -249,10 +243,10 @@ def process_uploaded_mod(temp_mod_path, is_ranked):
                        })
 
         cursor.execute("""INSERT INTO mod_version (
-                            uid, type, description, version, filename, icon, ranked, mod_id
+                            uid, type, description, version, filename, icon, mod_id
                         )
                         VALUES (
-                            %(uid)s, %(type)s, %(description)s, %(version)s, %(filename)s, %(icon)s, %(ranked)s,
+                            %(uid)s, %(type)s, %(description)s, %(version)s, %(filename)s, %(icon)s,
                             (SELECT id FROM `mod`WHERE display_name = %(display_name)s)
                         )""",
                        {
@@ -262,7 +256,6 @@ def process_uploaded_mod(temp_mod_path, is_ranked):
                            'version': version,
                            'filename': 'mods/' + zip_file_name,
                            'icon': os.path.basename(thumbnail_path) if thumbnail_path else None,
-                           'ranked': 1 if is_ranked else 0,
                            'display_name': display_name,
                        })
 
