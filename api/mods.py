@@ -37,7 +37,12 @@ SELECT_EXPRESSIONS = {
     'thumbnail_url': 'v.icon'
 }
 
-MODS_TABLE = '`mod` m JOIN mod_version v ON m.id = v.mod_id JOIN mod_stats s ON m.id = s.mod_id'
+MODS_TABLE = '''`mod` m
+    JOIN mod_version v ON m.id = v.mod_id
+    JOIN mod_stats s ON m.id = s.mod_id
+    JOIN (SELECT mod_id, max(version) version FROM mod_version GROUP BY mod_id) newest_version
+        ON newest_version.mod_id = m.id AND newest_version.version = v.version
+'''
 
 
 @app.route('/mods/upload', methods=['POST'])
@@ -141,7 +146,7 @@ def mod(mod_uid):
 @app.route('/mods')
 def mods():
     """
-    Lists all mod definitions.
+    Lists the newest version of all non-hidden mods.
 
     **Example Request**:
 
@@ -168,9 +173,10 @@ def mods():
                 "downloads": 93,
                 "id": "DF8825E2-DDB0-11DC-90F3-3F9B55D89593",
                 "is_ranked": false,
-                "is_ui": false,
+                "type": "UI",
                 "likes": 1,
-                "name": "Terrain Deform for FA",
+                "times_played": 152,
+                "display_name": "Terrain Deform for FA",
                 "version": "1"
               },
               "id": "DF8825E2-DDB0-11DC-90F3-3F9B55D89593",
