@@ -74,6 +74,10 @@ class ErrorCode(Enum):
         code=117,
         title='Invalid page number',
         detail='Page number is not valid: {0}')
+    QUERY_INVALID_RATING_TYPE = dict(
+        code=118,
+        title='Invalid rating type',
+        detail='Rating type is not valid: {0}. Please pick 1v1 or global.')
 
 
 class Error:
