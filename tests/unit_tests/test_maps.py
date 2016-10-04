@@ -291,7 +291,7 @@ def test_map_upload(oauth, ranked, maps, upload_dir, preview_dir):
                               data={'file': (file, os.path.basename(map_zip)),
                                     'metadata': json.dumps(dict(is_ranked=ranked))})
 
-    assert response.status_code == 200, json.loads(response.get_data(as_text=True))['message']
+    assert response.status_code == 200
     assert 'ok' == response.get_data(as_text=True)
     assert os.path.isfile(upload_dir.join(os.path.basename('sludge_test.v0001.zip')).strpath)
     assert os.path.isfile(preview_dir.join('small', 'sludge_test.v0001.png').strpath)
