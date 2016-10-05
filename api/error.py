@@ -114,6 +114,10 @@ class ErrorCode(Enum):
         code=127,
         title='Invalid rating type',
         detail='Rating type is not valid: {0}. Please pick 1v1 or global.')
+    LOGIN_DENIED_BANNED = dict(
+        code=128,
+        title='Login denied',
+        detail='You are currently banned: {0}')
 
 
 class Error:

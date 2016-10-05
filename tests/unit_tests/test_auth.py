@@ -6,6 +6,7 @@ import unittest
 
 import faf.db as db
 import api
+from api.error import ErrorCode
 
 
 class OAuthTestCase(unittest.TestCase):
@@ -170,6 +171,22 @@ class OAuthTestCase(unittest.TestCase):
         # Expect login screen
         self.assertEqual(200, response.status_code)
         self.assertRegex(response.data.decode("utf-8"), ".*<title>Log-in</title>.*")
+
+    def test_login_banned(self):
+        with db.connection:
+            self.insert_user('User', '321')
+
+            db.connection.cursor().execute("""INSERT INTO lobby_ban
+            (idUser, reason) VALUES ((select id from login where login = 'User'), 'Banned for unit testing')""")
+
+        response = self.app.post('/login', data=dict(username='User', password='123', next=''))
+
+        # Expect login screen
+        self.assertEqual(400, response.status_code)
+        response = json.loads(response.data.decode("utf-8"))
+        self.assertEquals(response['errors'][0]['code'], ErrorCode.LOGIN_DENIED_BANNED.value['code'])
+        self.assertEquals(response['errors'][0]['title'], ErrorCode.LOGIN_DENIED_BANNED.value['title'])
+        self.assertEquals(response['errors'][0]['detail'], ErrorCode.LOGIN_DENIED_BANNED.value['detail'].format("Banned for unit testing"))
 
     def test_login_sha256_password(self):
         with db.connection:
