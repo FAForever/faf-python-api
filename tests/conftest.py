@@ -12,7 +12,7 @@ def app():
     importlib.reload(api.maps)
     importlib.reload(api.events)
     importlib.reload(api.achievements)
-    importlib.reload(api.rating)
+    importlib.reload(api.leaderboards)
     importlib.reload(api.clans)
     importlib.reload(api.coop)
 

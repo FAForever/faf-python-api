@@ -1,5 +1,5 @@
-from faf.api.ranked1v1_schema import Ranked1v1Schema
-from faf.api.ranked1v1_stats_schema import Ranked1v1StatsSchema
+from faf.api import LeaderboardSchema
+from faf.api import LeaderboardStatsSchema
 from flask import request
 from pymysql.cursors import DictCursor
 
@@ -25,8 +25,9 @@ SELECT_EXPRESSIONS = {
 TABLE1V1 = 'ladder1v1_rating r JOIN login l on r.id = l.id, (SELECT @rownum:=%(row_num)s) n'
 TABLEGLOBAL = 'global_rating r JOIN login l on r.id = l.id, (SELECT @rownum:=%(row_num)s) n'
 
-@app.route('/rating/<string:rating_type>')
-def rating_type(rating_type):
+
+@app.route('/leaderboards/<string:leaderboard_type>')
+def leaderboards_type(leaderboard_type):
     """
         Lists all ranked 1v1 or global players.
 
@@ -39,7 +40,7 @@ def rating_type(rating_type):
 
         .. sourcecode:: http
 
-           GET /rating/1v1 /rating/global
+           GET /leaderboards/1v1 /leaderboards/global
            Accept: application/vnd.api+json
 
         **Example Response**:
@@ -56,7 +57,6 @@ def rating_type(rating_type):
                   "attributes": {
                     "deviation": 48.4808,
                     "id": "781",
-                    "is_active": true,
                     "login": "Zock",
                     "mean": 2475.69,
                     "num_games": 1285,
@@ -71,14 +71,12 @@ def rating_type(rating_type):
               ]
             }
 
-        :param page[number]: The page number being requested (EX.: /rating/1v1?page[number]=2)
+        :param page[number]: The page number being requested (EX.: /leaderboards/1v1?page[number]=2)
         :type page[number]: int
-        :param page[size]: The total amount of players to grab by default (EX.: /rating/1v1?page[size]=10)
+        :param page[size]: The total amount of players to grab by default (EX.: /leaderboards/1v1?page[size]=10)
         :type page[size]: int
-        :param filter[isActive]: Whether or not to filter active players or not (true or false) (EX.: /rating/1v1?filter[is_active]=true)
-        :type filter[isActive]: boolean
-        :param rating_type: Finds players in the 1v1 or global rating
-        :type rating_type: 1v1 OR global
+        :param leaderboard_type: Finds players in the 1v1 or global rating
+        :type leaderboard_type: 1v1 OR global
         :status 200: No error
 
         """
@@ -93,19 +91,14 @@ def rating_type(rating_type):
 
     args = {'row_num': row_num}
 
-    where = ''
-    active_filter = request.values.get('filter[is_active]')
-    if active_filter:
-        where += 'is_active = ' + ('1' if active_filter.lower() == 'true' else '0') + ' AND r.numGames > 0'
+    rating = find_leaderboard_type(leaderboard_type, select)
 
-    rating = find_rating_type(rating_type, select)
-
-    return fetch_data(Ranked1v1Schema(), rating['table'], rating['select'], MAX_PAGE_SIZE, request, sort='-rating',
-                      args=args, where=where)
+    return fetch_data(LeaderboardSchema(), rating['table'], rating['select'], MAX_PAGE_SIZE, request, sort='-rating',
+                      args=args, where='is_active = 1 AND r.numGames > 0')
 
 
-@app.route('/rating/<string:rating_type>/<int:player_id>')
-def rating_type_get_player(rating_type, player_id):
+@app.route('/leaderboards/<string:leaderboard_type>/<int:player_id>')
+def leaderboards_type_get_player(leaderboard_type, player_id):
     """
         Gets a global or 1v1 player. Player must be active, played more than one ranked game, and must have statistics associated
         with he/she.
@@ -114,7 +107,7 @@ def rating_type_get_player(rating_type, player_id):
 
         .. sourcecode:: http
 
-           GET /rating/1v1/781 /rating/global/781
+           GET /leaderboards/1v1/781 /leaderboards/global/781
 
         **Example Response**:
 
@@ -129,7 +122,6 @@ def rating_type_get_player(rating_type, player_id):
                 "attributes": {
                   "deviation": 48.4808,
                   "id": "781",
-                  "is_active": true,
                   "login": "Zock",
                   "mean": 2475.69,
                   "num_games": 1285,
@@ -142,8 +134,8 @@ def rating_type_get_player(rating_type, player_id):
               }
             }
 
-        :param rating_type: Finds players in the 1v1 or global rating
-        :type rating_type: 1v1 OR global
+        :param leaderboard_type: Finds players in the 1v1 or global rating
+        :type leaderboard_type: 1v1 OR global
         :param player_id: Player ID
         :type player_id: int
 
@@ -155,7 +147,7 @@ def rating_type_get_player(rating_type, player_id):
 
     select = select_expressions
 
-    rating = find_rating_type(rating_type, select)
+    rating = find_leaderboard_type(leaderboard_type, select)
 
     select_expressions['ranking'] = """(SELECT count(*) FROM """ + rating['tableName'] + """
                                         WHERE ROUND(mean - 3 * deviation) >= ROUND(r.mean - 3 * r.deviation)
@@ -163,7 +155,7 @@ def rating_type_get_player(rating_type, player_id):
                                         AND numGames > 0)
                                         """
 
-    result = fetch_data(Ranked1v1Schema(), rating['table'], rating['select'], MAX_PAGE_SIZE, request,
+    result = fetch_data(LeaderboardSchema(), rating['table'], rating['select'], MAX_PAGE_SIZE, request,
                         many=False, where='r.id=%(id)s', args=dict(id=player_id, row_num=0))
 
     if 'id' not in result['data']:
@@ -172,7 +164,7 @@ def rating_type_get_player(rating_type, player_id):
     return result
 
 
-@app.route("/rating/<string:rating_type>/stats")
+@app.route("/leaderboards/<string:rating_type>/stats")
 def rating_stats(rating_type):
     """
     Gets all player stats sorted by rankings.
@@ -181,7 +173,7 @@ def rating_stats(rating_type):
 
     .. sourcecode:: http
 
-       GET /rating/1v1/stats /rating/global/stats
+       GET /leaderboards/1v1/stats /leaderboards/global/stats
 
     **Example Response**:
 
@@ -228,8 +220,8 @@ def rating_stats(rating_type):
                 "900": 140
               }
             },
-            "id": "/ranked1v1/stats",
-            "type": "ranked1v1_stats"
+            "id": "/leaderboards/1v1/stats",
+            "type": "leaderboard_stats"
           }
         }
 
@@ -237,7 +229,7 @@ def rating_stats(rating_type):
 
     """
 
-    rating = find_rating_type(rating_type)
+    rating = find_leaderboard_type(rating_type)
 
     with db.connection:
         cursor = db.connection.cursor(DictCursor)
@@ -248,7 +240,7 @@ def rating_stats(rating_type):
         FROM """ + rating['tableName'] + """
         WHERE `is_active` = 1
             AND mean BETWEEN 0 AND 3000
-            AND deviation <= 250
+            AND deviation <= 240
             AND numGames > 0
         GROUP BY `rating`
         ORDER BY CAST(`rating` as SIGNED) ASC;
@@ -256,15 +248,15 @@ def rating_stats(rating_type):
 
         result = cursor.fetchall()
 
-    data = dict(id='/rating/' + rating_type + '/stats', rating_distribution={})
+    data = dict(id='/leaderboards/' + rating_type + '/stats', rating_distribution={})
 
     for item in result:
         data['rating_distribution'][str(int(item['rating']))] = item['count']
 
-    return Ranked1v1StatsSchema().dump(data, many=False).data
+    return LeaderboardStatsSchema().dump(data, many=False).data
 
 
-def find_rating_type(rating_type, select=None):
+def find_leaderboard_type(rating_type, select=None):
     rating = {}
 
     if rating_type == '1v1':

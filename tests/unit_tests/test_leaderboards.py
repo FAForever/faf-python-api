@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from faf.api import Ranked1v1Schema
+from faf.api import LeaderboardSchema
 
 from api.error import ErrorCode
 from faf import db
@@ -42,23 +42,23 @@ def rating_ratings(request, app):
     request.addfinalizer(finalizer)
 
 
-def test_rating_1v1(test_client, rating_ratings):
-    response = test_client.get('/rating/1v1')
+def test_leaderboards_1v1(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/1v1')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert 'data' in result
-    assert len(result['data']) == 4
+    assert len(result['data']) == 3
 
     for item in result['data']:
         assert 'type' in item
 
 
-def test_rating_global(test_client, rating_ratings):
-    response = test_client.get('/rating/1v1/4')
-    schema = Ranked1v1Schema()
+def test_leaderboards_global(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/1v1/4')
+    schema = LeaderboardSchema()
 
     result, errors = schema.loads(response.data.decode('utf-8'))
 
@@ -69,8 +69,8 @@ def test_rating_global(test_client, rating_ratings):
     assert result['ranking'] == 1
 
 
-def test_rating_not_found(test_client, rating_ratings):
-    response = test_client.get('/rating/1v1/999')
+def test_leaderboards_not_found(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/1v1/999')
 
     assert response.status_code == 404
     assert response.content_type == 'application/vnd.api+json'
@@ -80,8 +80,8 @@ def test_rating_not_found(test_client, rating_ratings):
     assert 'errors' in data
 
 
-def test_rating_page_size(test_client, rating_ratings):
-    response = test_client.get('/rating/1v1?page[size]=1')
+def test_leaderboards_page_size(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/1v1?page[size]=1')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -91,8 +91,8 @@ def test_rating_page_size(test_client, rating_ratings):
     assert len(result['data']) == 1
 
 
-def test_rating_invalid_page_size(test_client, rating_ratings):
-    response = test_client.get('/rating/1v1?page[size]=5001')
+def test_leaderboards_invalid_page_size(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/1v1?page[size]=5001')
 
     result = json.loads(response.data.decode('utf-8'))
 
@@ -101,8 +101,8 @@ def test_rating_invalid_page_size(test_client, rating_ratings):
     assert result['errors'][0]['meta']['args'] == [5001]
 
 
-def test_rating_page(test_client, rating_ratings):
-    response = test_client.get('/rating/1v1?page[size]=1&page[number]=2')
+def test_leaderboards_page(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/1v1?page[size]=1&page[number]=2')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -114,8 +114,8 @@ def test_rating_page(test_client, rating_ratings):
     assert result['data'][0]['attributes']['ranking'] == 2
 
 
-def test_rating_invalid_page(test_client):
-    response = test_client.get('/rating/1v1?page[number]=-1')
+def test_leaderboards_invalid_page(test_client):
+    response = test_client.get('/leaderboards/1v1?page[number]=-1')
 
     result = json.loads(response.data.decode('utf-8'))
 
@@ -124,8 +124,8 @@ def test_rating_invalid_page(test_client):
     assert result['errors'][0]['meta']['args'] == [-1]
 
 
-def test_rating_sort_disallowed(test_client):
-    response = test_client.get('/rating/1v1?sort=mean')
+def test_leaderboards_sort_disallowed(test_client):
+    response = test_client.get('/leaderboards/1v1?sort=mean')
 
     result = json.loads(response.data.decode('utf-8'))
 
@@ -134,34 +134,8 @@ def test_rating_sort_disallowed(test_client):
     assert result['errors'][0]['meta']['args'] == ['mean']
 
 
-def test_rating_filter_active(test_client, rating_ratings):
-    response = test_client.get('/rating/1v1?filter[is_active]=true')
-
-    assert response.status_code == 200
-    assert response.content_type == 'application/vnd.api+json'
-
-    result = json.loads(response.data.decode('utf-8'))
-    assert 'data' in result
-    assert len(result['data']) == 3
-
-    for item in result['data']:
-        assert item['attributes']['is_active'] == True
-
-
-def test_rating_filter_inactive(test_client, rating_ratings):
-    response = test_client.get('/rating/1v1?filter[is_active]=false')
-
-    assert response.status_code == 200
-    assert response.content_type == 'application/vnd.api+json'
-
-    result = json.loads(response.data.decode('utf-8'))
-    assert 'data' in result
-    assert len(result['data']) == 1
-    assert result['data'][0]['attributes']['is_active'] == 0
-
-
-def test_rating_1v1_stats(test_client, rating_ratings):
-    response = test_client.get('/rating/1v1/stats')
+def test_leaderboards_1v1_stats(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/1v1/stats')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -170,8 +144,8 @@ def test_rating_1v1_stats(test_client, rating_ratings):
     assert result['data']['attributes']['rating_distribution'] == {'1200': 1, '1400': 2}
 
 
-def test_rating_global_stats(test_client, rating_ratings):
-    response = test_client.get('/rating/global/stats')
+def test_leaderboards_global_stats(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/global/stats')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -180,14 +154,14 @@ def test_rating_global_stats(test_client, rating_ratings):
     assert result['data']['attributes']['rating_distribution'] == {'1000': 1, '1600': 1}
 
 
-def test_rating_invalid(test_client, rating_ratings):
-    response = test_client.get('/rating/')
+def test_leaderboards_invalid(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/')
 
     assert response.status_code == 404
 
 
-def test_rating_get_player_invalid(test_client, rating_ratings):
-    response = test_client.get('/rating/lol/1')
+def test_leaderboards_get_player_invalid(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/lol/1')
 
     result = json.loads(response.data.decode('utf-8'))
 
@@ -197,10 +171,10 @@ def test_rating_get_player_invalid(test_client, rating_ratings):
     assert result['errors'][0]['meta']['args'] == ['lol']
 
 
-def test_rating_get_player_1v1(test_client, rating_ratings):
-    response = test_client.get('/rating/1v1/1')
+def test_leaderboards_get_player_1v1(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/1v1/1')
 
-    schema = Ranked1v1Schema()
+    schema = LeaderboardSchema()
 
     result, errors = schema.loads(response.data.decode('utf-8'))
 
@@ -211,10 +185,10 @@ def test_rating_get_player_1v1(test_client, rating_ratings):
     assert result['ranking'] == 1
 
 
-def test_rating_get_player_global(test_client, rating_ratings):
-    response = test_client.get('/rating/global/1')
+def test_leaderboards_get_player_global(test_client, rating_ratings):
+    response = test_client.get('/leaderboards/global/1')
 
-    schema = Ranked1v1Schema()
+    schema = LeaderboardSchema()
 
     result, errors = schema.loads(response.data.decode('utf-8'))
 
