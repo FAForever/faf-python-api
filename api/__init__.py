@@ -154,6 +154,6 @@ import api.slack
 import api.achievements
 import api.events
 import api.query_commons
-import api.ranked1v1
+import api.leaderboards
 import api.clans
 import api.coop
