@@ -335,3 +335,11 @@ def test_mod_upload(oauth, mods, upload_dir, thumbnail_dir):
         assert result['ranked'] == 0
         assert result['hidden'] == 0
         assert result['mod_id'] == mod_id
+
+        cursor.execute("SELECT likes, downloads, times_played "
+                       "FROM mod_stats WHERE mod_id = '%s'", mod_id)
+        result = cursor.fetchone()
+
+        assert result['likes'] == 0
+        assert result['downloads'] == 0
+        assert result['times_played'] == 0

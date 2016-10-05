@@ -27,9 +27,9 @@ SELECT_EXPRESSIONS = {
     'author': 'm.author',
     'type': 'v.type',
     'create_time': 'v.create_time',
-    'downloads': 's.downloads',
-    'likes': 's.likes',
-    'times_played': 's.times_played',
+    'downloads': 'COALESCE(s.downloads, 0)',
+    'likes': 'COALESCE(s.likes, 0)',
+    'times_played': 'COALESCE(s.times_played, 0)',
     'is_ranked': 'v.ranked',
     # download_url will be URL encoded and made absolute in enrich_mod
     'download_url': 'v.filename',
@@ -39,7 +39,7 @@ SELECT_EXPRESSIONS = {
 
 MODS_TABLE = '''`mod` m
     JOIN mod_version v ON m.id = v.mod_id
-    JOIN mod_stats s ON m.id = s.mod_id
+    LEFT JOIN mod_stats s ON m.id = s.mod_id
     JOIN (SELECT mod_id, max(version) version FROM mod_version GROUP BY mod_id) newest_version
         ON newest_version.mod_id = m.id AND newest_version.version = v.version
 '''
@@ -247,7 +247,7 @@ def process_uploaded_mod(temp_mod_path):
                         )
                         VALUES (
                             %(uid)s, %(type)s, %(description)s, %(version)s, %(filename)s, %(icon)s,
-                            (SELECT id FROM `mod`WHERE display_name = %(display_name)s)
+                            (SELECT id FROM `mod` WHERE display_name = %(display_name)s)
                         )""",
                        {
                            'uid': uid,
@@ -258,6 +258,9 @@ def process_uploaded_mod(temp_mod_path):
                            'icon': os.path.basename(thumbnail_path) if thumbnail_path else None,
                            'display_name': display_name,
                        })
+
+        cursor.execute("""INSERT INTO mod_stats (mod_id)
+                        VALUES ((SELECT id FROM `mod` WHERE display_name = %s))""", (display_name,))
 
 
 def validate_mod_info(mod_info):
