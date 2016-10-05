@@ -138,7 +138,7 @@ def maps():
                 "thumbnail_url_large": "http://content.faforever.com/faf/vault/map_previews/large/canis3v3.v0001.png",
                 "thumbnail_url_small": "http://content.faforever.com/faf/vault/map_previews/small/canis3v3.v0001.png",
                 "times_played": 1955,
-                "version": "1",
+                "version": 1,
                 "author": "Someone"
               },
               "id": 0,
@@ -202,7 +202,7 @@ def laddermaps():
                 "thumbnail_url_large": "http://content.faforever.com/faf/vault/map_previews/large/maps/canis3v3.v0001.zip",
                 "thumbnail_url_small": "http://content.faforever.com/faf/vault/map_previews/small/maps/canis3v3.v0001.zip",
                 "times_played": 1955,
-                "version": "1"
+                "version": 1
               },
               "id": 0,
               "type": "map"
