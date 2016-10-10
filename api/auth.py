@@ -12,7 +12,9 @@ import re
 import jwt
 from flask import redirect, url_for, render_template, abort, g
 from flask_jwt import JWTError
-from flask_login import login_user, current_user
+from flask_login import login_user
+
+from api.error import ErrorCode, Error
 from api.oauth_handlers import *
 from api import flask_jwt
 
@@ -22,6 +24,7 @@ def _urlsafe_b64decode(b64string: Union[str, bytes]):
         b64string = b64string.encode('utf-8')
     padded = b64string + b'=' * (4 - len(b64string) % 4)
     return base64.urlsafe_b64decode(padded)
+
 
 def require_login(function):
     @wraps(function)
@@ -91,6 +94,10 @@ def login(*args, **kwargs):
     username = request.form.get('username')
     # TODO implement salt as soon as available
     password = request.form.get('password')
+
+    is_banned, ban_reason = User.is_banned(username)
+    if is_banned:
+        raise ApiException([Error(ErrorCode.LOGIN_DENIED_BANNED, ban_reason)])
 
     user = User.get_by_username(username)
 

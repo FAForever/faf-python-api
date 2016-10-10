@@ -63,3 +63,23 @@ class User(UserMixin):
 
             user = cursor.fetchone()
             return User(**user) if user else None
+
+    @classmethod
+    def is_banned(cls, username):
+        """
+        Checks whether a user is banned.
+
+        :param str username: The username to check
+        :returns: (`True`, reason) if the user is currently banned, (`False`, `None`) otherwise
+
+        """
+        with db.connection:
+            cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+            # Need to use lowercase comparison until we change the collation in the db and prune dupes
+            cursor.execute("SELECT reason FROM lobby_ban b "
+                           "JOIN `login` l ON l.id = b.idUser "
+                           "WHERE LOWER(l.login) = %s AND b.expires_at > NOW()", username.lower())
+
+            result = cursor.fetchone()
+            reason = result['reason'] if result else None
+            return result is not None, reason

@@ -39,7 +39,7 @@ SELECT_EXPRESSIONS = {
     'thumbnail_url_small': "REPLACE(REPLACE(version.filename, '.zip', '.png'), 'maps/', '')",
     # thumbnail_url_large will be URL encoded and made absolute in enricher
     'thumbnail_url_large': "REPLACE(REPLACE(version.filename, '.zip', '.png'), 'maps/', '')",
-    'technical_name': "SUBSTRING(version.filename, LOCATE('/', version.filename)+1, LOCATE('.zip', version.filename)-6)",
+    'folder_name': "SUBSTRING(version.filename, LOCATE('/', version.filename)+1, LOCATE('.zip', version.filename)-6)",
     'downloads': 'COALESCE(features.downloads, 0)',
     'num_draws': 'COALESCE(features.num_draws, 0)',
     'rating': 'features.rating',
@@ -134,11 +134,11 @@ def maps():
                 "max_players": 6,
                 "num_draws": 0,
                 "rating": 2.94119,
-                "technical_name": "canis3v3.v0001",
+                "folder_name": "canis3v3.v0001",
                 "thumbnail_url_large": "http://content.faforever.com/faf/vault/map_previews/large/canis3v3.v0001.png",
                 "thumbnail_url_small": "http://content.faforever.com/faf/vault/map_previews/small/canis3v3.v0001.png",
                 "times_played": 1955,
-                "version": "1",
+                "version": 1,
                 "author": "Someone"
               },
               "id": 0,
@@ -154,7 +154,7 @@ def maps():
     args = None
     many = True
 
-    filename_filter = request.values.get('filter[technical_name]')
+    filename_filter = request.values.get('filter[folder_name]')
     if filename_filter:
         where = ' filename = %s'
         args = 'maps/' + filename_filter + '.zip'
@@ -198,11 +198,11 @@ def laddermaps():
                 "max_players": 6,
                 "num_draws": 0,
                 "rating": 2.94119,
-                "technical_name": "canis3v3.v0001",
+                "folder_name": "canis3v3.v0001",
                 "thumbnail_url_large": "http://content.faforever.com/faf/vault/map_previews/large/maps/canis3v3.v0001.zip",
                 "thumbnail_url_small": "http://content.faforever.com/faf/vault/map_previews/small/maps/canis3v3.v0001.zip",
                 "times_played": 1955,
-                "version": "1"
+                "version": 1
               },
               "id": 0,
               "type": "map"
@@ -335,14 +335,6 @@ def validate_map_info(map_info):
 
     if errors:
         raise ApiException(errors)
-
-
-def extract_preview(zip, member, target_folder, target_name):
-    with zip.open(member) as source:
-        target_path = os.path.join(target_folder, target_name)
-
-        with open(target_path, "wb") as target:
-            shutil.copyfileobj(source, target)
 
 
 def map_exists(display_name, version):

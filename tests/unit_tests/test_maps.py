@@ -265,7 +265,7 @@ def test_maps_upload_txt_results_400(oauth, app, tmpdir):
 
 
 def test_map_by_name(test_client, app, maps):
-    response = test_client.get('/maps?filter%5Btechnical_name%5D=scmp_002.v0001')
+    response = test_client.get('/maps?filter%5Bfolder_name%5D=scmp_002.v0001')
 
     assert response.status_code == 200
     assert response.content_type == 'application/vnd.api+json'
@@ -291,7 +291,7 @@ def test_map_upload(oauth, ranked, maps, upload_dir, preview_dir):
                               data={'file': (file, os.path.basename(map_zip)),
                                     'metadata': json.dumps(dict(is_ranked=ranked))})
 
-    assert response.status_code == 200, json.loads(response.get_data(as_text=True))['message']
+    assert response.status_code == 200
     assert 'ok' == response.get_data(as_text=True)
     assert os.path.isfile(upload_dir.join(os.path.basename('sludge_test.v0001.zip')).strpath)
     assert os.path.isfile(preview_dir.join('small', 'sludge_test.v0001.png').strpath)

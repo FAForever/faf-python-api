@@ -20,7 +20,8 @@ REPO_PATHS = {
 }
 
 GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'
-MOD_UPLOAD_PATH = '/mods'
+MOD_UPLOAD_PATH = '/content/faf/vault/mods'
+MOD_THUMBNAIL_PATH = '/content/faf/vault/mods_thumbs'
 MAP_UPLOAD_PATH = '/content/faf/vault/maps'
 MAP_PREVIEW_PATH = '/content/faf/vault/map_previews'
 CONTENT_URL = 'http://content.faforever.com'
