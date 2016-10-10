@@ -40,10 +40,10 @@ def mods(request):
                     (1, 'bar', 2, '', 'SIM', 'foobar2.zip', 'foobar.png'),
                     (2, 'baz', 1, '', 'UI', 'foobar3.zip', 'foobar3.png'),
                     (3, 'EA040F8E-857A-4566-9879-0D37420A5B9D', 1, '', 'SIM', 'foobar4.zip', 'foobar4.png')""")
-        cursor.execute("""insert into mod_stats (mod_id, times_played, likes) VALUES
-                    (1, 0, 3),
-                    (2, 0, 4),
-                    (3, 1, 5)""")
+        cursor.execute("""insert into mod_stats (mod_id, times_played, likes, likers) VALUES
+                    (1, 0, 3, ''),
+                    (2, 0, 4, ''),
+                    (3, 1, 5, '')""")
 
 
 @pytest.fixture

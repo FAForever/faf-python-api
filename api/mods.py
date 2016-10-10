@@ -259,8 +259,8 @@ def process_uploaded_mod(temp_mod_path):
                            'display_name': display_name,
                        })
 
-        cursor.execute("""INSERT INTO mod_stats (mod_id)
-                        VALUES ((SELECT id FROM `mod` WHERE display_name = %s))""", (display_name,))
+        cursor.execute("""INSERT INTO mod_stats (mod_id, likers)
+                        SELECT id, '' FROM `mod` WHERE display_name = %s""", (display_name,))
 
 
 def validate_mod_info(mod_info):
