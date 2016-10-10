@@ -288,7 +288,7 @@ def process_uploaded_map(temp_map_path, is_ranked):
         cursor.execute("""INSERT INTO map (display_name, map_type, battle_type, author)
                         SELECT %(display_name)s, %(map_type)s, %(battle_type)s, %(author)s
                         WHERE NOT EXISTS (
-                            SELECT display_name FROM map WHERE display_name = %(display_name)s
+                            SELECT display_name FROM map WHERE lower(display_name) = lower(%(display_name)s)
                         ) LIMIT 1""",
                        {
                            'display_name': display_name,
@@ -303,7 +303,7 @@ def process_uploaded_map(temp_map_path, is_ranked):
                         VALUES (
                             %(description)s, %(max_players)s, %(width)s, %(height)s, %(version)s, %(filename)s,
                             %(ranked)s,
-                            (SELECT id FROM map WHERE display_name = %(display_name)s)
+                            (SELECT id FROM map WHERE lower(display_name) = lower(%(display_name)s))
                         )""",
                        {
                            'description': description,
@@ -341,7 +341,7 @@ def map_exists(display_name, version):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute('''select count(*) from map_version v join map m on m.id = v.map_id
-                          where m.display_name = %s and v.version = %s''', (display_name, version))
+                          where lower(m.display_name) = lower(%s) and v.version = %s''', (display_name, version))
 
         return cursor.fetchone()[0] > 0
 
@@ -349,6 +349,6 @@ def map_exists(display_name, version):
 def can_upload_map(name, user_id):
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute('SELECT count(*) FROM map WHERE display_name = %s AND author != %s', (name, user_id))
+        cursor.execute('SELECT count(*) FROM map WHERE lower(display_name) = lower(%s) AND author != %s', (name, user_id))
 
         return cursor.fetchone()[0] == 0
