@@ -317,7 +317,7 @@ def test_upload_existing_mod(oauth, mods, upload_dir, thumbnail_dir):
     assert result['errors'][0]['meta']['args'] == ['No Friendly Fire', 3]
 
 
-def test_mod_name_conflict(oauth, upload_dir):
+def test_mod_name_conflict(oauth, mods, upload_dir):
     Path(upload_dir.strpath, 'no_friendly_fire.v0003.zip').touch()
 
     map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/No Friendly Fire.zip')
