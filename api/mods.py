@@ -234,7 +234,7 @@ def process_uploaded_mod(temp_mod_path):
         cursor.execute("""INSERT INTO `mod` (display_name, author, uploader)
                         SELECT %(display_name)s, %(author)s, %(uploader)s
                         WHERE NOT EXISTS (
-                            SELECT display_name FROM `mod`WHERE display_name = %(display_name)s
+                            SELECT display_name FROM `mod`WHERE lower(display_name) = lower(%(display_name)s)
                         ) LIMIT 1""",
                        {
                            'display_name': display_name,
@@ -247,7 +247,7 @@ def process_uploaded_mod(temp_mod_path):
                         )
                         VALUES (
                             %(uid)s, %(type)s, %(description)s, %(version)s, %(filename)s, %(icon)s,
-                            (SELECT id FROM `mod` WHERE display_name = %(display_name)s)
+                            (SELECT id FROM `mod` WHERE lower(display_name) = lower(%(display_name)s))
                         )""",
                        {
                            'uid': uid,
@@ -259,8 +259,9 @@ def process_uploaded_mod(temp_mod_path):
                            'display_name': display_name,
                        })
 
-        cursor.execute("""INSERT INTO mod_stats (mod_id)
-                        VALUES ((SELECT id FROM `mod` WHERE display_name = %s))""", (display_name,))
+        cursor.execute("""INSERT INTO mod_stats (mod_id, likers)
+                        SELECT id, '' FROM `mod` WHERE lower(display_name) = lower(%s)
+                        AND NOT EXISTS (SELECT mod_id FROM mod_stats WHERE mod_id = id)""", (display_name,))
 
 
 def validate_mod_info(mod_info):
@@ -304,7 +305,7 @@ def mod_exists(display_name, version):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute('''select count(*) from mod_version v join `mod` m on m.id = v.mod_id
-                          where m.display_name = %s and v.version = %s''', (display_name, version))
+                          where lower(m.display_name) = lower(%s) and v.version = %s''', (display_name, version))
 
         return cursor.fetchone()[0] > 0
 
@@ -312,6 +313,6 @@ def mod_exists(display_name, version):
 def can_upload_mod(name, user_id):
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute('SELECT count(*) FROM `mod` WHERE display_name = %s AND uploader != %s', (name, user_id))
+        cursor.execute('SELECT count(*) FROM `mod` WHERE lower(display_name) = lower(%s) AND uploader != %s', (name, user_id))
 
         return cursor.fetchone()[0] == 0
