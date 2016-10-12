@@ -122,6 +122,30 @@ class ErrorCode(Enum):
         code=129,
         title='Name clash',
         detail='Another mod with file name "{0}" already exists.')
+    REGISTRATION_INVALID_EMAIL = dict(
+        code=129,
+        title='Registration failed',
+        detail='The entered email-adress is invalid: {0}')
+    REGISTRATION_INVALID_USERNAME = dict(
+        code=130,
+        title='Registration failed',
+        detail='The entered username is invalid: {0}')
+    REGISTRATION_USERNAME_TAKEN = dict(
+        code=131,
+        title='Registration failed',
+        detail='The entered username is already in use: {0}')
+    REGISTRATION_EMAIL_REGISTERED = dict(
+        code=132,
+        title='Registration failed',
+        detail='The entered email address `{0}` already has an associated account. Please request a new password instead.')
+    REGISTRATION_BLACKLISTED_EMAIL = dict(
+        code=133,
+        title='Registration failed',
+        detail='The domain of your email is blacklisted: {0}')
+    REGISTRATION_INVALID_TOKEN = dict(
+        code=134,
+        title='Invalid operation',
+        detail='The delivered token is invalid.')
 
 
 class Error:
