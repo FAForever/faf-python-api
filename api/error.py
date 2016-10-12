@@ -118,6 +118,10 @@ class ErrorCode(Enum):
         code=128,
         title='Login denied',
         detail='You are currently banned: {0}')
+    MOD_NAME_CONFLICT = dict(
+        code=129,
+        title='Name clash',
+        detail='Another mod with file name "{0}" already exists.')
 
 
 class Error:

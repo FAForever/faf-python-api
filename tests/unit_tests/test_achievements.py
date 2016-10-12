@@ -37,6 +37,7 @@ class AchievementsTestCase(unittest.TestCase):
 
         with db.connection:
             cursor = db.connection.cursor()
+            cursor.execute('delete from avatars')
             cursor.execute('delete from login')
             cursor.execute('delete from player_achievements')
             # TODO use common fixtures
@@ -292,7 +293,7 @@ class AchievementsTestCase(unittest.TestCase):
         response = self.app.post('/achievements/50260d04-90ff-45c8-816b-4ad8d7b97ecd/unlock', data=dict(player_id=1))
         self.assertEqual(200, response.status_code)
 
-        response = self.app.get('/players/1/achievements?sort=create_time')
+        response = self.app.get('/players/1/achievements?sort=-id')
         self.assertEqual(200, response.status_code)
         result, errors = PlayerAchievementSchema().loads(response.get_data(as_text=True), many=True)
 

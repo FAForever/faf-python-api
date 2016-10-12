@@ -9,6 +9,7 @@ import marshmallow
 import pytest
 import sys
 
+from pathlib import Path
 from pymysql.cursors import DictCursor
 
 import api
@@ -40,10 +41,10 @@ def mods(request):
                     (1, 'bar', 2, '', 'SIM', 'foobar2.zip', 'foobar.png'),
                     (2, 'baz', 1, '', 'UI', 'foobar3.zip', 'foobar3.png'),
                     (3, 'EA040F8E-857A-4566-9879-0D37420A5B9D', 1, '', 'SIM', 'foobar4.zip', 'foobar4.png')""")
-        cursor.execute("""insert into mod_stats (mod_id, times_played, likes) VALUES
-                    (1, 0, 3),
-                    (2, 0, 4),
-                    (3, 1, 5)""")
+        cursor.execute("""insert into mod_stats (mod_id, times_played, likes, likers) VALUES
+                    (1, 0, 3, ''),
+                    (2, 0, 4, ''),
+                    (3, 1, 5, '')""")
 
 
 @pytest.fixture
@@ -298,6 +299,36 @@ def test_mods_upload_txt_results_400(oauth, app, tmpdir):
     result = json.loads(response.get_data(as_text=True))
     assert len(result['errors']) == 1
     assert result['errors'][0]['code'] == ErrorCode.UPLOAD_INVALID_FILE_EXTENSION.value['code']
+
+
+def test_upload_existing_mod(oauth, mods, upload_dir, thumbnail_dir):
+    map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/No Friendly Fire.zip')
+    with open(map_zip, 'rb') as file:
+        oauth.post('/mods/upload',
+                   data={'file': (file, os.path.basename(map_zip))})
+
+    with open(map_zip, 'rb') as file:
+        response = oauth.post('/mods/upload', data={'file': (file, os.path.basename(map_zip))})
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    assert response.status_code == 400
+    assert result['errors'][0]['code'] == ErrorCode.MOD_VERSION_EXISTS.value['code']
+    assert result['errors'][0]['meta']['args'] == ['No Friendly Fire', 3]
+
+
+def test_mod_name_conflict(oauth, mods, upload_dir):
+    Path(upload_dir.strpath, 'no_friendly_fire.v0003.zip').touch()
+
+    map_zip = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../data/No Friendly Fire.zip')
+    with open(map_zip, 'rb') as file:
+        response = oauth.post('/mods/upload', data={'file': (file, os.path.basename(map_zip))})
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    assert response.status_code == 400
+    assert result['errors'][0]['code'] == ErrorCode.MOD_NAME_CONFLICT.value['code']
+    assert result['errors'][0]['meta']['args'] == ['no_friendly_fire.v0003.zip']
 
 
 def test_mod_upload(oauth, mods, upload_dir, thumbnail_dir):
