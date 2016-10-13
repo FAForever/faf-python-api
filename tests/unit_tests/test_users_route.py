@@ -134,3 +134,26 @@ def test_validate_account_email_blacklisted(test_client, setup_users):
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
     assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_BLACKLISTED_EMAIL.value['code']
+
+
+def test_validate_account_success(test_client, setup_users):
+    response = test_client.get('/users/validate_account/' + create_token('alpha', 'a@faforever.com', '0000', 0))
+
+    assert response.status_code == 200
+
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+        cursor.execute("SELECT * FROM login WHERE login = 'alpha'")
+
+        result = cursor.fetchone()
+        user_id = result['id']
+
+        assert result['login'] == 'alpha'
+        assert result['email'] == 'a@faforever.com'
+        assert result['password'] == '0000'
+
+        cursor.execute("SELECT * FROM global_rating WHERE id = %s" % user_id)
+        assert cursor.fetchone() is not None
+
+        cursor.execute("SELECT * FROM ladder1v1_rating WHERE id = %s" % user_id)
+        assert cursor.fetchone() is not None
