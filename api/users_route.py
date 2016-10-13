@@ -12,6 +12,12 @@ from api.error import ApiException, Error, ErrorCode
 from config import CRYPTO_KEY
 
 
+def create_token(name: str, email: str, pw_hash: str, expiry: int) -> str:
+    plaintext = name + "," + email + "," + pw_hash + "," + str(expiry)
+    request_hmac = Fernet(CRYPTO_KEY).encrypt(plaintext.encode())
+    return base64.urlsafe_b64encode(request_hmac).decode("utf-8")
+
+
 @app.route('/users/create_account', methods=['POST'])
 def create_account():
     """
@@ -46,12 +52,10 @@ def create_account():
     validate_registration_input(name, email)  # raises exception if not valid
 
     expiry = str(time.time() + 3600 * 24 * 14)
-    plaintext = name+","+email+","+pw_hash+","+expiry
-    request_hmac = Fernet(CRYPTO_KEY).encrypt(plaintext.encode())
-    token = base64.urlsafe_b64encode(request_hmac)
+    token = create_token(name, email, pw_hash, expiry)
 
     #send email with link to activation url
-    print(token.decode("utf-8"))
+    print(token)
 
     return "ok"
 
@@ -68,6 +72,8 @@ def validate_account(token=None):
 
     name, email, pw_hash, expiry = plaintext.split(',')
     validate_registration_input(name, email)  # raises exception if not valid
+
+    # TODO: Check whether token is expired
 
     with db.connection:
         cursor = db.connection.cursor()

@@ -4,6 +4,7 @@ import pytest
 from faf import db
 
 from api.error import ErrorCode
+from api.users_route import create_token
 
 
 @pytest.fixture
@@ -28,6 +29,7 @@ def setup_users(request, app):
             cursor.execute("TRUNCATE TABLE global_rating")
 
     request.addfinalizer(finalizer)
+
 
 
 def test_create_account_invalid_email(test_client, setup_users):
@@ -81,6 +83,50 @@ def test_create_account_email_taken(test_client, setup_users):
 def test_create_account_email_blacklisted(test_client, setup_users):
     response = test_client.post('/users/create_account',
                                 data={'name': 'alpha', 'email': 'a@ZZZ.com', 'pw_hash': '0000'})
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_BLACKLISTED_EMAIL.value['code']
+
+
+def test_validate_account_invalid_email(test_client, setup_users):
+    response = test_client.get('/users/validate_account/' + create_token('a', 'abbb.cc', '0000', 0))
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_INVALID_EMAIL.value['code']
+
+
+def test_validate_account_username_taken(test_client, setup_users):
+    response = test_client.get('/users/validate_account/' + create_token('A', 'a@bbb.cc', '0000', 0))
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_USERNAME_TAKEN.value['code']
+
+
+def test_validate_account_email_taken(test_client, setup_users):
+    response = test_client.get('/users/validate_account/' + create_token('abc', 'a@AA.aa', '0000', 0))
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_EMAIL_REGISTERED.value['code']
+
+
+def test_validate_account_email_blacklisted(test_client, setup_users):
+    response = test_client.get('/users/validate_account/' + create_token('alpha', 'a@ZZZ.com', '0000', 0))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
