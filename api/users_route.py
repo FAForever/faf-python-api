@@ -1,13 +1,16 @@
-from config import CRYPTO_KEY
+import base64
+import marisa_trie
 import re
 import time
-import marisa_trie
+
 import faf.db as db
-from api import app
-from flask import request
-from api.error import ApiException, Error, ErrorCode
-import base64
 from cryptography.fernet import Fernet
+from flask import request
+
+from api import app
+from api.error import ApiException, Error, ErrorCode
+from config import CRYPTO_KEY
+
 
 @app.route('/users/create_account', methods=['POST'])
 def create_account():
@@ -109,7 +112,7 @@ def validate_registration_input(login: str, user_email: str)-> bool:
         raise ApiException([Error(ErrorCode.REGISTRATION_INVALID_USERNAME, login)])
 
     with db.connection:
-        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+        cursor = db.connection.cursor()
 
         #ensure that username is unique
         cursor.execute("SELECT id FROM `login` WHERE LOWER(`login`) = %s",
@@ -127,13 +130,14 @@ def validate_registration_input(login: str, user_email: str)-> bool:
 
 
         # checkBlacklisted email domains (we don't like disposable email)
-        cursor.execute("SELECT domain FROM email_domain_blacklist")
+        cursor.execute("SELECT lower(domain) FROM email_domain_blacklist")
         rows = cursor.fetchall()
-        # Get list of reversed blacklisted domains (so we can (pre)suffix-match incoming emails
+        # Get list of  blacklisted domains (so we can suffix-match incoming emails
         # in sublinear time)
-        blacklisted_email_domains = marisa_trie.Trie(map(lambda x: x[0][::-1], rows))
+        blacklisted_email_domains = marisa_trie.Trie(map(lambda x: x[0], rows))
 
-        if len(blacklisted_email_domains.keys(user_email[::-1])) != 0:
+        domain = user_email.split("@")[1].lower()
+        if domain in blacklisted_email_domains:
             raise ApiException([Error(ErrorCode.REGISTRATION_BLACKLISTED_EMAIL, user_email)])
 
     return True
