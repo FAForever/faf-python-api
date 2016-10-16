@@ -146,7 +146,10 @@ class ErrorCode(Enum):
         code=134,
         title='Invalid operation',
         detail='The delivered token is invalid.')
-
+    REGISTRATION_TOKEN_EXPIRED = dict(
+        code=134,
+        title='Invalid operation',
+        detail='The delivered token has expired.')
 
 class Error:
     def __init__(self, code: ErrorCode, *args):

@@ -73,7 +73,8 @@ def validate_account(token=None):
     name, email, pw_hash, expiry = plaintext.split(',')
     validate_registration_input(name, email)  # raises exception if not valid
 
-    # TODO: Check whether token is expired
+    if (float(expiry) < time.time()):
+        raise ApiException([Error(ErrorCode.REGISTRATION_TOKEN_EXPIRED)])
 
     with db.connection:
         cursor = db.connection.cursor()

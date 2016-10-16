@@ -1,4 +1,5 @@
 import json
+import time
 
 import pytest
 from faf import db
@@ -137,7 +138,8 @@ def test_validate_account_email_blacklisted(test_client, setup_users):
 
 
 def test_validate_account_success(test_client, setup_users):
-    response = test_client.get('/users/validate_account/' + create_token('alpha', 'a@faforever.com', '0000', 0))
+    response = test_client.get(
+        '/users/validate_account/' + create_token('alpha', 'a@faforever.com', '0000', time.time() + 60))
 
     assert response.status_code == 200
 
@@ -157,3 +159,15 @@ def test_validate_account_success(test_client, setup_users):
 
         cursor.execute("SELECT * FROM ladder1v1_rating WHERE id = %s" % user_id)
         assert cursor.fetchone() is not None
+
+
+def test_validate_token_expired(test_client, setup_users):
+    response = test_client.get(
+        '/users/validate_account/' + create_token('alpha', 'a@faforever.com', '0000', time.time() - 60))
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_TOKEN_EXPIRED.value['code']
