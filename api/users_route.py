@@ -1,16 +1,24 @@
 import base64
+import datetime
+import email
+import json
+import logging
 import marisa_trie
 import re
 import time
+from email.mime.text import MIMEText
 
 import faf.db as db
+import requests
 from cryptography.fernet import Fernet
 from flask import request
 
+import config
 from api import app
 from api.error import ApiException, Error, ErrorCode
 from config import CRYPTO_KEY
 
+logger = logging.getLogger(__name__)
 
 def create_token(name: str, email: str, pw_hash: str, expiry: int) -> str:
     plaintext = name + "," + email + "," + pw_hash + "," + str(expiry)
@@ -51,11 +59,30 @@ def create_account():
 
     validate_registration_input(name, email)  # raises exception if not valid
 
-    expiry = str(time.time() + 3600 * 24 * 14)
-    token = create_token(name, email, pw_hash, expiry)
+    expiry = time.time() + 3600 * 24 * 14
+    token = create_token(name, email, pw_hash, str(expiry))
 
     #send email with link to activation url
-    print(token)
+    logger.info(
+        "User {} has registrated with email address {} -- Token expires at {:%Y-%m-%d %H:%M}".format(name, email,
+                                                                                                     datetime.datetime.fromtimestamp(
+                                                                                                         expiry)))
+
+    passwordLink = "http://" + config.HOST_NAME + "/users/validate_account/" + token
+
+    if (config.ENVIRONMENT == "testing"):
+        print(passwordLink)
+    else:
+        text = "Dear " + name + ",\n\n\
+        welcome to the Forged Alliance Forever community.\
+        Please visit the following link to activate your FAF account:\n\
+        -----------------------\n\
+        " + passwordLink + "\n\
+        -----------------------\n\n\
+        Thanks,\n\
+        -- The FA Forever team"
+
+        send_email(text, name, email, 'Forged Alliance Forever - Account validation')
 
     return "ok"
 
@@ -74,6 +101,7 @@ def validate_account(token=None):
     validate_registration_input(name, email)  # raises exception if not valid
 
     if (float(expiry) < time.time()):
+        logger.error("Registration of user {} with email address {} failed (token expired)".format(name, email))
         raise ApiException([Error(ErrorCode.REGISTRATION_TOKEN_EXPIRED)])
 
     with db.connection:
@@ -148,3 +176,29 @@ def validate_registration_input(login: str, user_email: str)-> bool:
             raise ApiException([Error(ErrorCode.REGISTRATION_BLACKLISTED_EMAIL, user_email)])
 
     return True
+
+
+def send_email(text, to_name, to_email, subject):
+    msg = MIMEText(text)
+
+    msg['Subject'] = subject
+    msg['From'] = email.utils.formataddr(('Forged Alliance Forever', "admin@faforever.com"))
+    msg['To'] = email.utils.formataddr((to_name, to_email))
+
+    logger.debug("Sending mail to " + to_email)
+    url = config.MANDRILL_API_URL + "/messages/send-raw.json"
+    headers = {'content-type': 'application/json'}
+    resp = requests.post(url,
+                         data=json.dumps({
+                             "key": config.MANDRILL_API_KEY,
+                             "raw_message": msg.as_string(),
+                             "from_email": 'admin@faforever.com',
+                             "from_name": "Forged Alliance Forever",
+                             "to": [
+                                 to_email
+                             ],
+                             "async": False
+                         }),
+                         headers=headers)
+    print(json.dumps(resp.text))
+    logger.debug("Mandrill response: %s", json.dumps(resp.text))
