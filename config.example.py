@@ -34,7 +34,11 @@ GITHUB_TOKEN = 'some-token'
 AUTO_DEPLOY = ['patchnotes']
 
 FLASK_LOGIN_SECRET_KEY = os.getenv("FLASK_LOGIN_SECRET_KEY", '1234')
+CRYPTO_KEY = 'vx7rzvK2C5XxW58XRVc5vTQnQLq35UYOEP8-PYSShBs='
 SECRET_KEY = os.getenv("SECRET_KEY", '1234')
 JWT_AUTH_URL_RULE = None
 JWT_AUTH_HEADER_PREFIX = "Bearer"
 SLACK_HOOK_URL = 'http://example.com'
+
+MANDRILL_API_KEY = os.getenv("MANDRILL_API_KEY", '')
+MANDRILL_API_URL = os.getenv("MANDRILL_API_URL", 'https://mandrillapp.com/api/1.0')
