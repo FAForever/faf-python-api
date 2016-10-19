@@ -146,13 +146,13 @@ def deploy_game(repository: str, remote_url: Path, branch: str, sha: str):
 # Write a new function, also API, to return a list of available 'Game modes' (Featured mods)
 
 
-@app.route('/deploy/<str:repository>/<str:branch>/<str:sha>', methods=['GET'])
+@app.route('/deploy/<str:repository>/<str:branch>', methods=['GET'])
 def deploy_route(repository, branch, sha):
     """
     Perform deployment on this machine
     :param repository: the repository to deploy
     :param branch: branch to fetch
-    :param sha: hash to verify deployment with
+    :param sha: hash to verify deployment with. Not used when called by API
     :return: (status: str, description: str)
     """
 

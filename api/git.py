@@ -18,5 +18,6 @@ def checkout_repo(repo_path: Path, remote_url: Path, ref: str, sha: str):
     subprocess.call(git_command + ['checkout', '-f', 'FETCH_HEAD'])
     checked_out = subprocess.check_output(git_command + ['rev-parse', 'HEAD'],
                                           universal_newlines=True).strip()
-    if not checked_out == sha:
-        raise Exception("checked out hash {} doesn't match {}".format(checked_out, sha))
+    if sha:
+        if not checked_out == sha:
+            raise Exception("checked out hash {} doesn't match {}".format(checked_out, sha))
