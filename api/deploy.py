@@ -102,9 +102,9 @@ def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
     return 'success', 'Deployed'
 
 
-def deploy_game(repository: str, remote_url: Path, ref: str, sha: str):
+def deploy_game(repository: str, remote_url: Path, branch: str, sha: str):
     repo_path = Path(app.config['REPO_PATHS'][repository])
-    checkout_repo(repo_path, remote_url, ref, sha)  # Checkout the intended state on the server repo
+    checkout_repo(repo_path, remote_url, branch, sha)  # Checkout the intended state on the server repo
 
     mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))  # Harvest data from mod_info.lua
     game_mode = mod_info['_faf_modname']
@@ -135,21 +135,23 @@ def deploy_game(repository: str, remote_url: Path, ref: str, sha: str):
                        'values (%s,%s,%s,%s)'.format(game_mode),
                        (file['id'], version, file['md5'], destination.name))  # In with the new
 
-    return 'Success', 'Deployed ' + repository + ' branch ' + ref + ' to ' + game_mode
+    return 'Success', 'Deployed ' + repository + ' branch ' + branch + ' to ' + game_mode
 
 
 # TODOs
 # What is ref? branch name?
+# ref is the full reference: 'refs/heads/branchname'. We should probably accept branchname from UI and amend refs/heads
+#   on to the start of it
 # Store the git URL in config to avoid hard-coding it in multiple files ('https://github.com/FAForever/')
 # Write a new function, also API, to return a list of available 'Game modes' (Featured mods)
 
 
-@app.route('/deploy/<str:repository>/<str:ref>/<str:sha>', methods=['GET'])
-def deploy_route(repository, ref, sha):
+@app.route('/deploy/<str:repository>/<str:branch>/<str:sha>', methods=['GET'])
+def deploy_route(repository, branch, sha):
     """
     Perform deployment on this machine
     :param repository: the repository to deploy
-    :param ref: ref to fetch
+    :param branch: branch to fetch
     :param sha: hash to verify deployment with
     :return: (status: str, description: str)
     """
@@ -162,7 +164,7 @@ def deploy_route(repository, ref, sha):
             'api': deploy_web,
             'patchnotes': deploy_web,
             'fa': deploy_game
-        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, ref, sha)
+        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, branch, sha)
     except Exception as e:
         logger.exception(e)
         return 'error', "{}: {}".format(type(e), e)
