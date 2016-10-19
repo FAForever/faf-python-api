@@ -105,22 +105,32 @@ def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
     return 'success', 'Deployed'
 
 def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
-    checkout_repo(repo_path, remote_url, ref, sha)
-    mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))
-    faf_modname = mod_info['_faf_modname']
-    files = build_mod(repo_path)
+    checkout_repo(repo_path, remote_url, ref, sha) # Checkout the intended state on the server repo
+
+    mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua')) # Harvest data from mod_info.lua
+    gameMode = mod_info['_faf_modname'] # TODO: This seems to determine the server deployment path, where 'balancetesting'
+                                           # = Main FAF mod... We probably want to be able to pass this in, to decide
+                                           # which game mode we want to be updating
+
+    files = build_mod(repo_path) # Build the mod from the fileset we just checked out
     logger.info("Build result: {}".format(files))
-    deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(mod_info['_faf_modname']))
-    logger.info("Deploying {} to {}".format(faf_modname, deploy_path))
-    for f in files:
-        destination = deploy_path / (f['filename'] + "." + faf_modname + "." + str(mod_info['version']) + f['sha1'][:6] + ".zip")
-        logger.info("Deploying {} to {}".format(f, destination))
-        shutil.copy2(str(f['path']), str(destination))
-        db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;'.format(faf_modname), (f['id'], mod_info['version']))
+
+    deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(gameMode))
+    logger.info("Deploying {} to {}".format(gameMode, deploy_path))
+
+    for file in files:
+        # Organise the files needed into their final setup and pack as .zip
+        destination = deploy_path / (file['filename'] + "." + gameMode + "." + str(mod_info['version']) + file['sha1'][:6] + ".zip")
+        logger.info("Deploying {} to {}".format(file, destination))
+        shutil.copy2(str(file['path']), str(destination))
+
+        # Update the database with the new mod
+        db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;'.format(gameMode), (file['id'], mod_info['version'])) # Out with the old
         db.execute_sql('insert into updates_{}_files '
                        '(fileId, version, md5, name) '
-                       'values (%s,%s,%s,%s)'.format(faf_modname),
-                       (f['id'], mod_info['version'], f['md5'], destination.name))
+                       'values (%s,%s,%s,%s)'.format(gameMode),
+                       (file['id'], mod_info['version'], file['md5'], destination.name)) # In with the new
+
     return 'success', 'Deployed'
 
 
