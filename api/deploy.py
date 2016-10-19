@@ -104,39 +104,42 @@ def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
     restart_file.touch()
     return 'success', 'Deployed'
 
-def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
+def deploy_game(repository: str, remote_url: Path, ref: str, sha: str):
+    repo_path = Path(app.config['REPO_PATHS'][repository])
     checkout_repo(repo_path, remote_url, ref, sha) # Checkout the intended state on the server repo
 
     mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua')) # Harvest data from mod_info.lua
-    gameMode = mod_info['_faf_modname'] # TODO: This seems to determine the server deployment path, where 'balancetesting'
-                                           # = Main FAF mod... We probably want to be able to pass this in, to decide
-                                           # which game mode we want to be updating
+    gameMode = mod_info['_faf_modname'] ''' TODO: This seems to determine the server deployment path, where 'balancetesting'
+                                            = Main FAF mod... We probably want to be able to pass this in, to decide
+                                            which game mode we want to be updating'''
+    version = str(mod_info['version'])
 
     files = build_mod(repo_path) # Build the mod from the fileset we just checked out
-    logger.info("Build result: {}".format(files))
+    logger.info('Build result: {}'.format(files))
 
     deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(gameMode))
-    logger.info("Deploying {} to {}".format(gameMode, deploy_path))
+    logger.info('Deploying {} to {}'.format(gameMode, deploy_path))
 
     for file in files:
         # Organise the files needed into their final setup and pack as .zip
-        destination = deploy_path / (file['filename'] + "." + gameMode + "." + str(mod_info['version']) + file['sha1'][:6] + ".zip")
-        logger.info("Deploying {} to {}".format(file, destination))
+        destination = deploy_path / (file['filename'] + '.' + gameMode + '.' + version + file['sha1'][:6] + '.zip')
+        logger.info('Deploying {} to {}'.format(file, destination))
         shutil.copy2(str(file['path']), str(destination))
 
         # Update the database with the new mod
-        db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;'.format(gameMode), (file['id'], mod_info['version'])) # Out with the old
+        db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;'.format(gameMode), (file['id'], version)) # Out with the old
         db.execute_sql('insert into updates_{}_files '
                        '(fileId, version, md5, name) '
                        'values (%s,%s,%s,%s)'.format(gameMode),
-                       (file['id'], mod_info['version'], file['md5'], destination.name)) # In with the new
+                       (file['id'], version, file['md5'], destination.name)) # In with the new
 
-    return 'success', 'Deployed'
+    return 'Success', 'Deployed ' + repository + ' branch ' + ref + ' to ' + gameMode
 
 
 # TODOs
 # What is ref? branchname?
-# Store the git URL in config to avoid hard-coding it in multiple files
+# Store the git URL in config to avoid hard-coding it in multiple files ('https://github.com/FAForever/')
+# Write a new function, also API, to return a list of available 'Game modes' (Featured mods)
 
 
 @app.route('/deploy/<str:repository>/<str:ref>/<str:sha>', methods = ['GET'])
@@ -149,15 +152,15 @@ def deploy(repository, ref, sha):
     :return: (status: str, description: str)
     """
 
-    gitURL = app.config['GIT_URL']
-    URL = gitPath + repository + '.git'
+    github_url = app.config['GIT_URL']
+    remote_url = github_url + repository + '.git'
 
     try:
         return {
             'api': deploy_web,
             'patchnotes': deploy_web,
             'fa': deploy_game
-        }[repository](Path(app.config['REPO_PATHS'][repository]), URL, ref, sha)
+        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, ref, sha)
     except Exception as e:
         logger.exception(e)
         return 'error', "{}: {}".format(type(e), e)
