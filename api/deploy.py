@@ -59,7 +59,7 @@ def github_hook():
             if match or repo_name in app.config['AUTO_DEPLOY']:
                 resp = app.github.create_deployment(owner='FAForever',
                                                     repo=repo_name,
-                                                    ref=body['ref'],
+                                                    branch=body['ref'],
                                                     environment=environment,
                                                     description=head_commit['message'])
                 if not resp.status_code == 201:
