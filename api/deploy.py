@@ -102,16 +102,12 @@ def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
     return 'success', 'Deployed'
 
 
-def deploy_game(repository: str, remote_url: Path, branch: str, sha: str):
+def deploy_game(repository: str, remote_url: Path, branch: str, mode: str, sha: str):
     repo_path = Path(app.config['REPO_PATHS'][repository])
     checkout_repo(repo_path, remote_url, branch, sha)  # Checkout the intended state on the server repo
 
     mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))  # Harvest data from mod_info.lua
-    game_mode = mod_info['_faf_modname']
-
-    # TODO: This seems to determine the server deployment path, where 'balancetesting'
-    # = Main FAF mod... We probably want to be able to pass this in, to decide
-    # which game mode we want to be updating
+    game_mode = mode or mod_info['_faf_modname']
 
     version = str(mod_info['version'])
 
@@ -146,12 +142,13 @@ def deploy_game(repository: str, remote_url: Path, branch: str, sha: str):
 # Write a new function, also API, to return a list of available 'Game modes' (Featured mods)
 
 
-@app.route('/deploy/<str:repository>/<str:branch>', methods=['GET'])
-def deploy_route(repository, branch, sha):
+@app.route('/deploy/<str:repository>/<str:branch>/<str:mode>', methods=['GET'])
+def deploy_route(repository, branch, mode, sha):
     """
     Perform deployment on this machine
     :param repository: the repository to deploy
     :param branch: branch to fetch
+    :param mode: game mode that we're deploying to
     :param sha: hash to verify deployment with. Not used when called by API
     :return: (status: str, description: str)
     """
@@ -164,7 +161,7 @@ def deploy_route(repository, branch, sha):
             'api': deploy_web,
             'patchnotes': deploy_web,
             'fa': deploy_game
-        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, branch, sha)
+        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, branch, mode, sha)
     except Exception as e:
         logger.exception(e)
         return 'error', "{}: {}".format(type(e), e)
