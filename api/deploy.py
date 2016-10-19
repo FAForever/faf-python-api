@@ -1,24 +1,18 @@
 """
 Holds routes for deployment based off of Github events
 """
-import json
-import re
-
-from flask import request, render_template, url_for
-import shutil
-
-from api import *
-from api.oauth_handlers import *
-
 import hmac
+import logging
+import re
+import shutil
 from pathlib import Path
 
-from faf.tools.fa.mods import parse_mod_info
 from faf.tools.fa.build_mod import build_mod
+from faf.tools.fa.mods import parse_mod_info
 
+from api.oauth_handlers import *
 from .git import checkout_repo
 
-import logging
 logger = logging.getLogger(__name__)
 
 github_session = None
@@ -26,12 +20,14 @@ github_session = None
 
 def validate_github_request(body, signature):
     digest = hmac.new(app.config['GITHUB_SECRET'],
-                   body, 'sha1').hexdigest()
+                      body, 'sha1').hexdigest()
     return hmac.compare_digest(digest, signature)
 
+
 @app.route('/deployment/<repo>/<int:id>', methods=['GET'])
-def deployment(repo, id):
-    return app.github.deployment(owner='FAForever', repo=repo, id=id).json()
+def deployment(repo, deployment_id):
+    return app.github.deployment(owner='FAForever', repo=repo, id=deployment_id).json()
+
 
 @app.route('/status/<repo>', methods=['GET'])
 def deployments(repo):
@@ -39,6 +35,7 @@ def deployments(repo):
         'status': 'OK',
         'deployments': app.github.deployments(owner='FAForever', repo=repo).json()
     }
+
 
 @app.route('/github', methods=['POST'])
 def github_hook():
@@ -68,32 +65,32 @@ def github_hook():
                 if not resp.status_code == 201:
                     raise Exception(resp.content)
     elif event == 'deployment':
-        deployment = body['deployment']
+        body_deployment = body['deployment']
         repo = body['repository']
-        if deployment['environment'] == app.config['ENVIRONMENT']:
-            status, description = deploy(body['repository']['name'],
-                                         body['repository'],
-                                         deployment['ref'],
-                                         deployment['sha'])
+        if body_deployment['environment'] == app.config['ENVIRONMENT']:
+            status, description = deploy_route(body['repository']['name'],
+                                               body['repository'],
+                                               body_deployment['ref'],
+                                               body_deployment['sha'])
             status_response = app.github.create_deployment_status(
                 owner='FAForever',
                 repo=repo['name'],
-                id=deployment['id'],
+                id=body_deployment['id'],
                 state=status,
                 description=description)
             app.slack.send_message(username='deploybot',
                                    text="Deployed {}:{} to {}".format(
                                        repo['name'],
-                                       "{}@{}".format(deployment['ref'], deployment['sha']),
-                                       deployment['environment']))
+                                       "{}@{}".format(body_deployment['ref'], body_deployment['sha']),
+                                       body_deployment['environment']))
             if status_response.status_code == 201:
                 return (dict(status=status,
-                            description=description),
-                       201)
+                             description=description),
+                        201)
             else:
                 return ((dict(status='error',
-                             description="Failure creating github deployment status: {}"
-                             .format(status_response.content))),
+                              description="Failure creating github deployment status: {}"
+                              .format(status_response.content))),
                         status_response.status_code)
     return dict(status="OK"), 200
 
@@ -104,46 +101,51 @@ def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
     restart_file.touch()
     return 'success', 'Deployed'
 
+
 def deploy_game(repository: str, remote_url: Path, ref: str, sha: str):
     repo_path = Path(app.config['REPO_PATHS'][repository])
-    checkout_repo(repo_path, remote_url, ref, sha) # Checkout the intended state on the server repo
+    checkout_repo(repo_path, remote_url, ref, sha)  # Checkout the intended state on the server repo
 
-    mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua')) # Harvest data from mod_info.lua
-    gameMode = mod_info['_faf_modname'] ''' TODO: This seems to determine the server deployment path, where 'balancetesting'
-                                            = Main FAF mod... We probably want to be able to pass this in, to decide
-                                            which game mode we want to be updating'''
+    mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))  # Harvest data from mod_info.lua
+    game_mode = mod_info['_faf_modname']
+
+    # TODO: This seems to determine the server deployment path, where 'balancetesting'
+    # = Main FAF mod... We probably want to be able to pass this in, to decide
+    # which game mode we want to be updating
+
     version = str(mod_info['version'])
 
-    files = build_mod(repo_path) # Build the mod from the fileset we just checked out
+    files = build_mod(repo_path)  # Build the mod from the fileset we just checked out
     logger.info('Build result: {}'.format(files))
 
-    deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(gameMode))
-    logger.info('Deploying {} to {}'.format(gameMode, deploy_path))
+    deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(game_mode))
+    logger.info('Deploying {} to {}'.format(game_mode, deploy_path))
 
     for file in files:
         # Organise the files needed into their final setup and pack as .zip
-        destination = deploy_path / (file['filename'] + '.' + gameMode + '.' + version + file['sha1'][:6] + '.zip')
+        destination = deploy_path / (file['filename'] + '.' + game_mode + '.' + version + file['sha1'][:6] + '.zip')
         logger.info('Deploying {} to {}'.format(file, destination))
         shutil.copy2(str(file['path']), str(destination))
 
         # Update the database with the new mod
-        db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;'.format(gameMode), (file['id'], version)) # Out with the old
+        db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;'.format(game_mode),
+                       (file['id'], version))  # Out with the old
         db.execute_sql('insert into updates_{}_files '
                        '(fileId, version, md5, name) '
-                       'values (%s,%s,%s,%s)'.format(gameMode),
-                       (file['id'], version, file['md5'], destination.name)) # In with the new
+                       'values (%s,%s,%s,%s)'.format(game_mode),
+                       (file['id'], version, file['md5'], destination.name))  # In with the new
 
-    return 'Success', 'Deployed ' + repository + ' branch ' + ref + ' to ' + gameMode
+    return 'Success', 'Deployed ' + repository + ' branch ' + ref + ' to ' + game_mode
 
 
 # TODOs
-# What is ref? branchname?
+# What is ref? branch name?
 # Store the git URL in config to avoid hard-coding it in multiple files ('https://github.com/FAForever/')
 # Write a new function, also API, to return a list of available 'Game modes' (Featured mods)
 
 
-@app.route('/deploy/<str:repository>/<str:ref>/<str:sha>', methods = ['GET'])
-def deploy(repository, ref, sha):
+@app.route('/deploy/<str:repository>/<str:ref>/<str:sha>', methods=['GET'])
+def deploy_route(repository, ref, sha):
     """
     Perform deployment on this machine
     :param repository: the repository to deploy
