@@ -72,7 +72,7 @@ def github_hook():
         repo = body['repository']
         if deployment['environment'] == app.config['ENVIRONMENT']:
             status, description = deploy(body['repository']['name'],
-                                         body['repository']['clone_url'],
+                                         body['repository'],
                                          deployment['ref'],
                                          deployment['sha'])
             status_response = app.github.create_deployment_status(
@@ -104,7 +104,6 @@ def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
     restart_file.touch()
     return 'success', 'Deployed'
 
-
 def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
     checkout_repo(repo_path, remote_url, ref, sha)
     mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))
@@ -124,7 +123,14 @@ def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
                        (f['id'], mod_info['version'], f['md5'], destination.name))
     return 'success', 'Deployed'
 
-def deploy(repository, remote_url, ref, sha):
+
+# What is ref? branchname?
+# It wants us to pass in remote_url. Why are we not generating this from the repository
+#     (https://github.com/FAForever/ + repository + .git)?
+
+    
+@app.route('/deploy/<str:repository>/<str:ref>/<str:sha>', methods = ['GET'])
+def deploy(repository, ref, sha):
     """
     Perform deployment on this machine
     :param repository: the repository to deploy
@@ -132,12 +138,16 @@ def deploy(repository, remote_url, ref, sha):
     :param sha: hash to verify deployment with
     :return: (status: str, description: str)
     """
+
+    gitPath = 'https://github.com/FAForever/'
+    URL = gitPath + repository + '.git'
+
     try:
         return {
             'api': deploy_web,
             'patchnotes': deploy_web,
             'fa': deploy_game
-        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, ref, sha)
+        }[repository](Path(app.config['REPO_PATHS'][repository]), URL, ref, sha)
     except Exception as e:
         logger.exception(e)
         return 'error', "{}: {}".format(type(e), e)
