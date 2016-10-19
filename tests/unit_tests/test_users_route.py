@@ -32,9 +32,8 @@ def setup_users(request, app):
     request.addfinalizer(finalizer)
 
 
-
-def test_create_account_invalid_email(test_client, setup_users):
-    response = test_client.post('/users/create_account',
+def test_register_invalid_email(test_client, setup_users):
+    response = test_client.post('/users/register',
                                 data={'name': 'a', 'email': 'abbb.cc', 'pw_hash': '0000'})
 
     assert response.status_code == 400
@@ -45,8 +44,8 @@ def test_create_account_invalid_email(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_INVALID_EMAIL.value['code']
 
 
-def test_create_account_invalid_username(test_client, setup_users):
-    response = test_client.post('/users/create_account',
+def test_register_invalid_username(test_client, setup_users):
+    response = test_client.post('/users/register',
                                 data={'name': 'a,b', 'email': 'a@bbb.cc', 'pw_hash': '0000'})
 
     assert response.status_code == 400
@@ -57,8 +56,8 @@ def test_create_account_invalid_username(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_INVALID_USERNAME.value['code']
 
 
-def test_create_account_username_taken(test_client, setup_users):
-    response = test_client.post('/users/create_account',
+def test_register_username_taken(test_client, setup_users):
+    response = test_client.post('/users/register',
                                 data={'name': 'A', 'email': 'a@bbb.cc', 'pw_hash': '0000'})
 
     assert response.status_code == 400
@@ -69,8 +68,8 @@ def test_create_account_username_taken(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_USERNAME_TAKEN.value['code']
 
 
-def test_create_account_email_taken(test_client, setup_users):
-    response = test_client.post('/users/create_account',
+def test_register_email_taken(test_client, setup_users):
+    response = test_client.post('/users/register',
                                 data={'name': 'abc', 'email': 'a@AA.aa', 'pw_hash': '0000'})
 
     assert response.status_code == 400
@@ -81,8 +80,8 @@ def test_create_account_email_taken(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_EMAIL_REGISTERED.value['code']
 
 
-def test_create_account_email_blacklisted(test_client, setup_users):
-    response = test_client.post('/users/create_account',
+def test_register_email_blacklisted(test_client, setup_users):
+    response = test_client.post('/users/register',
                                 data={'name': 'alpha', 'email': 'a@ZZZ.com', 'pw_hash': '0000'})
 
     assert response.status_code == 400
@@ -93,8 +92,8 @@ def test_create_account_email_blacklisted(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_BLACKLISTED_EMAIL.value['code']
 
 
-def test_validate_account_invalid_email(test_client, setup_users):
-    response = test_client.get('/users/validate_account/' + create_token('a', 'abbb.cc', '0000', 0))
+def test_validate_registration_invalid_email(test_client, setup_users):
+    response = test_client.get('/users/validate_registration/' + create_token('a', 'abbb.cc', '0000', 0))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
@@ -104,8 +103,8 @@ def test_validate_account_invalid_email(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_INVALID_EMAIL.value['code']
 
 
-def test_validate_account_username_taken(test_client, setup_users):
-    response = test_client.get('/users/validate_account/' + create_token('A', 'a@bbb.cc', '0000', 0))
+def test_validate_registration_username_taken(test_client, setup_users):
+    response = test_client.get('/users/validate_registration/' + create_token('A', 'a@bbb.cc', '0000', 0))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
@@ -115,8 +114,8 @@ def test_validate_account_username_taken(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_USERNAME_TAKEN.value['code']
 
 
-def test_validate_account_email_taken(test_client, setup_users):
-    response = test_client.get('/users/validate_account/' + create_token('abc', 'a@AA.aa', '0000', 0))
+def test_validate_registration_email_taken(test_client, setup_users):
+    response = test_client.get('/users/validate_registration/' + create_token('abc', 'a@AA.aa', '0000', 0))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
@@ -126,8 +125,8 @@ def test_validate_account_email_taken(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_EMAIL_REGISTERED.value['code']
 
 
-def test_validate_account_email_blacklisted(test_client, setup_users):
-    response = test_client.get('/users/validate_account/' + create_token('alpha', 'a@ZZZ.com', '0000', 0))
+def test_validate_registration_email_blacklisted(test_client, setup_users):
+    response = test_client.get('/users/validate_registration/' + create_token('alpha', 'a@ZZZ.com', '0000', 0))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
@@ -137,9 +136,9 @@ def test_validate_account_email_blacklisted(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_BLACKLISTED_EMAIL.value['code']
 
 
-def test_validate_account_success(test_client, setup_users):
+def test_validate_registration_success(test_client, setup_users):
     response = test_client.get(
-        '/users/validate_account/' + create_token('alpha', 'a@faforever.com', '0000', time.time() + 60))
+        '/users/validate_registration/' + create_token('alpha', 'a@faforever.com', '0000', time.time() + 60))
 
     assert response.status_code == 200
 
@@ -163,7 +162,7 @@ def test_validate_account_success(test_client, setup_users):
 
 def test_validate_token_expired(test_client, setup_users):
     response = test_client.get(
-        '/users/validate_account/' + create_token('alpha', 'a@faforever.com', '0000', time.time() - 60))
+        '/users/validate_registration/' + create_token('alpha', 'a@faforever.com', '0000', time.time() - 60))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
