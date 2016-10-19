@@ -124,11 +124,11 @@ def deploy_game(repo_path: Path, remote_url: Path, ref: str, sha: str):
     return 'success', 'Deployed'
 
 
+# TODOs
 # What is ref? branchname?
-# It wants us to pass in remote_url. Why are we not generating this from the repository
-#     (https://github.com/FAForever/ + repository + .git)?
+# Store the git URL in config to avoid hard-coding it in multiple files
 
-    
+
 @app.route('/deploy/<str:repository>/<str:ref>/<str:sha>', methods = ['GET'])
 def deploy(repository, ref, sha):
     """
@@ -139,7 +139,7 @@ def deploy(repository, ref, sha):
     :return: (status: str, description: str)
     """
 
-    gitPath = 'https://github.com/FAForever/'
+    gitURL = app.config['GIT_URL']
     URL = gitPath + repository + '.git'
 
     try:
