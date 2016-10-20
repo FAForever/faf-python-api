@@ -37,34 +37,6 @@ def rating_ratings(request, app):
         (2, 500, 300, 2, 1),
         (3, 1600, 200, 3, 1),
         (4, 1800, 50, 20, 1)""")
-        cursor.execute("""INSERT INTO game_featuredMods
-        (id, gamemod, description, name, publish, `order`) VALUES
-        (1, 'faf', '', '', 1, 1),
-        (2, 'ladder1v1', '', '', 1, 1),
-        (3, 'blackops', '', '', 1, 1)
-        """)
-        cursor.execute("""INSERT INTO game_stats
-        (id, startTime, gameType, gameMod, host, mapId, gameName, validity) VALUES
-        (1, '2016-10-12T11:40', 1, 2, 1, 1, '', 0),
-        (2, '2016-10-12T12:40', 1, 1, 1, 1, '', 0),
-        (3, '2016-10-12T13:40', 1, 1, 1, 1, '', 0),
-        (4, '2016-10-12T14:40', 1, 1, 1, 1, '', 0),
-        (5, '2016-10-12T15:40', 1, 1, 1, 1, '', 0),
-        (6, '2016-10-12T16:40', 1, 3, 1, 1, '', 0),
-        (7, '2016-10-12T17:40', 1, 1, 1, 1, '', 0)
-        """)
-        cursor.execute("""INSERT INTO game_player_stats
-(id, gameId, playerId, AI, faction, color, team, place, mean, deviation, after_mean, after_deviation, score,          scoreTime) VALUES
-(1,       1,        1,  0,       1,     1,    1,     1, 1500,       123,         800,             100,    0, '2016-10-12T11:51'),
-(2,       2,        1,  0,       1,     1,    1,     1, 1395,       111,        1390,             110,    0, '2016-10-12T12:51'),
-(3,       3,        1,  0,       1,     1,    1,     1, 1390,       110,        1401,             150,    0, '2016-10-12T13:51'),
-(4,       4,        1,  0,       1,     1,    1,     1, 1401,       110,        1405,             149,    0, '2016-10-12T14:51'),
-(5,       4,        2,  0,       1,     1,    1,     1, 1500,       250,        1400,             150,    0, '2016-10-12T14:51'),
-(6,       5,        1,  0,       1,     1,    1,     1, 1400,       150,        NULL,             NULL,   0, '2016-10-12T15:51'),
-(7,       5,        2,  0,       1,     1,    1,     2, 1400,       150,        NULL,             NULL,   0, '2016-10-12T15:51'),
-(8,       6,        1,  0,       1,     1,    1,     2, 1500,       250,        NULL,             NULL,   0, '2016-10-12T16:51'),
-(9,       7,        1,  0,       1,     1,    1,     2, 1500,       250,        1500,              250,   0,               NULL)
-        """)
 
     def finalizer():
         with db.connection:
@@ -229,29 +201,3 @@ def test_leaderboards_get_player_global(test_client, rating_ratings):
     assert not errors
     assert result['login'] == 'a'
     assert result['ranking'] == 2
-
-
-def test_leaderboards_global_history(test_client, rating_ratings):
-    response = test_client.get('/leaderboards/global/1/history')
-
-    assert response.status_code == 200
-    assert response.content_type == 'application/vnd.api+json'
-
-    result = json.loads(response.data.decode('utf-8'))
-    assert result['data']['attributes']['history'] == {
-        '1476280260': [1401.0, 150.0],
-        '1476276660': [1390.0, 110.0],
-        '1476283860': [1405.0, 149.0]
-    }
-
-
-def test_leaderboards_1v1_history(test_client, rating_ratings):
-    response = test_client.get('/leaderboards/1v1/1/history')
-
-    assert response.status_code == 200
-    assert response.content_type == 'application/vnd.api+json'
-
-    result = json.loads(response.data.decode('utf-8'))
-    assert result['data']['attributes']['history'] == {
-        '1476273060': [800.0, 100.0]
-    }
