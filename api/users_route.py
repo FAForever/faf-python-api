@@ -26,7 +26,7 @@ def create_token(name: str, email: str, pw_hash: str, expiry: int) -> str:
     return base64.urlsafe_b64encode(request_hmac).decode("utf-8")
 
 
-@app.route('/users/create_account', methods=['POST'])
+@app.route('/users/register', methods=['POST'])
 def create_account():
     """
     Creates a request for a new account
@@ -68,7 +68,7 @@ def create_account():
                                                                                                      datetime.datetime.fromtimestamp(
                                                                                                          expiry)))
 
-    passwordLink = "http://" + config.HOST_NAME + "/users/validate_account/" + token
+    passwordLink = "http://" + config.HOST_NAME + "/users/validate_registration/" + token
 
     if (config.ENVIRONMENT == "testing"):
         print(passwordLink)
@@ -87,7 +87,7 @@ def create_account():
     return "ok"
 
 
-@app.route('/users/validate_account/<token>', methods=['GET'])
+@app.route('/users/validate_registration/<token>', methods=['GET'])
 def validate_account(token=None):
     # Fuck you urlsafe_b64encode & padding and fuck you overzealous http implementations
     token = token.replace('%3d','=')
