@@ -165,3 +165,8 @@ def deploy_route(repository, branch, mode, sha):
     except Exception as e:
         logger.exception(e)
         return 'error', "{}: {}".format(type(e), e)
+
+
+@app.route('/listmodes', methods=['GET'])
+def list_modes():
+    db.execute_sql('select gamemod, name from game_featuredMods ')
