@@ -24,7 +24,7 @@ def validate_github_request(body, signature):
     return hmac.compare_digest(digest, signature)
 
 
-@app.route('/deployment/<repo>/<int:id>', methods=['GET'])
+@app.route('/deployment/<repo>/<int:deployment_id>', methods=['GET'])
 def deployment(repo, deployment_id):
     return app.github.deployment(owner='FAForever', repo=repo, id=deployment_id).json()
 
