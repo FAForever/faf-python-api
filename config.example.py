@@ -30,6 +30,7 @@ STATSD_SERVER = os.getenv('STATSD_SERVER', None)
 
 GITHUB_USER = 'some-user'
 GITHUB_TOKEN = 'some-token'
+GIT_URL = 'https://github.com/FAForever/'
 
 AUTO_DEPLOY = ['patchnotes']
 

@@ -134,14 +134,6 @@ def deploy_game(repository: str, remote_url: Path, branch: str, mode: str, sha: 
     return 'Success', 'Deployed ' + repository + ' branch ' + branch + ' to ' + game_mode
 
 
-# TODOs
-# What is ref? branch name?
-# ref is the full reference: 'refs/heads/branchname'. We should probably accept branchname from UI and amend refs/heads
-#   on to the start of it
-# Store the git URL in config to avoid hard-coding it in multiple files ('https://github.com/FAForever/')
-# Write a new function, also API, to return a list of available 'Game modes' (Featured mods)
-
-
 @app.route('/deploy/<str:repository>/<str:branch>/<str:mode>', methods=['GET'])
 def deploy_route(repository, branch, mode, sha):
     """
