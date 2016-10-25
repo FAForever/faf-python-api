@@ -75,13 +75,15 @@ def github_hook():
         body_deployment = body['deployment']
         repo = body['repository']
         branch = body_deployment['ref']
+        commit = body_deployment['sha']
+        game_mode = app.config['DEPLOY_ARRAY'][branch]
 
-        if app.config[DEPLOY_ARRAY][branch]:
+        if game_mode:
             # Build mod on database from git and write to download system
             status, description = deploy_route(repo['name'],
-                                               repo,
                                                branch,
-                                               body_deployment['sha'])
+                                               game_mode,
+                                               commit)
             # Create status update on github
             status_response = app.github.create_deployment_status(owner='FAForever',
                                                                   repo=repo['name'],
@@ -92,7 +94,7 @@ def github_hook():
             app.slack.send_message(username='deploybot',
                                    text="Deployed {}:{} to {}".format(
                                        repo['name'],
-                                       "{}@{}".format(branch, body_deployment['sha']),
+                                       "{}@{}".format(branch, commit),
                                        body_deployment['environment']))
             # Create status responses
             if status_response.status_code == 201:
@@ -114,15 +116,13 @@ def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
     return 'success', 'Deployed'
 
 
-def deploy_game(repository: str, remote_url: Path, branch: str, mode: str, sha: str):
-    repo_path = Path(app.config['REPO_PATHS'][repository])
+def deploy_game(repo_path: Path, remote_url: Path, branch: str, game_mode: str, sha: str):
     checkout_repo(repo_path, remote_url, branch, sha)  # Checkout the intended state on the server repo
 
     mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))  # Harvest data from mod_info.lua
-    game_mode = mode or mod_info['_faf_modname']
-
     version = str(mod_info['version'])
 
+    # TODO: Figure out what form repo_path needs to take for build_mod
     files = build_mod(repo_path)  # Build the mod from the fileset we just checked out
     logger.info('Build result: {}'.format(files))
 
@@ -146,14 +146,13 @@ def deploy_game(repository: str, remote_url: Path, branch: str, mode: str, sha: 
     return 'Success', 'Deployed ' + repository + ' branch ' + branch + ' to ' + game_mode
 
 
-@app.route('/deploy/<str:repository>/<str:branch>/<str:mode>', methods=['GET'])
-def deploy_route(repository, branch, mode, sha):
+def deploy_route(repository, branch, game_mode, sha):
     """
     Perform deployment on this machine
-    :param repository: the repository to deploy
-    :param branch: branch to fetch
-    :param mode: game mode that we're deploying to
-    :param sha: hash to verify deployment with. Not used when called by API
+    :param repository: the source repository
+    :param branch: the source branch
+    :param game_mode: the game mode we are deploying to
+    :param sha: hash to verify deployment
     :return: (status: str, description: str)
     """
 
@@ -165,7 +164,7 @@ def deploy_route(repository, branch, mode, sha):
             'api': deploy_web,
             'patchnotes': deploy_web,
             'fa': deploy_game
-        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, branch, mode, sha)
+        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, branch, game_mode, sha)
     except Exception as e:
         logger.exception(e)
         return 'error', "{}: {}".format(type(e), e)
