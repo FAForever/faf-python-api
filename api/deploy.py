@@ -48,38 +48,23 @@ def github_hook():
     if not validate_github_request(request.data, request.headers['X-Hub-Signature'].split("sha1=")[1]):
         return dict(status="Invalid request"), 400
 
-    body = request.get_json()
     event = request.headers['X-Github-Event']
 
     if event == 'push':
-        repo_name = body['repository']['name']
-        if repo_name in app.config['REPO_PATHS'].keys():
-            head_commit = body['head_commit']
-            if not head_commit['distinct']:
-                return dict(status="OK"), 200
-            match = re.search('Deploy: ([\w\W]+)', head_commit['message'])
-            environment = match.group(1) if match else app.config['ENVIRONMENT']
-            if match or repo_name in app.config['AUTO_DEPLOY']:
-                resp = app.github.create_deployment(owner='FAForever',
-                                                    repo=repo_name,
-                                                    branch=body['ref'],
-                                                    environment=environment,
-                                                    description=head_commit['message'])
-                if not resp.status_code == 201:
-                    raise Exception(resp.content)
-    elif event == 'deployment':
         """
         body_deployment['id'] is a numeric code identifying the deployment
         body_deployment['environment'] is the environment to deploy to. Defaults to production
         """
 
+        body = request.get_json()
         body_deployment = body['deployment']
-        repo = body['repository']
         branch = body_deployment['ref']
-        commit = body_deployment['sha']
         game_mode = app.config['DEPLOY_ARRAY'][branch]
 
         if game_mode:
+            repo = body['repository']
+            commit = body_deployment['sha']
+
             # Build mod on database from git and write to download system
             status, description = deploy_route(repo['name'],
                                                branch,
