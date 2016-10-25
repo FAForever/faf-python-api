@@ -68,9 +68,10 @@ def github_hook():
                 if not resp.status_code == 201:
                     raise Exception(resp.content)
     elif event == 'deployment':
-        # TODO: Check that body_deployment['ref'] is branch name
-        # TODO: What is body_deployment['id']?
-        # TODO: What is body_deployment['environment']?
+        """
+        body_deployment['id'] is a numeric code identifying the deployment
+        body_deployment['environment'] is the environment to deploy to. Defaults to production
+        """
 
         body_deployment = body['deployment']
         repo = body['repository']
