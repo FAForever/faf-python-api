@@ -19,9 +19,9 @@ REPO_PATHS = {
     "patchnotes": '/opt/dev/www/patchnotes'
 }
 
-DEPLOY_ARRAY = {
+DEPLOY_BRANCHES = {
     # branch name : game mode
-    'refs/heads/deploy/develop': 'faf',
+    'refs/heads/master': 'faf',
     'refs/heads/deploy/beta': 'fafbeta',
     'refs/heads/deploy/experiment': 'fafdevelop'
 }

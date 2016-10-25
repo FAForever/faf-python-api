@@ -59,7 +59,7 @@ def github_hook():
         body = request.get_json()
         body_deployment = body['deployment']
         branch = body_deployment['ref']
-        game_mode = app.config['DEPLOY_ARRAY'][branch]
+        game_mode = app.config['DEPLOY_BRANCHES'][branch]
 
         if game_mode:
             repo = body['repository']
@@ -132,13 +132,13 @@ def deploy_game(repo_path: Path, remote_url: Path, branch: str, game_mode: str, 
     return 'Success', 'Deployed ' + repository + ' branch ' + branch + ' to ' + game_mode
 
 
-def deploy_route(repository, branch, game_mode, sha):
+def deploy_route(repository, branch, game_mode, commit):
     """
     Perform deployment on this machine
     :param repository: the source repository
     :param branch: the source branch
     :param game_mode: the game mode we are deploying to
-    :param sha: hash to verify deployment
+    :param commit: commit hash to verify deployment
     :return: (status: str, description: str)
     """
 
@@ -150,7 +150,7 @@ def deploy_route(repository, branch, game_mode, sha):
             'api': deploy_web,
             'patchnotes': deploy_web,
             'fa': deploy_game
-        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, branch, game_mode, sha)
+        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, branch, game_mode, commit)
     except Exception as e:
         logger.exception(e)
         return 'error', "{}: {}".format(type(e), e)
