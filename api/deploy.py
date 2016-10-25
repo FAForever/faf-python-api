@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 github_session = None
 
 
-def validate_github_request(body, signature):
+def validate_github_request(data, signature):
     digest = hmac.new(app.config['GITHUB_SECRET'],
-                      body, 'sha1').hexdigest()
+                      data, 'sha1').hexdigest()
     return hmac.compare_digest(digest, signature)
 
 
@@ -43,11 +43,14 @@ def github_hook():
     Generic github hook suitable for receiving github status events.
     :return:
     """
-    body = request.get_json()
-    if not validate_github_request(request.data,
-                                   request.headers['X-Hub-Signature'].split("sha1=")[1]):
+
+    #  Validate that we have a a legitimate github request
+    if not validate_github_request(request.data, request.headers['X-Hub-Signature'].split("sha1=")[1]):
         return dict(status="Invalid request"), 400
+
+    body = request.get_json()
     event = request.headers['X-Github-Event']
+
     if event == 'push':
         repo_name = body['repository']['name']
         if repo_name in app.config['REPO_PATHS'].keys():
@@ -65,24 +68,33 @@ def github_hook():
                 if not resp.status_code == 201:
                     raise Exception(resp.content)
     elif event == 'deployment':
+        # TODO: Check that body_deployment['ref'] is branch name
+        # TODO: What is body_deployment['id']?
+        # TODO: What is body_deployment['environment']?
+
         body_deployment = body['deployment']
         repo = body['repository']
-        if body_deployment['environment'] == app.config['ENVIRONMENT']:
-            status, description = deploy_route(body['repository']['name'],
-                                               body['repository'],
-                                               body_deployment['ref'],
+        branch = body_deployment['ref']
+
+        if app.config[DEPLOY_ARRAY][branch]:
+            # Build mod on database from git and write to download system
+            status, description = deploy_route(repo['name'],
+                                               repo,
+                                               branch,
                                                body_deployment['sha'])
-            status_response = app.github.create_deployment_status(
-                owner='FAForever',
-                repo=repo['name'],
-                id=body_deployment['id'],
-                state=status,
-                description=description)
+            # Create status update on github
+            status_response = app.github.create_deployment_status(owner='FAForever',
+                                                                  repo=repo['name'],
+                                                                  id=body_deployment['id'],
+                                                                  state=status,
+                                                                  description=description)
+            # Create status update on Slack
             app.slack.send_message(username='deploybot',
                                    text="Deployed {}:{} to {}".format(
                                        repo['name'],
-                                       "{}@{}".format(body_deployment['ref'], body_deployment['sha']),
+                                       "{}@{}".format(branch, body_deployment['sha']),
                                        body_deployment['environment']))
+            # Create status responses
             if status_response.status_code == 201:
                 return (dict(status=status,
                              description=description),

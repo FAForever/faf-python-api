@@ -19,6 +19,13 @@ REPO_PATHS = {
     "patchnotes": '/opt/dev/www/patchnotes'
 }
 
+DEPLOY_ARRAY = {
+    # branch name : game mode
+    'deploy/develop': 'faf',
+    'deploy/beta': 'fafbeta',
+    'deploy/experiment': 'fafdevelop'
+}
+
 GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'
 MOD_UPLOAD_PATH = '/content/faf/vault/mods'
 MOD_THUMBNAIL_PATH = '/content/faf/vault/mods_thumbs'
