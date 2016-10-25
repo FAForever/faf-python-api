@@ -16,6 +16,7 @@ ENVIRONMENT = os.getenv("FAF_API_ENVIRONMENT", 'testing')
 
 REPO_PATHS = {
     "api": '.',
+    "fa": '/opt/stable/featured_mods',
     "patchnotes": '/opt/dev/www/patchnotes'
 }
 

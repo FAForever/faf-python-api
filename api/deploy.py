@@ -108,7 +108,6 @@ def deploy_game(repo_path: Path, remote_url: Path, branch: str, game_mode: str, 
     mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))  # Harvest data from mod_info.lua
     version = str(mod_info['version'])
 
-    # TODO: Figure out what form repo_path needs to take for build_mod
     files = build_mod(repo_path)  # Build the mod from the fileset we just checked out
     logger.info('Build result: {}'.format(files))
 
