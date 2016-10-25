@@ -82,6 +82,6 @@ def users_type_get_player_history(rating_type, player_id):
     data = dict(id=player_id, history={})
 
     for item in result:
-        data['history'][str(int(item['scoreTime']))] = [item['after_mean'], item['after_deviation']]
+        data['history'][item['scoreTime']] = [item['after_mean'], item['after_deviation']]
 
     return HistorySchema().dump(data, many=False).data
