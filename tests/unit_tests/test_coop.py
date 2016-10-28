@@ -231,23 +231,25 @@ def test_coop_leaderboards_player_count_two(test_client, test_data):
     result = json.loads(response.data.decode('utf-8'))
     assert result == {'data': [
         {
-            'id': 3,
+            'id': "3",
             'type': 'coop_leaderboard',
             'attributes': {
                 'ranking': 1,
-                'id': 3,
+                'id': "3",
                 'secondary_objectives': False,
                 'player_names': 'c, d',
+                'player_count': 2,
                 'duration': 2160
             }
         }, {
-            'id': 1,
+            'id': "1",
             'type': 'coop_leaderboard',
             'attributes': {
                 'ranking': 2,
-                'id': 1,
+                'id': "1",
                 'secondary_objectives': True,
                 'player_names': 'a, b',
+                'player_count': 2,
                 'duration': 2340
             }
         }
@@ -266,27 +268,30 @@ def test_coop_leaderboards_player_count_all(test_client, test_data, player_count
         'attributes': {
             'secondary_objectives': False,
             'player_names': 'c, d',
+            'player_count': 2,
             'ranking': 1,
             'duration': 2160,
-            'id': 3
-        }, 'id': 3,
+            'id': "3"
+        }, 'id': "3",
         'type': 'coop_leaderboard'
     }, {
         'attributes': {
             'secondary_objectives': True,
             'player_names': 'a, b',
+            'player_count': 2,
             'ranking': 2,
             'duration': 2340,
-            'id': 1
-        }, 'id': 1,
+            'id': "1"
+        }, 'id': "1",
         'type': 'coop_leaderboard'
     }, {
         'attributes': {
             'secondary_objectives': True,
             'player_names': 'a',
+            'player_count': 1,
             'ranking': 3,
             'duration': 2700,
-            'id': 2
-        }, 'id': 2,
+            'id': "2"
+        }, 'id': "2",
         'type': 'coop_leaderboard'
     }]}

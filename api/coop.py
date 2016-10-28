@@ -26,6 +26,7 @@ LEADERBOARD_SELECT_EXPRESSIONS = {
     'id': 'leaderboard.id',
     'game_id': 'leaderboard.gameid',
     'player_names': 'leaderboard.player_names',
+    'player_count': 'leaderboard.player_count',
     'secondary_objectives': 'leaderboard.secondary',
     'duration': 'TIME_TO_SEC(leaderboard.time)',
     'ranking': '@rownum := @rownum + 1'
