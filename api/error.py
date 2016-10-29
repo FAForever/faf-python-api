@@ -152,18 +152,12 @@ class ErrorCode(Enum):
         detail='The delivered token has expired.')
     PASSWORD_RESET_FAILED = dict(
         code=137,
-        title='Passwort reset failed',
+        title='Password reset failed',
         detail='Username and/or email did not match.')
     PASSWORD_CHANGE_FAILED = dict(
         code=138,
-        title='Passwort reset failed',
+        title='Password change failed',
         detail='Username and/or old password did not match.')
-
-
-PASSWORD_RESET_FAILED = dict(
-    code=137,
-    title='Passwort reset failed',
-    detail='Username and/or email did not match.')
 
 class Error:
     def __init__(self, code: ErrorCode, *args):
