@@ -92,6 +92,13 @@ def test_register_email_blacklisted(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_BLACKLISTED_EMAIL.value['code']
 
 
+def test_register_success(test_client, setup_users):
+    response = test_client.post('/users/register',
+                                data={'name': 'alpha', 'email': 'a@validmail.com', 'pw_hash': '0000'})
+
+    assert response.status_code == 200
+
+
 def test_validate_registration_invalid_email(test_client, setup_users):
     response = test_client.get('/users/validate_registration/' + create_token('a', 'abbb.cc', '0000', 0))
 
@@ -169,4 +176,101 @@ def test_validate_token_expired(test_client, setup_users):
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_TOKEN_EXPIRED.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.USER_TOKEN_EXPIRED.value['code']
+
+
+def test_reset_password_wrong_username(test_client, setup_users):
+    response = test_client.post('/users/reset_password',
+                                data={'name': 'wrong_user', 'email': 'a@aa.aa', 'pw_hash': '0000'})
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.PASSWORD_RESET_INVALID.value['code']
+
+
+def test_reset_password_wrong_email(test_client, setup_users):
+    response = test_client.post('/users/reset_password',
+                                data={'name': 'a', 'email': 'wrong_mail@bbb.cc', 'pw_hash': '0000'})
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.PASSWORD_RESET_INVALID.value['code']
+
+
+def test_validate_password_expired(test_client, setup_users):
+    response = test_client.get('/users/validate_password/' + create_token('a', 'a@aa.aa', '0000', time.time() - 60))
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.USER_TOKEN_EXPIRED.value['code']
+
+
+def test_validate_password_invalid_data(test_client, setup_users):
+    response = test_client.get(
+        '/users/validate_password/' + create_token('wrong_user', 'a@aa.aa', '0000', time.time() + 60))
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.PASSWORD_RESET_FAILED.value['code']
+
+
+def test_validate_password_success(test_client, setup_users):
+    response = test_client.get('/users/validate_password/' + create_token('a', 'a@aa.aa', 'test123', time.time() + 60))
+
+    assert response.status_code == 200
+
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+        cursor.execute("SELECT * FROM login WHERE login = 'a' AND password = 'test123'")
+        assert cursor.fetchone() is not None
+
+
+def test_change_password_invalid_user(test_client, setup_users):
+    response = test_client.post('/users/change_password', data={
+        'name': 'wrong_user', 'pw_hash_old': '0000', 'pw_hash_new': '0001'
+    })
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.PASSWORD_CHANGE_FAILED.value['code']
+
+
+def test_change_password_invalid_password(test_client, setup_users):
+    response = test_client.post('/users/change_password', data={
+        'name': 'a', 'pw_hash_old': 'wrong_password', 'pw_hash_new': '0001'
+    })
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.PASSWORD_CHANGE_FAILED.value['code']
+
+
+def test_change_password_success(test_client, setup_users):
+    response = test_client.post('/users/change_password', data={
+        'name': 'a', 'pw_hash_old': 'pw_a', 'pw_hash_new': 'new_pw_a'
+    })
+
+    assert response.status_code == 200
+
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+        cursor.execute("SELECT * FROM login WHERE login = 'a' AND password = 'new_pw_a'")
+        assert cursor.fetchone() is not None

@@ -142,14 +142,22 @@ class ErrorCode(Enum):
         code=134,
         title='Registration failed',
         detail='The domain of your email is blacklisted: {0}')
-    REGISTRATION_INVALID_TOKEN = dict(
+    PASSWORD_RESET_INVALID = dict(
         code=135,
         title='Invalid operation',
         detail='The delivered token is invalid.')
-    REGISTRATION_TOKEN_EXPIRED = dict(
+    USER_TOKEN_EXPIRED = dict(
         code=136,
         title='Invalid operation',
         detail='The delivered token has expired.')
+    PASSWORD_RESET_FAILED = dict(
+        code=137,
+        title='Password reset failed',
+        detail='Username and/or email did not match.')
+    PASSWORD_CHANGE_FAILED = dict(
+        code=138,
+        title='Password change failed',
+        detail='Username and/or old password did not match.')
 
 class Error:
     def __init__(self, code: ErrorCode, *args):
