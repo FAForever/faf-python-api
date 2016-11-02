@@ -86,9 +86,6 @@ def maps_upload():
     if not file:
         raise ApiException([Error(ErrorCode.UPLOAD_FILE_MISSING)])
 
-    if not metadata_string:
-        raise ApiException([Error(ErrorCode.UPLOAD_METADATA_MISSING)])
-
     if not file_allowed(file.filename):
         raise ApiException([Error(ErrorCode.UPLOAD_INVALID_FILE_EXTENSION, *ALLOWED_EXTENSIONS)])
 
