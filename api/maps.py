@@ -4,17 +4,17 @@ import os
 import shutil
 import tempfile
 import urllib.parse
-
-from faf.api.map_schema import MapSchema
-from faf.tools.fa.maps import generate_map_previews, parse_map_info, generate_folder_name, generate_zip
-from flask import request
 from pathlib import Path
+
+from faf import db
+from faf.api.map_schema import MapSchema
+from faf.tools.fa.maps import generate_map_previews, parse_map_info, generate_zip
+from flask import request
 from werkzeug.utils import secure_filename
 
 from api import app, oauth
-from api.error import ApiException, Error, ErrorCode
+from api.error import ApiException, Error, ErrorCode, req_post_param
 from api.query_commons import fetch_data
-from faf import db
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,7 @@ TABLE = 'map ' \
 
 @app.route('/maps/upload', methods=['POST'])
 @oauth.require_oauth('upload_map')
+@req_post_param('metadata')
 def maps_upload():
     """
     Creates a new map in the system

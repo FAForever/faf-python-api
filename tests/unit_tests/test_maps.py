@@ -2,19 +2,17 @@ import datetime
 import importlib
 import json
 import os
+import sys
 from io import BytesIO
-
 from unittest.mock import Mock
 
 import pytest
-import sys
-
+from faf import db
 from pymysql.cursors import DictCursor
 
 import api
 from api import User
 from api.error import ErrorCode
-from faf import db
 
 
 @pytest.fixture
@@ -242,11 +240,11 @@ def test_maps_upload_is_metadata_missing(oauth, app, tmpdir):
 
     result = json.loads(response.get_data(as_text=True))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.UPLOAD_METADATA_MISSING.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.PARAMETER_MISSING.value['code']
 
 
 def test_maps_upload_no_file_results_400(oauth, app, tmpdir):
-    response = oauth.post('/maps/upload')
+    response = oauth.post('/maps/upload', data={'metadata': '{}'})
 
     assert response.status_code == 400
     result = json.loads(response.get_data(as_text=True))

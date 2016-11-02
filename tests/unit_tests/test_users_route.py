@@ -179,6 +179,13 @@ def test_validate_token_expired(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.USER_TOKEN_EXPIRED.value['code']
 
 
+def test_reset_password_success(test_client, setup_users):
+    response = test_client.post('/users/reset_password',
+                                data={'name': 'a', 'email': 'a@aa.aa', 'pw_hash': '0000'})
+
+    assert response.status_code == 200
+
+
 def test_reset_password_wrong_username(test_client, setup_users):
     response = test_client.post('/users/reset_password',
                                 data={'name': 'wrong_user', 'email': 'a@aa.aa', 'pw_hash': '0000'})
