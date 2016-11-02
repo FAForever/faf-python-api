@@ -15,7 +15,7 @@ from flask import request
 
 import config
 from api import app
-from api.error import ApiException, Error, ErrorCode
+from api.error import ApiException, Error, ErrorCode, req_post_param
 from config import CRYPTO_KEY
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,7 @@ def create_token(name: str, email: str, pw_hash: str, expiry: int) -> str:
 
 
 @app.route('/users/register', methods=['POST'])
+@req_post_param('name', 'email', 'pw_hash')
 def create_account():
     """
     Creates a request for a new account
@@ -36,7 +37,7 @@ def create_account():
 
     .. sourcecode:: http
 
-       POST /users/create_account
+       POST /users/register/
 
     **Example Response**:
 
@@ -97,7 +98,7 @@ def validate_account(token=None):
 
     .. sourcecode:: http
 
-       POST /users/create_account
+       GET /users/validate_registration/Z0FBQUFBQllHbVNQU3Y4Ui1VN3ZMSk12bUFSbUdKRG1NNDJYdzZzN0kyelk1SGNwV0FZZkdhc1lOUU1NeUkxQ0JWODU2OWhKbW5LYVZFOVBKYVhxY3JOVWZKSDRjU2xBdXFGOFJ5WkJCdzZSdnFwd2xYLVlhQkttZFBFdUZySXBOaGtpQjFoeGF2bTg=
 
     **Example Response**:
 
@@ -201,8 +202,8 @@ def validate_registration_input(login: str, user_email: str) -> bool:
 
     return True
 
-
 @app.route('/users/reset_password', methods=['POST'])
+@req_post_param('name', 'email', 'pw_hash')
 def reset_password():
     """
     Creates a request for a new account
@@ -281,7 +282,7 @@ def validate_password(token=None):
 
     .. sourcecode:: http
 
-       POST /users/create_account
+       POST /users/validate_password/Z0FBQUFBQllHbVdoNFdHblhjUE01Z2l2RTQ0Z2xneXpRZ19fYUgxcmY2endsaEJ4TzdjS1EwM1QxNG8yblVwNlFhMFVuLUdKR0JETW9PZWdDdm1hLThNYUhwZnVaa0s1OGhVVF9ER09YMzFPS2RnM0dLV0hoZkUzMU9ONm1DTnFkWEgwU1VvZzZBWGs=
 
     **Example Response**:
 
@@ -353,6 +354,7 @@ def send_email(text, to_name, to_email, subject):
 
 
 @app.route('/users/change_password', methods=['POST'])
+@req_post_param('name', 'pw_hash_old', 'pw_hash_new')
 def change_password(token=None):
     """
     Request a password change for a user

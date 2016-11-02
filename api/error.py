@@ -1,4 +1,7 @@
 from enum import Enum
+from functools import wraps
+
+from flask import request
 
 
 class ErrorCode(Enum):
@@ -14,10 +17,10 @@ class ErrorCode(Enum):
         code=102,
         title='Missing file',
         detail='A file has to be provided as parameter "file".')
-    UPLOAD_METADATA_MISSING = dict(
+    PARAMETER_MISSING = dict(
         code=103,
-        title='Missing metadata',
-        detail='A parameter "metadata" has to be provided.')
+        title='Missing parameter',
+        detail='A parameter "{0}" has to be provided.')
     UPLOAD_INVALID_FILE_EXTENSION = dict(
         code=104,
         title='Invalid file extension',
@@ -159,6 +162,7 @@ class ErrorCode(Enum):
         title='Password change failed',
         detail='Username and/or old password did not match.')
 
+
 class Error:
     def __init__(self, code: ErrorCode, *args):
         self.code = code
@@ -184,3 +188,19 @@ class ApiException(Exception):
         return {
             'errors': [error.to_dict() for error in self.errors]
         }
+
+
+# ======== Usefull decorators =======
+
+def req_post_param(*param_names):
+    def wrapper(function):
+        @wraps(function)
+        def decorated_function(*args, **kwargs):
+            for param_name in param_names:
+                if param_name not in request.form:
+                    raise ApiException([Error(ErrorCode.PARAMETER_MISSING, param_name)])
+            return function(*args, **kwargs)
+
+        return decorated_function
+
+    return wrapper
