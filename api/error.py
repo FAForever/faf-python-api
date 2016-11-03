@@ -125,25 +125,25 @@ class ErrorCode(Enum):
         code=129,
         title='Name clash',
         detail='Another mod with file name "{0}" already exists.')
-    REGISTRATION_INVALID_EMAIL = dict(
+    INVALID_EMAIL = dict(
         code=130,
-        title='Registration failed',
+        title='Invalid account data',
         detail='The entered email-adress is invalid: {0}')
-    REGISTRATION_INVALID_USERNAME = dict(
+    INVALID_USERNAME = dict(
         code=131,
-        title='Registration failed',
+        title='Invalid account data',
         detail='The entered username is invalid: {0}')
-    REGISTRATION_USERNAME_TAKEN = dict(
+    USERNAME_TAKEN = dict(
         code=132,
-        title='Registration failed',
+        title='Invalid account data',
         detail='The entered username is already in use: {0}')
-    REGISTRATION_EMAIL_REGISTERED = dict(
+    EMAIL_REGISTERED = dict(
         code=133,
-        title='Registration failed',
-        detail='The entered email address `{0}` already has an associated account. Please request a new password instead.')
-    REGISTRATION_BLACKLISTED_EMAIL = dict(
+        title='Invalid account data',
+        detail='The entered email address `{0}` already has an associated account.')
+    BLACKLISTED_EMAIL = dict(
         code=134,
-        title='Registration failed',
+        title='Invalid account data',
         detail='The domain of your email is blacklisted: {0}')
     PASSWORD_RESET_INVALID = dict(
         code=135,
@@ -161,6 +161,10 @@ class ErrorCode(Enum):
         code=138,
         title='Password change failed',
         detail='Username and/or old password did not match.')
+    USERNAME_CHANGE_TAKEN = dict(
+        code=140,
+        title='Change of username failed',
+        detail='The entered username is already in use: {0}')
 
 
 class Error:
