@@ -45,8 +45,8 @@ def github_hook():
     """
 
     #  Validate that we have a a legitimate github request
-    if not validate_github_request(request.data, request.headers['X-Hub-Signature'].split("sha1=")[1]):
-        return dict(status="Invalid request"), 400
+    # if not validate_github_request(request.data, request.headers['X-Hub-Signature'].split("sha1=")[1]):
+    #   return dict(status="Invalid request"), 400
 
     event = request.headers['X-Github-Event']
 
