@@ -4,7 +4,7 @@ import time
 
 from flask import request
 
-from api import app
+from api import app, oauth
 from api.error import req_post_param
 from api.helpers import *
 
@@ -258,6 +258,7 @@ def validate_password(token=None):
 
 
 @app.route('/users/change_password', methods=['POST'])
+@oauth.require_oauth('write_account_data')
 @req_post_param('name', 'pw_hash_old', 'pw_hash_new')
 def change_password():
     """
@@ -301,5 +302,48 @@ def change_password():
 
         if cursor.rowcount == 0:
             raise ApiException([Error(ErrorCode.PASSWORD_CHANGE_FAILED)])
+
+    return "ok"
+
+
+@app.route('/users/change_name', methods=['POST'])
+@oauth.require_oauth('write_account_data')
+@req_post_param('desired_name')
+def change_name():
+    """
+    Request a name change for a user
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       POST /users/change_name
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        "ok"
+
+    :desired_name the new username
+
+    """
+
+    desired_name = request.form.get('desired_name')
+
+    validate_username(desired_name)
+
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute(
+            "UPDATE `login` SET `login` = %(name)s WHERE id = %(id)s",
+            {
+                'name': desired_name.lower(),
+                'id': request.oauth.user.id
+            })
 
     return "ok"
