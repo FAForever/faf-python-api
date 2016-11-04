@@ -159,3 +159,4 @@ import api.clans
 import api.coop
 import api.players
 import api.users_route
+import api.featured_mods
