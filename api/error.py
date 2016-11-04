@@ -161,10 +161,6 @@ class ErrorCode(Enum):
         code=138,
         title='Password change failed',
         detail='Username and/or old password did not match.')
-    USERNAME_CHANGE_TAKEN = dict(
-        code=140,
-        title='Change of username failed',
-        detail='The entered username is already in use: {0}')
 
 
 class Error:
