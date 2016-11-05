@@ -260,8 +260,8 @@ def test_validate_password_invalid_data(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.PASSWORD_RESET_FAILED.value['code']
 
 
-def test_validate_password_success(test_client, setup_users):
-    response = test_client.get(
+def test_validate_password_success(oauth, setup_users):
+    response = oauth.get(
         '/users/validate_password/' + create_token('abc', 'a@aa.aa', 'test123', time.time() + 60))
 
     assert response.status_code == 200
@@ -272,8 +272,8 @@ def test_validate_password_success(test_client, setup_users):
         assert cursor.fetchone() is not None
 
 
-def test_change_password_invalid_user(oauth, test_client, setup_users):
-    response = test_client.post('/users/change_password', data={
+def test_change_password_invalid_user(oauth, setup_users):
+    response = oauth.post('/users/change_password', data={
         'name': 'wrong_user', 'pw_hash_old': '0000', 'pw_hash_new': '0001'
     })
 
@@ -285,8 +285,8 @@ def test_change_password_invalid_user(oauth, test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.PASSWORD_CHANGE_FAILED.value['code']
 
 
-def test_change_password_invalid_password(oauth, test_client, setup_users):
-    response = test_client.post('/users/change_password', data={
+def test_change_password_invalid_password(oauth, setup_users):
+    response = oauth.post('/users/change_password', data={
         'name': 'abc', 'pw_hash_old': 'wrong_password', 'pw_hash_new': '0001'
     })
 
@@ -298,8 +298,8 @@ def test_change_password_invalid_password(oauth, test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.PASSWORD_CHANGE_FAILED.value['code']
 
 
-def test_change_password_success(oauth, test_client, setup_users):
-    response = test_client.post('/users/change_password', data={
+def test_change_password_success(oauth, setup_users):
+    response = oauth.post('/users/change_password', data={
         'name': 'abc', 'pw_hash_old': 'pw_a', 'pw_hash_new': 'new_pw_a'
     })
 
@@ -309,3 +309,46 @@ def test_change_password_success(oauth, test_client, setup_users):
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
         cursor.execute("SELECT * FROM login WHERE login = 'abc' AND password = 'new_pw_a'")
         assert cursor.fetchone() is not None
+
+
+def test_change_name_success(oauth, setup_users):
+    response = oauth.post('/users/change_name', data={
+        'desired_name': 'Xyz'
+    })
+
+    assert response.status_code == 200
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT * FROM login WHERE login = 'Xyz' AND id = 1")
+        assert cursor.fetchone() is not None
+
+
+def test_change_name_too_early(oauth, setup_users):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute(
+            "INSERT INTO name_history (change_time, user_id, previous_name) VALUES (NOW() - INTERVAL 10 DAY, 1, 'Dostya')")
+
+        response = oauth.post('/users/change_name', data={
+            'desired_name': 'Xyz'
+        })
+
+        assert response.status_code == 400
+        assert response.content_type == 'application/vnd.api+json'
+
+        result = json.loads(response.data.decode('utf-8'))
+        assert len(result['errors']) == 1
+        assert result['errors'][0]['code'] == ErrorCode.USERNAME_CHANGE_TOO_EARLY.value['code']
+
+
+def test_change_name_taken(oauth, setup_users):
+    response = oauth.post('/users/change_name', data={
+        'desired_name': 'bCD'
+    })
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.USERNAME_TAKEN.value['code']

@@ -161,6 +161,10 @@ class ErrorCode(Enum):
         code=138,
         title='Password change failed',
         detail='Username and/or old password did not match.')
+    USERNAME_CHANGE_TOO_EARLY = dict(
+        code=139,
+        title='Username change not allowed',
+        detail='Only one name change per 30 days is allowed. {0} more days to go.')
 
 
 class Error:

@@ -340,10 +340,29 @@ def change_name():
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute(
-            "UPDATE `login` SET `login` = %(name)s WHERE id = %(id)s",
+            "SELECT DATEDIFF(NOW(), change_time) as days_since_last_change FROM name_history WHERE user_id=%(id)s AND DATEDIFF(NOW(), change_time) < 30 ORDER BY change_time DESC",
             {
-                'name': desired_name.lower(),
                 'id': request.oauth.user.id
             })
+
+        entry = cursor.fetchone()
+
+        if entry is not None:
+            raise ApiException([Error(ErrorCode.USERNAME_CHANGE_TOO_EARLY, 30 - int(entry[0]))])
+
+        cursor.execute(
+            "INSERT INTO name_history (user_id, previous_name) SELECT id, login FROM login WHERE id = %(id)s",
+            {
+                'id': request.oauth.user.id
+            }
+        )
+
+        cursor.execute(
+            "UPDATE login SET login = %(name)s WHERE id = %(id)s",
+            {
+                'id': request.oauth.user.id,
+                'name': desired_name
+            }
+        )
 
     return "ok"
