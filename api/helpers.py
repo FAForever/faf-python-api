@@ -3,6 +3,7 @@ import email
 import json
 import marisa_trie
 import re
+import time
 from email.mime.text import MIMEText
 
 import faf.db as db
@@ -18,6 +19,14 @@ EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$")
 
 
 def validate_email(email: str) -> bool:
+    """
+    Checks correctness of a username
+    Throws exception if the syntax does not fit,
+     the domain is blacklistet or is already in use
+    :email name: Users email (Case sensitive)
+    :return: true if no error occured
+    """
+
     # check for correct email syntax
     if not EMAIL_REGEX.match(email):
         raise ApiException([Error(ErrorCode.INVALID_EMAIL, email)])
@@ -46,6 +55,12 @@ def validate_email(email: str) -> bool:
 
 
 def validate_username(name: str) -> bool:
+    """
+    Checks correctness of a username
+    Throws exception if the syntax does not fit or is already in use
+    :param name: FAF username (Case sensitive)
+    :return: true if no error occured
+    """
     # check for correct syntax
     if not USERNAME_REGEX.match(name):
         raise ApiException([Error(ErrorCode.INVALID_USERNAME, name)])
@@ -64,6 +79,9 @@ def validate_username(name: str) -> bool:
 
 
 def send_email(logger, text, to_name, to_email, subject):
+    """
+    Sends an email using mandrill API
+    """
     msg = MIMEText(text)
 
     msg['Subject'] = subject
@@ -89,21 +107,37 @@ def send_email(logger, text, to_name, to_email, subject):
     logger.debug("Mandrill response: %s", json.dumps(resp.text))
 
 
-def create_token(*args) -> str:
-    first = True
+def create_token(action: str, expiry: float, *args) -> str:
+    """
+    Create a crypted token that can carry any number of arguments.
+    Only a server using the same CRYPTO_KEY can decrypt the token.
+    Use this to store any kind of requests in an URL for i.e. emails
+
+    :param action: a unique identifier for the action associated with this token
+    :param expiry: timestamp when token expires
+    :param args: any arguments you want to store in the token
+    :return: the token as a string that can be decrypted using decrypt_token
+    """
+
+    plaintext = action + ',' + str(expiry)
 
     for param in args:
-        if first:
-            plaintext = str(param)
-            first = False
-        else:
-            plaintext += "," + str(param)
+        plaintext += "," + str(param)
 
     request_hmac = Fernet(CRYPTO_KEY).encrypt(plaintext.encode())
     return base64.urlsafe_b64encode(request_hmac).decode("utf-8")
 
 
-def decrypt_token(token: str):
+def decrypt_token(action: str, token: str):
+    """
+    Decrypts a token and returns the data in a list of strings
+    Throws exception when the action does not fit or the token expired
+
+    :param action: a unique identifier for the action associated with this token
+    :param token: the crypted token
+    :return: list of strings which contains the data given on creating the token
+    """
+
     # Fuck you urlsafe_b64encode & padding and fuck you overzealous http implementations
     token = token.replace('%3d', '=')
     token = token.replace('%3D', '=')
@@ -111,4 +145,12 @@ def decrypt_token(token: str):
     ciphertext = base64.urlsafe_b64decode(token.encode())
     plaintext = Fernet(CRYPTO_KEY).decrypt(ciphertext).decode("utf-8")
 
-    return plaintext.split(',')
+    token_action, expiry, *result = plaintext.split(',')
+
+    if token_action != action:
+        raise ApiException([Error(ErrorCode.TOKEN_INVALID)])
+
+    if (float(expiry) < time.time()):
+        raise ApiException([Error(ErrorCode.TOKEN_EXPIRED)])
+
+    return result

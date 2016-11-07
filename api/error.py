@@ -145,11 +145,11 @@ class ErrorCode(Enum):
         code=134,
         title='Invalid account data',
         detail='The domain of your email is blacklisted: {0}')
-    PASSWORD_RESET_INVALID = dict(
+    TOKEN_INVALID = dict(
         code=135,
         title='Invalid operation',
         detail='The delivered token is invalid.')
-    USER_TOKEN_EXPIRED = dict(
+    TOKEN_EXPIRED = dict(
         code=136,
         title='Invalid operation',
         detail='The delivered token has expired.')

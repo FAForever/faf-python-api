@@ -1,5 +1,3 @@
-import time
-
 import pytest
 
 from api.helpers import *
@@ -70,9 +68,20 @@ def test_token_simulate_registration():
     email = "new_user@faforever.com"
     pw_hash = "123456789!"
 
-    result = decrypt_token(create_token(expires_at, name, email, pw_hash))
+    result = decrypt_token('register', create_token('register', expires_at, name, email, pw_hash))
 
-    assert float(result[0]) == expires_at
-    assert result[1] == name
-    assert result[2] == email
-    assert result[3] == pw_hash
+    assert result[0] == name
+    assert result[1] == email
+    assert result[2] == pw_hash
+
+
+def test_token_expired():
+    expires_at = time.time() - 60
+    name = "new_user"
+    email = "new_user@faforever.com"
+    pw_hash = "123456789!"
+
+    with pytest.raises(ApiException) as excInfo:
+        result = decrypt_token('register', create_token('register', expires_at, name, email, pw_hash))
+
+    assert excInfo.value.errors[0].code == ErrorCode.TOKEN_EXPIRED

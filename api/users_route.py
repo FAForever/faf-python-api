@@ -1,14 +1,15 @@
 import datetime
 import logging
-import time
+import urllib
 
-from flask import request
+from flask import request, redirect
 
 from api import app, oauth
 from api.error import req_post_param
 from api.helpers import *
 
 logger = logging.getLogger(__name__)
+
 
 @app.route('/users/register', methods=['POST'])
 @req_post_param('name', 'email', 'pw_hash')
@@ -46,7 +47,7 @@ def create_account():
     validate_email(email)
 
     expiry = time.time() + 3600 * 24 * 14
-    token = create_token(name, email, pw_hash, expiry)
+    token = create_token('register', expiry, name, email, pw_hash)
 
     # send email with link to activation url
     logger.info(
@@ -94,17 +95,13 @@ def validate_account(token=None):
 
         "ok"
 
-    :token contains the required data (username, email, password hash, expiration date
+    :token contains the required data (username, email, password hash)
 
     """
 
-    name, email, pw_hash, expiry = decrypt_token(token)
+    name, email, pw_hash = decrypt_token('register', token)
     validate_username(name)
     validate_email(email)
-
-    if (float(expiry) < time.time()):
-        logger.error("Registration of user {} with email address {} failed (token expired)".format(name, email))
-        raise ApiException([Error(ErrorCode.USER_TOKEN_EXPIRED)])
 
     with db.connection:
         cursor = db.connection.cursor()
@@ -179,10 +176,10 @@ def reset_password():
                        (name.lower(), email))
 
         if cursor.fetchone() is None:
-            raise ApiException([Error(ErrorCode.PASSWORD_RESET_INVALID)])
+            raise ApiException([Error(ErrorCode.TOKEN_INVALID)])
 
     expiry = time.time() + 3600 * 24 * 14
-    token = create_token(name, email, pw_hash, str(expiry))
+    token = create_token('reset_password', expiry, name, email, pw_hash)
 
     # send email with link to activation url
     logger.info(
@@ -219,7 +216,7 @@ def validate_password(token=None):
 
     .. sourcecode:: http
 
-       POST /users/validate_password/Z0FBQUFBQllHbVdoNFdHblhjUE01Z2l2RTQ0Z2xneXpRZ19fYUgxcmY2endsaEJ4TzdjS1EwM1QxNG8yblVwNlFhMFVuLUdKR0JETW9PZWdDdm1hLThNYUhwZnVaa0s1OGhVVF9ER09YMzFPS2RnM0dLV0hoZkUzMU9ONm1DTnFkWEgwU1VvZzZBWGs=
+       GET /users/validate_password/Z0FBQUFBQllHbVdoNFdHblhjUE01Z2l2RTQ0Z2xneXpRZ19fYUgxcmY2endsaEJ4TzdjS1EwM1QxNG8yblVwNlFhMFVuLUdKR0JETW9PZWdDdm1hLThNYUhwZnVaa0s1OGhVVF9ER09YMzFPS2RnM0dLV0hoZkUzMU9ONm1DTnFkWEgwU1VvZzZBWGs=
 
     **Example Response**:
 
@@ -231,15 +228,11 @@ def validate_password(token=None):
 
         "ok"
 
-    :token contains the required data (username, email, password hash, expiration date
+    :token contains the required data (username, email, password hash)
 
     """
 
-    name, email, pw_hash, expiry = decrypt_token(token)
-
-    if (float(expiry) < time.time()):
-        logger.error("Registration of user {} with email address {} failed (token expired)".format(name, email))
-        raise ApiException([Error(ErrorCode.USER_TOKEN_EXPIRED)])
+    name, email, pw_hash = decrypt_token('reset_password', token)
 
     with db.connection:
         cursor = db.connection.cursor()
@@ -366,3 +359,54 @@ def change_name():
         )
 
     return "ok"
+
+
+@app.route('/users/link_to_steam', methods=['GET'])
+@oauth.require_oauth('write_account_data')
+def link_to_steam():
+    """
+    API stores the steam link request in a token.
+    The user gets redirected to a steam login page.
+    The redirect contains a callback-url where steam redirects after login to route users/validate_steam/<token>
+    """
+
+    expiry = time.time() + 600
+    token = create_token('link_to_steam', expiry, request.oauth.user.id)
+
+    openid_args = {
+        'openid.ns': 'http://specs.openid.net/auth/2.0',
+        'openid.mode': 'checkid_setup',
+        'openid.return_to': request.host_url + 'users/validate_steam/' + token,
+        'openid.realm': request.host_url,
+        'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select',
+        'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select'
+    }
+
+    steam_url = config.STEAM_LOGIN_URL + '?' + urllib.parse.urlencode(openid_args)
+
+    return redirect(steam_url)
+
+
+@app.route('/users/validate_steam/<token>', methods=['GET'])
+def validate_steam(token=None):
+    user_id = 1
+    # user_id = decrypt_token('link_to_steam', token)
+
+    # extract steam account id
+    match = re.search('^http://steamcommunity.com/openid/id/([0-9]{17,25})', request.args.get('openid.identity'))
+
+    if match is None:
+        return redirect(config.STEAM_LINK_FAIL_URL)
+
+    steamID = match.group(1)
+
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute(
+            "UPDATE login SET steamid = %(steam_id)s WHERE id = %(id)s",
+            {
+                'steam_id': steamID,
+                'id': request.oauth.user.id
+            })
+
+        return redirect(config.STEAM_LINK_SUCCESS_URL)

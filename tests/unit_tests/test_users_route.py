@@ -127,7 +127,8 @@ def test_register_success(test_client, setup_users):
 
 
 def test_validate_registration_invalid_email(test_client, setup_users):
-    response = test_client.get('/users/validate_registration/' + create_token('new_user', 'abbb.cc', '0000', 0))
+    response = test_client.get(
+        '/users/validate_registration/' + create_token('register', time.time() + 60, 'new_user', 'abbb.cc', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
@@ -138,7 +139,8 @@ def test_validate_registration_invalid_email(test_client, setup_users):
 
 
 def test_validate_registration_username_taken(test_client, setup_users):
-    response = test_client.get('/users/validate_registration/' + create_token('Abc', 'a@bbb.cc', '0000', 0))
+    response = test_client.get(
+        '/users/validate_registration/' + create_token('register', time.time() + 60, 'Abc', 'a@bbb.cc', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
@@ -149,7 +151,8 @@ def test_validate_registration_username_taken(test_client, setup_users):
 
 
 def test_validate_registration_email_taken(test_client, setup_users):
-    response = test_client.get('/users/validate_registration/' + create_token('new_user', 'a@AA.aa', '0000', 0))
+    response = test_client.get(
+        '/users/validate_registration/' + create_token('register', time.time() + 60, 'new_user', 'a@AA.aa', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
@@ -160,7 +163,8 @@ def test_validate_registration_email_taken(test_client, setup_users):
 
 
 def test_validate_registration_email_blacklisted(test_client, setup_users):
-    response = test_client.get('/users/validate_registration/' + create_token('new_user', 'a@ZZZ.com', '0000', 0))
+    response = test_client.get(
+        '/users/validate_registration/' + create_token('register', time.time() + 60, 'new_user', 'a@ZZZ.com', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
@@ -172,7 +176,8 @@ def test_validate_registration_email_blacklisted(test_client, setup_users):
 
 def test_validate_registration_success(test_client, setup_users):
     response = test_client.get(
-        '/users/validate_registration/' + create_token('alpha', 'a@faforever.com', '0000', time.time() + 60))
+        '/users/validate_registration/' + create_token('register', time.time() + 60, 'alpha', 'a@faforever.com',
+                                                       '0000'))
 
     assert response.status_code == 200
 
@@ -196,14 +201,15 @@ def test_validate_registration_success(test_client, setup_users):
 
 def test_validate_token_expired(test_client, setup_users):
     response = test_client.get(
-        '/users/validate_registration/' + create_token('alpha', 'a@faforever.com', '0000', time.time() - 60))
+        '/users/validate_registration/' + create_token('register', time.time() - 60, 'alpha', 'a@faforever.com',
+                                                       '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.USER_TOKEN_EXPIRED.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.TOKEN_EXPIRED.value['code']
 
 
 def test_reset_password_success(test_client, setup_users):
@@ -222,7 +228,7 @@ def test_reset_password_wrong_username(test_client, setup_users):
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.PASSWORD_RESET_INVALID.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.TOKEN_INVALID.value['code']
 
 
 def test_reset_password_wrong_email(test_client, setup_users):
@@ -234,23 +240,24 @@ def test_reset_password_wrong_email(test_client, setup_users):
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.PASSWORD_RESET_INVALID.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.TOKEN_INVALID.value['code']
 
 
 def test_validate_password_expired(test_client, setup_users):
-    response = test_client.get('/users/validate_password/' + create_token('abc', 'a@aa.aa', '0000', time.time() - 60))
+    response = test_client.get(
+        '/users/validate_password/' + create_token('reset_password', time.time() - 60, 'abc', 'a@aa.aa', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.USER_TOKEN_EXPIRED.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.TOKEN_EXPIRED.value['code']
 
 
 def test_validate_password_invalid_data(test_client, setup_users):
     response = test_client.get(
-        '/users/validate_password/' + create_token('wrong_user', 'a@aa.aa', '0000', time.time() + 60))
+        '/users/validate_password/' + create_token('reset_password', time.time() + 60, 'wrong_user', 'a@aa.aa', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
@@ -262,7 +269,7 @@ def test_validate_password_invalid_data(test_client, setup_users):
 
 def test_validate_password_success(oauth, setup_users):
     response = oauth.get(
-        '/users/validate_password/' + create_token('abc', 'a@aa.aa', 'test123', time.time() + 60))
+        '/users/validate_password/' + create_token('reset_password', time.time() + 60, 'abc', 'a@aa.aa', 'test123'))
 
     assert response.status_code == 200
 
@@ -352,3 +359,10 @@ def test_change_name_taken(oauth, setup_users):
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
     assert result['errors'][0]['code'] == ErrorCode.USERNAME_TAKEN.value['code']
+
+
+def test_link_to_steam_success(oauth, setup_users):
+    response = oauth.get('/users/link_to_steam')
+
+    assert response.status_code == 302
+    assert response.headers['location'].startswith('https://steamcommunity.com/openid/login')
