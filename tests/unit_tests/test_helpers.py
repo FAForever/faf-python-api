@@ -1,3 +1,5 @@
+from unittest.mock import patch, Mock
+
 import pytest
 
 from api.helpers import *
@@ -85,3 +87,14 @@ def test_token_expired():
         result = decrypt_token('register', create_token('register', expires_at, name, email, pw_hash))
 
     assert excInfo.value.errors[0].code == ErrorCode.TOKEN_EXPIRED
+
+
+@patch('requests.post')
+def test_send_email(post_function):
+    response = Mock()
+    response.text = "{}"
+    post_function.return_value = response
+
+    send_email(Mock(), "someText", "someName", "someEmail", "someSubject")
+
+    assert post_function.call_count == 1
