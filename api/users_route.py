@@ -57,18 +57,18 @@ def create_account():
 
     passwordLink = "http://" + config.HOST_NAME + "/users/validate_registration/" + token
 
+    text = "Dear " + name + ",\n\n\
+    welcome to the Forged Alliance Forever community.\
+    Please visit the following link to activate your FAF account:\n\
+    -----------------------\n\
+    " + passwordLink + "\n\
+    -----------------------\n\n\
+    Thanks,\n\
+    -- The FA Forever team"
+
     if (config.ENVIRONMENT == "testing"):
         print(passwordLink)
     else:
-        text = "Dear " + name + ",\n\n\
-        welcome to the Forged Alliance Forever community.\
-        Please visit the following link to activate your FAF account:\n\
-        -----------------------\n\
-        " + passwordLink + "\n\
-        -----------------------\n\n\
-        Thanks,\n\
-        -- The FA Forever team"
-
         send_email(logger, text, name, email, 'Forged Alliance Forever - Account validation')
 
     return "ok"
@@ -189,19 +189,19 @@ def reset_password():
 
     passwordLink = "http://" + config.HOST_NAME + "/users/validate_password/" + token
 
+    text = "Dear " + name + ",\n\n\
+    a new password was requested for your user.\n\
+    If you did not request a new password, please delete this email.\n\n\
+    Otherwise please click on the following link to reset your password:\n\
+    -----------------------\n\
+    " + passwordLink + "\n\
+    -----------------------\n\n\
+    Thanks,\n\
+    -- The FA Forever team"
+
     if (config.ENVIRONMENT == "testing"):
         print(passwordLink)
     else:
-        text = "Dear " + name + ",\n\n\
-        a new password was requested for your user.\n\
-        If you did not request a new password, please delete this email.\n\n\
-        Otherwise please click on the following link to reset your password:\n\
-        -----------------------\n\
-        " + passwordLink + "\n\
-        -----------------------\n\n\
-        Thanks,\n\
-        -- The FA Forever team"
-
         send_email(logger, text, name, email, 'Forged Alliance Forever - Password reset')
 
     return "ok"
@@ -395,8 +395,7 @@ def link_to_steam():
 
 @app.route('/users/validate_steam/<token>', methods=['GET'])
 def validate_steam_request(token=None):
-    user_id = 1
-    # user_id = decrypt_token('link_to_steam', token)
+    user_id = decrypt_token('link_to_steam', token)
 
     # extract steam account id
     match = re.search('^http://steamcommunity.com/openid/id/([0-9]{17,25})', request.args.get('openid.identity'))
@@ -461,24 +460,24 @@ def change_email():
 
     changeLink = "http://" + config.HOST_NAME + "/users/validate_email/" + token
 
-    if (config.ENVIRONMENT == "testing"):
-        print(changeLink)
-    else:
-        with db.connection:
-            cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-            cursor.execute("SELECT email FROM login WHERE id = %s", request.oauth.user.id)
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+        cursor.execute("SELECT email FROM login WHERE id = %s", request.oauth.user.id)
 
-            user = cursor.fetchone()
+        user = cursor.fetchone()
 
-            text = "Dear " + name + ",\n\n\
-            you have requested to change your email account to " + new_email + ".\n\
-            To confirm this change please click on the following link:\n\
-            -----------------------\n\
-            " + changeLink + "\n\
-            -----------------------\n\n\
-            Thanks,\n\
-            -- The FA Forever team"
+        text = "Dear " + name + ",\n\n\
+        you have requested to change your email account to " + new_email + ".\n\
+        To confirm this change please click on the following link:\n\
+        -----------------------\n\
+        " + changeLink + "\n\
+        -----------------------\n\n\
+        Thanks,\n\
+        -- The FA Forever team"
 
+        if (config.ENVIRONMENT == "testing"):
+            print(changeLink)
+        else:
             send_email(logger, text, name, user['email'], 'Forged Alliance Forever - Change of email address')
 
     return "ok"

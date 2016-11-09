@@ -42,7 +42,7 @@ def setup_users(request, app):
 def oauth():
     def get_token(access_token=None, refresh_token=None):
         return Mock(
-            user=User(id=1),
+            user=User(id=1, login="Dostya"),
             expires=datetime.datetime.now() + datetime.timedelta(hours=1),
             scopes=['write_account_data']
         )
