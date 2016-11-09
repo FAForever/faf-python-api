@@ -20,7 +20,8 @@ def setup_users(request, app):
         cursor = db.connection.cursor()
         cursor.execute("TRUNCATE TABLE ladder1v1_rating")
         cursor.execute("TRUNCATE TABLE global_rating")
-        cursor.execute("delete from login")
+        cursor.execute("DELETE FROM avatars")
+        cursor.execute("DELETE FROM login")
         cursor.execute("""INSERT INTO login
         (id, login, password, email) VALUES
         (1, 'abc', 'pw_a', 'a@aa.aa'),
@@ -366,3 +367,35 @@ def test_link_to_steam_success(oauth, setup_users):
 
     assert response.status_code == 302
     assert response.headers['location'].startswith('https://steamcommunity.com/openid/login')
+
+
+def test_change_password_success(oauth, setup_users):
+    response = oauth.post('/users/change_email', data={
+        'new_email': 'new@Email.com'
+    })
+
+    assert response.status_code == 200
+
+
+def test_validate_email_success(test_client, setup_users):
+    response = test_client.get(
+        '/users/validate_email/' + create_token('change_email', time.time() + 60, 1, 'new@Email.com'))
+
+    assert response.status_code == 200
+
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT * FROM login WHERE email = 'new@email.com' AND id = 1")
+        assert cursor.fetchone() is not None
+
+
+def test_validate_email_failed(test_client, setup_users):
+    response = test_client.get(
+        '/users/validate_email/' + create_token('change_email', time.time() + 60, 99, 'new@Email.com'))
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.EMAIL_CHANGE_FAILED.value['code']

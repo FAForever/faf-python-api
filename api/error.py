@@ -165,6 +165,11 @@ class ErrorCode(Enum):
         code=139,
         title='Username change not allowed',
         detail='Only one name change per 30 days is allowed. {0} more days to go.')
+    EMAIL_CHANGE_FAILED = dict(
+        code=140,
+        title='Email change failed',
+        detail='An unknown error happened while updating the database.'
+    )
 
 
 class Error:

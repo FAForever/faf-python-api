@@ -171,7 +171,7 @@ def reset_password():
     with db.connection:
         cursor = db.connection.cursor()
 
-        # ensure that username is unique
+        # validate username and email in the database
         cursor.execute("SELECT id FROM `login` WHERE LOWER(`login`) = %s AND LOWER(`email`) = %s",
                        (name.lower(), email))
 
@@ -373,6 +373,12 @@ def link_to_steam():
     expiry = time.time() + 600
     token = create_token('link_to_steam', expiry, request.oauth.user.id)
 
+    logger.info(
+        "User {} has requested steam account linking -- Token expires at {:%Y-%m-%d %H:%M}".format(
+            request.oauth.user.username,
+            datetime.datetime.fromtimestamp(
+                expiry)))
+
     openid_args = {
         'openid.ns': 'http://specs.openid.net/auth/2.0',
         'openid.mode': 'checkid_setup',
@@ -388,7 +394,7 @@ def link_to_steam():
 
 
 @app.route('/users/validate_steam/<token>', methods=['GET'])
-def validate_steam(token=None):
+def validate_steam_request(token=None):
     user_id = 1
     # user_id = decrypt_token('link_to_steam', token)
 
@@ -410,3 +416,111 @@ def validate_steam(token=None):
             })
 
         return redirect(config.STEAM_LINK_SUCCESS_URL)
+
+
+@app.route('/users/change_email', methods=['POST'])
+@oauth.require_oauth('write_account_data')
+@req_post_param('new_email')
+def change_email():
+    """
+    Request a name change for a user
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       POST /users/change_email
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        "ok"
+
+    :desired_name the new username
+
+    """
+
+    name = request.oauth.user.username
+    new_email = request.form.get('new_email')
+
+    validate_email(new_email)
+
+    expiry = time.time() + 3600 * 24 * 14
+    token = create_token('change_email', expiry, request.oauth.user.id, new_email)
+
+    # send email with link to activation url
+    logger.info(
+        "User {} has requested change of email -- Token expires at {:%Y-%m-%d %H:%M}".format(name,
+                                                                                             datetime.datetime.fromtimestamp(
+                                                                                                 expiry)))
+
+    changeLink = "http://" + config.HOST_NAME + "/users/validate_email/" + token
+
+    if (config.ENVIRONMENT == "testing"):
+        print(changeLink)
+    else:
+        with db.connection:
+            cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+            cursor.execute("SELECT email FROM login WHERE id = %s", request.oauth.user.id)
+
+            user = cursor.fetchone()
+
+            text = "Dear " + name + ",\n\n\
+            you have requested to change your email account to " + new_email + ".\n\
+            To confirm this change please click on the following link:\n\
+            -----------------------\n\
+            " + changeLink + "\n\
+            -----------------------\n\n\
+            Thanks,\n\
+            -- The FA Forever team"
+
+            send_email(logger, text, name, user['email'], 'Forged Alliance Forever - Change of email address')
+
+    return "ok"
+
+
+@app.route('/users/validate_email/<token>', methods=['GET'])
+def validate_email_request(token=None):
+    """
+    Sets a new password based on a token from /users/change_email
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       GET /users/validate_email/Z0FBQUFBQllHbVdoNFdHblhjUE01Z2l2RTQ0Z2xneXpRZ19fYUgxcmY2endsaEJ4TzdjS1EwM1QxNG8yblVwNlFhMFVuLUdKR0JETW9PZWdDdm1hLThNYUhwZnVaa0s1OGhVVF9ER09YMzFPS2RnM0dLV0hoZkUzMU9ONm1DTnFkWEgwU1VvZzZBWGs=
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        "ok"
+
+    :token contains the required data (userid, new email)
+
+    """
+
+    userId, email = decrypt_token('change_email', token)
+
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute(
+            "UPDATE `login` SET `email` = %(email)s WHERE id = %(userid)s",
+            {
+                'userid': userId,
+                'email': email.lower()
+            })
+
+        if cursor.rowcount == 0:
+            raise ApiException([Error(ErrorCode.EMAIL_CHANGE_FAILED)])
+
+    return "ok"
