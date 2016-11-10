@@ -1,8 +1,13 @@
+import datetime
+import importlib
 import json
+from unittest.mock import Mock
 
 import pytest
 
+import api
 from faf import db
+from api import User
 
 
 @pytest.fixture
@@ -12,6 +17,7 @@ def test_data(request, app):
         cursor = db.connection.cursor()
         cursor.execute("TRUNCATE TABLE ladder1v1_rating")
         cursor.execute("TRUNCATE TABLE global_rating")
+        cursor.execute("delete from avatars")
         cursor.execute("delete from login")
         cursor.execute("delete from game_player_stats")
         cursor.execute("delete from game_stats")
@@ -65,6 +71,28 @@ def test_data(request, app):
         """)
 
 
+@pytest.fixture
+def oauth():
+    def get_token(access_token=None, refresh_token=None):
+        return Mock(
+            user=User(id=1),
+            expires=datetime.datetime.now() + datetime.timedelta(hours=1),
+            scopes=['public_profile']
+        )
+
+    importlib.reload(api)
+    importlib.reload(api.oauth_handlers)
+    importlib.reload(api.players)
+
+    api.app.config.from_object('config')
+    api.api_init()
+    api.app.debug = True
+
+    api.oauth.tokengetter(get_token)
+
+    return api.app.test_client()
+
+
 def test_players_global_history(test_client, test_data):
     response = test_client.get('/players/1/ratings/global/history')
 
@@ -88,4 +116,30 @@ def test_players_1v1_history(test_client, test_data):
     result = json.loads(response.data.decode('utf-8'))
     assert result['data']['attributes']['history'] == {
         '1476273060': [800.0, 100.0]
+    }
+
+
+def test_get_player(test_client, test_data):
+    response = test_client.get('/players/2')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert result['data']['attributes'] == {
+        'id': '2',
+        'login': 'b'
+    }
+
+
+def test_get_player_me(oauth, test_data):
+    response = oauth.get('/players/me')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert result['data']['attributes'] == {
+        'id': '1',
+        'login': 'a'
     }
