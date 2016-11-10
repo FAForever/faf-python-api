@@ -1,10 +1,99 @@
+from faf.api import PlayerSchema
 from faf.api.client.client_base import ApiException
 from faf.api.history_schema import HistorySchema
+from flask import request
 from pymysql.cursors import DictCursor
 
-from api import app
+from api import app, oauth
 from api.error import Error, ErrorCode
+from api.query_commons import fetch_data
 from faf import db
+
+PLAYER_TABLE = "login l"
+PLAYER_SELECT_EXPRESSIONS = {
+    'id': 'l.id',
+    'login': 'l.login'
+}
+
+
+@app.route('/players/<int:player_id>')
+def get_player(player_id):
+    """
+        Gets a player's public profile.
+
+        **Example Request**:
+
+        .. sourcecode:: http
+
+           GET /players/1234
+
+        **Example Response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Vary: Accept
+            Content-Type: text/javascript
+
+            {
+              "data": {
+                "attributes": {
+                  "id": "21447",
+                  "login": "Downlord"
+                },
+                "id": "21447",
+                "type": "player"
+              }
+            }
+
+        :param player_id: Player ID
+        :type player_id: int
+
+        :status 200: No error
+
+        """
+    return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1, request, many=False,
+                      where='l.id = %s', args=(player_id,))
+
+
+@app.route('/players/me')
+@oauth.require_oauth('public_profile')
+def get_player_me():
+    """
+        Gets the currently logged in player's public profile.
+
+        **Example Request**:
+
+        .. sourcecode:: http
+
+           GET /players/me
+
+        **Example Response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Vary: Accept
+            Content-Type: text/javascript
+
+            {
+              "data": {
+                "attributes": {
+                  "id": "21447",
+                  "login": "Downlord"
+                },
+                "id": "21447",
+                "type": "player"
+              }
+            }
+
+        :param player_id: Player ID
+        :type player_id: int
+
+        :status 200: No error
+
+        """
+    return get_player(request.oauth.user.id)
 
 
 @app.route('/players/<int:player_id>/ratings/<string:rating_type>/history')
