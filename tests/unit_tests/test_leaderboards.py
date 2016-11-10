@@ -15,6 +15,10 @@ def rating_ratings(request, app):
         cursor.execute("TRUNCATE TABLE ladder1v1_rating")
         cursor.execute("TRUNCATE TABLE global_rating")
         cursor.execute("delete from login")
+        cursor.execute("delete from game_player_stats")
+        cursor.execute("delete from game_stats")
+        cursor.execute("delete from game_featuredMods")
+        # TODO use common fixtures
         cursor.execute("""INSERT INTO login
         (id, login, password, email) VALUES
         (1, 'a', '', 'a'),
@@ -166,7 +170,7 @@ def test_leaderboards_get_player_invalid(test_client, rating_ratings):
     result = json.loads(response.data.decode('utf-8'))
 
     assert response.status_code == 400
-    assert result['errors'][0]['detail'] == 'Rating type is not valid: lol. Please pick 1v1 or global.'
+    assert result['errors'][0]['detail'] == 'Rating type is not valid: lol. Please pick "1v1" or "global".'
     assert result['errors'][0]['title'] == ErrorCode.QUERY_INVALID_RATING_TYPE.value['title']
     assert result['errors'][0]['meta']['args'] == ['lol']
 

@@ -1,6 +1,7 @@
 import importlib
 
 import pytest
+
 import api
 
 
@@ -15,6 +16,9 @@ def app():
     importlib.reload(api.leaderboards)
     importlib.reload(api.clans)
     importlib.reload(api.coop)
+    importlib.reload(api.players)
+    importlib.reload(api.users_route)
+    importlib.reload(api.featured_mods)
 
     api.app.config.from_object('config')
     api.app.debug = True

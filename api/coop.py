@@ -1,3 +1,4 @@
+from faf.api.coop_leaderboard_schema import CoopLeaderboardSchema
 from faf.api.coop_mission_schema import CoopMissionSchema
 from flask import request
 
@@ -20,6 +21,37 @@ SELECT_EXPRESSIONS = {
     'thumbnail_url_large': "REPLACE(REPLACE(filename, '.zip', '.png'), 'missions/', '')",
     'folder_name': "SUBSTRING(filename, LOCATE('/', filename)+1, LOCATE('.zip', filename)-6)"
 }
+
+LEADERBOARD_SELECT_EXPRESSIONS = {
+    'id': 'leaderboard.id',
+    'game_id': 'leaderboard.gameid',
+    'player_names': 'leaderboard.player_names',
+    'player_count': 'leaderboard.player_count',
+    'secondary_objectives': 'leaderboard.secondary',
+    'duration': 'TIME_TO_SEC(leaderboard.time)',
+    'ranking': '@rownum := @rownum + 1'
+}
+
+LEADERBOARD_BASE_TABLE = """
+  (SELECT
+    c.id,
+    GROUP_CONCAT(login.login ORDER BY login SEPARATOR ', ') AS player_names,
+    gameid,
+    c.time,
+    c.secondary,
+    c.mission,
+    c.player_count
+   FROM (SELECT @rownum := 0) n,
+    coop_leaderboard c
+    INNER JOIN game_player_stats ON game_player_stats.gameid = c.gameuid
+    INNER JOIN login ON game_player_stats.playerId = login.id
+    WHERE mission = %(mission)s {}
+  GROUP BY gameid
+  ORDER BY time ASC) leaderboard
+"""
+
+LEADERBOARD_TABLE_BY_PLAYER_COUNT = LEADERBOARD_BASE_TABLE.format("AND player_count = %(player_count)s")
+LEADERBOARD_TABLE_ALL = LEADERBOARD_BASE_TABLE.format("")
 
 MAX_PAGE_SIZE = 1000
 
@@ -68,6 +100,56 @@ def coop_missions():
     return fetch_data(CoopMissionSchema(), 'coop_map', SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, enricher=enricher)
 
 
+@app.route("/coop/leaderboards/<int:mission>/<int:player_count>")
+def coop_leaderboards(mission, player_count):
+    """
+    Lists a coop leaderboard for a specific mission. `id` refers to the game id.
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       GET /coop/leaderboards
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": [
+            {
+              "attributes": {
+                "id": "112",
+                "game_id": "1337",
+                "ranking": 3,
+                "player_names": "Someone, SomeoneElse",
+                "secondary_objectives": true,
+                "duration": 3600,
+              },
+              "id": "112",
+              "type": "coop_leaderboard"
+            },
+            ...
+          ]
+        }
+
+
+    """
+
+    if player_count <= 0:
+        table = LEADERBOARD_TABLE_ALL
+    else:
+        table = LEADERBOARD_TABLE_BY_PLAYER_COUNT
+
+    return fetch_data(CoopLeaderboardSchema(), table, LEADERBOARD_SELECT_EXPRESSIONS,
+                      MAX_PAGE_SIZE, request, args={'player_count': player_count, 'mission': mission},
+                      enricher=enricher)
+
+
 def enricher(mission):
     if 'thumbnail_url_small' in mission:
         if not mission['thumbnail_url_small']:
@@ -85,4 +167,4 @@ def enricher(mission):
 
     if 'download_url' in mission:
         mission['download_url'] = '{}/faf/vault/{}'.format(app.config['CONTENT_URL'],
-                                                       urllib.parse.quote(mission['download_url']))
+                                                           urllib.parse.quote(mission['download_url']))

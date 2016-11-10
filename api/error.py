@@ -1,4 +1,7 @@
 from enum import Enum
+from functools import wraps
+
+from flask import request
 
 
 class ErrorCode(Enum):
@@ -14,10 +17,10 @@ class ErrorCode(Enum):
         code=102,
         title='Missing file',
         detail='A file has to be provided as parameter "file".')
-    UPLOAD_METADATA_MISSING = dict(
+    PARAMETER_MISSING = dict(
         code=103,
-        title='Missing metadata',
-        detail='A parameter "metadata" has to be provided.')
+        title='Missing parameter',
+        detail='A parameter "{0}" has to be provided.')
     UPLOAD_INVALID_FILE_EXTENSION = dict(
         code=104,
         title='Invalid file extension',
@@ -113,7 +116,7 @@ class ErrorCode(Enum):
     QUERY_INVALID_RATING_TYPE = dict(
         code=127,
         title='Invalid rating type',
-        detail='Rating type is not valid: {0}. Please pick 1v1 or global.')
+        detail='Rating type is not valid: {0}. Please pick "1v1" or "global".')
     LOGIN_DENIED_BANNED = dict(
         code=128,
         title='Login denied',
@@ -122,6 +125,42 @@ class ErrorCode(Enum):
         code=129,
         title='Name clash',
         detail='Another mod with file name "{0}" already exists.')
+    REGISTRATION_INVALID_EMAIL = dict(
+        code=130,
+        title='Registration failed',
+        detail='The entered email-adress is invalid: {0}')
+    REGISTRATION_INVALID_USERNAME = dict(
+        code=131,
+        title='Registration failed',
+        detail='The entered username is invalid: {0}')
+    REGISTRATION_USERNAME_TAKEN = dict(
+        code=132,
+        title='Registration failed',
+        detail='The entered username is already in use: {0}')
+    REGISTRATION_EMAIL_REGISTERED = dict(
+        code=133,
+        title='Registration failed',
+        detail='The entered email address `{0}` already has an associated account. Please request a new password instead.')
+    REGISTRATION_BLACKLISTED_EMAIL = dict(
+        code=134,
+        title='Registration failed',
+        detail='The domain of your email is blacklisted: {0}')
+    PASSWORD_RESET_INVALID = dict(
+        code=135,
+        title='Invalid operation',
+        detail='The delivered token is invalid.')
+    USER_TOKEN_EXPIRED = dict(
+        code=136,
+        title='Invalid operation',
+        detail='The delivered token has expired.')
+    PASSWORD_RESET_FAILED = dict(
+        code=137,
+        title='Password reset failed',
+        detail='Username and/or email did not match.')
+    PASSWORD_CHANGE_FAILED = dict(
+        code=138,
+        title='Password change failed',
+        detail='Username and/or old password did not match.')
 
 
 class Error:
@@ -149,3 +188,19 @@ class ApiException(Exception):
         return {
             'errors': [error.to_dict() for error in self.errors]
         }
+
+
+# ======== Usefull decorators =======
+
+def req_post_param(*param_names):
+    def wrapper(function):
+        @wraps(function)
+        def decorated_function(*args, **kwargs):
+            for param_name in param_names:
+                if param_name not in request.form:
+                    raise ApiException([Error(ErrorCode.PARAMETER_MISSING, param_name)])
+            return function(*args, **kwargs)
+
+        return decorated_function
+
+    return wrapper

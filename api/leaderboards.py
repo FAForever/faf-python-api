@@ -130,7 +130,7 @@ def leaderboards_type_get_player(leaderboard_type, player_id):
                   "won_games": 946
                 },
                 "id": "781",
-                "type": "ranked1v1"
+                "type": "leaderboard"
               }
             }
 
