@@ -370,6 +370,19 @@ def link_to_steam():
     The redirect contains a callback-url where steam redirects after login to route users/validate_steam/<token>
     """
 
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+        cursor.execute(
+            "SELECT steamid from login WHERE id = %(id)s",
+            {
+                'id': request.oauth.user.id
+            })
+
+        entry = cursor.fetchone()
+
+        if entry['steamid'] is not None:
+            raise ApiException([Error(ErrorCode.STEAM_ID_UNCHANGEABLE)])
+
     expiry = time.time() + 600
     token = create_token('link_to_steam', expiry, request.oauth.user.id)
 
@@ -411,7 +424,7 @@ def validate_steam_request(token=None):
             "UPDATE login SET steamid = %(steam_id)s WHERE id = %(id)s",
             {
                 'steam_id': steamID,
-                'id': request.oauth.user.id
+                'id': user_id
             })
 
         return redirect(config.STEAM_LINK_SUCCESS_URL)

@@ -170,6 +170,11 @@ class ErrorCode(Enum):
         title='Email change failed',
         detail='An unknown error happened while updating the database.'
     )
+    STEAM_ID_UNCHANGEABLE = dict(
+        code=141,
+        title='Linking to Steam failed',
+        detail='Your account is already bound to another Steam ID.'
+    )
 
 
 class Error:

@@ -369,6 +369,21 @@ def test_link_to_steam_success(oauth, setup_users):
     assert response.headers['location'].startswith('https://steamcommunity.com/openid/login')
 
 
+def test_link_to_steam_already_linked(oauth, setup_users):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute("UPDATE login SET steamid = 123456 WHERE id = 1")
+
+    response = oauth.get('/users/link_to_steam')
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.STEAM_ID_UNCHANGEABLE.value['code']
+
+
 def test_change_password_success(oauth, setup_users):
     response = oauth.post('/users/change_email', data={
         'new_email': 'new@Email.com'
