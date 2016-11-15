@@ -23,8 +23,8 @@ REPO_PATHS = {
 DEPLOY_BRANCHES = {
     # branch name : game mode
     'refs/heads/master': 'faf',
-    'refs/heads/deploy/beta': 'fafbeta',
-    'refs/heads/deploy/experiment': 'fafdevelop'
+    'refs/heads/deploy/fafbeta': 'fafbeta',
+    'refs/heads/deploy/fafdevelop': 'fafdevelop'
 }
 
 GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'

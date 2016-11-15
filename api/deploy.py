@@ -57,13 +57,12 @@ def github_hook():
         """
 
         body = request.get_json()
-        body_deployment = body['deployment']
-        branch = body_deployment['ref']
+        branch = body['ref']
         game_mode = app.config['DEPLOY_BRANCHES'][branch]
 
         if game_mode:
             repo = body['repository']
-            commit = body_deployment['sha']
+            commit = body['after']
 
             # Build mod on database from git and write to download system
             status, description = deploy_route(repo['name'],
@@ -73,7 +72,7 @@ def github_hook():
             # Create status update on github
             status_response = app.github.create_deployment_status(owner='FAForever',
                                                                   repo=repo['name'],
-                                                                  id=body_deployment['id'],
+                                                                  id=repo['id'],
                                                                   state=status,
                                                                   description=description)
             # Create status update on Slack
@@ -81,7 +80,7 @@ def github_hook():
                                    text="Deployed {}:{} to {}".format(
                                        repo['name'],
                                        "{}@{}".format(branch, commit),
-                                       body_deployment['environment']))
+                                       game_mode))
             # Create status responses
             if status_response.status_code == 201:
                 return (dict(status=status,
