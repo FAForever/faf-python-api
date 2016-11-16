@@ -44,5 +44,3 @@ MANDRILL_API_KEY = os.getenv("MANDRILL_API_KEY", '')
 MANDRILL_API_URL = os.getenv("MANDRILL_API_URL", 'https://mandrillapp.com/api/1.0')
 
 STEAM_LOGIN_URL = os.getenv("STEAM_LOGIN_URL", 'https://steamcommunity.com/openid/login')
-STEAM_LINK_SUCCESS_URL = os.getenv("STEAM_LINK_SUCCESS_URL", 'http://www.faforever.com?steam_link_successful')
-STEAM_LINK_FAIL_URL = os.getenv("STEAM_LINK_FAIL_URL", 'http://www.faforever.com?steam_link_failed')

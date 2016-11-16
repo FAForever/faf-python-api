@@ -1,6 +1,7 @@
 import datetime
 import logging
 import urllib
+from urllib.parse import urlparse, urlencode
 
 from flask import request, redirect
 
@@ -361,8 +362,9 @@ def change_name():
     return "ok"
 
 
-@app.route('/users/link_to_steam', methods=['GET'])
+@app.route('/users/link_to_steam', methods=['POST'])
 @oauth.require_oauth('write_account_data')
+@req_post_param('redirect_to')
 def link_to_steam():
     """
     API stores the steam link request in a token.
@@ -384,7 +386,7 @@ def link_to_steam():
             raise ApiException([Error(ErrorCode.STEAM_ID_UNCHANGEABLE)])
 
     expiry = time.time() + 600
-    token = create_token('link_to_steam', expiry, request.oauth.user.id)
+    token = create_token('link_to_steam', expiry, request.oauth.user.id, request.form.get('redirect_to'))
 
     logger.info(
         "User {} has requested steam account linking -- Token expires at {:%Y-%m-%d %H:%M}".format(
@@ -403,18 +405,19 @@ def link_to_steam():
 
     steam_url = config.STEAM_LOGIN_URL + '?' + urllib.parse.urlencode(openid_args)
 
-    return redirect(steam_url)
+    return {'steam_url': steam_url}
 
 
 @app.route('/users/validate_steam/<token>', methods=['GET'])
 def validate_steam_request(token=None):
-    user_id = decrypt_token('link_to_steam', token)
+    user_id, redirect_to = decrypt_token('link_to_steam', token)
 
     # extract steam account id
     match = re.search('^http://steamcommunity.com/openid/id/([0-9]{17,25})', request.args.get('openid.identity'))
 
     if match is None:
-        return redirect(config.STEAM_LINK_FAIL_URL)
+        redirect_to += ('&' if urlparse(redirect_to).query else '?') + urlencode({'steam_link_result': 'fail'})
+        return redirect(redirect_to)
 
     steamID = match.group(1)
 
@@ -427,7 +430,8 @@ def validate_steam_request(token=None):
                 'id': user_id
             })
 
-        return redirect(config.STEAM_LINK_SUCCESS_URL)
+        redirect_to = ('&' if urlparse(redirect_to).query else '?') + urlencode({'steam_link_result': 'success'})
+        return redirect(redirect_to)
 
 
 @app.route('/users/change_email', methods=['POST'])

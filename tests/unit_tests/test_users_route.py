@@ -363,10 +363,13 @@ def test_change_name_taken(oauth, setup_users):
 
 
 def test_link_to_steam_success(oauth, setup_users):
-    response = oauth.get('/users/link_to_steam')
+    response = oauth.post('/users/link_to_steam', data={
+        'redirect_to': 'faforever.com'
+    })
 
-    assert response.status_code == 302
-    assert response.headers['location'].startswith('https://steamcommunity.com/openid/login')
+    assert response.status_code == 200
+    result = json.loads(response.data.decode('utf-8'))
+    assert result['steam_url'].startswith('https://steamcommunity.com/openid/login')
 
 
 def test_link_to_steam_already_linked(oauth, setup_users):
@@ -374,7 +377,9 @@ def test_link_to_steam_already_linked(oauth, setup_users):
         cursor = db.connection.cursor()
         cursor.execute("UPDATE login SET steamid = 123456 WHERE id = 1")
 
-    response = oauth.get('/users/link_to_steam')
+    response = oauth.post('/users/link_to_steam', data={
+        'redirect_to': 'faforever.com'
+    })
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
@@ -382,6 +387,22 @@ def test_link_to_steam_already_linked(oauth, setup_users):
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
     assert result['errors'][0]['code'] == ErrorCode.STEAM_ID_UNCHANGEABLE.value['code']
+
+
+def test_validate_steam_fail(test_client, setup_users):
+    response = test_client.get('/users/validate_steam/' + create_token('link_to_steam', time.time() + 60, 'abc',
+                                                                       'http://localhost?test=true') + '?openid.identity=http://steamcommunity.com/openid/id/no-steam-id')
+
+    assert response.status_code == 302
+    assert response.headers['location'] == 'http://localhost?test=true&steam_link_result=fail'
+
+
+def test_validate_steam_success(test_client, setup_users):
+    response = test_client.get('/users/validate_steam/' + create_token('link_to_steam', time.time() + 60, 'abc',
+                                                                       'http://localhost') + '?openid.identity=http://steamcommunity.com/openid/id/12345678901234567890')
+
+    assert response.status_code == 302
+    assert response.headers['location'] == 'http://localhost/?steam_link_result=success'
 
 
 def test_change_password_success(oauth, setup_users):
