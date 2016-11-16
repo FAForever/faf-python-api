@@ -41,7 +41,7 @@
 
     .allow-card h2 {
       font-weight: 100;
-      margin: 0.5em 0 1em 0;
+      margin: 1em 0 2em 0;
     }
 
     .allow-card input[type=submit] {
@@ -130,7 +130,9 @@
     #page-top {
       background-color: black;
     }
-  </style>
+
+
+    </style>
 </head>
 <body>
 <div id="header">
@@ -139,7 +141,8 @@
             <div class="container">
                 <div class="navbar-header">
                     <!-- TODO serve image from static content -->
-                    <a class="navbar-brand" href="http://www.faforever.com"><img src="https://test.faforever.com/images/faf_32x32.png"></a></div>
+                    <a class="navbar-brand" href="http://www.faforever.com"><img
+                            src="https://test.faforever.com/images/faf_32x32.png"></a></div>
                 <span class="navbar-text">Forged Alliance Forever</span>
             </div>
         </div>
@@ -163,6 +166,8 @@
                 Upload maps
                 {% elif scope == "upload_mods" %}
                 Upload mods
+                {% elif scope == "write_account_data" %}
+                Edit account data
                 {% endif %}
             </li>
             {% endfor %}

@@ -1,9 +1,14 @@
+import datetime
+import importlib
 import json
 import time
+from unittest.mock import Mock
 
 import pytest
 from faf import db
 
+import api
+from api import User
 from api.error import ErrorCode
 from api.users_route import create_token
 
@@ -15,11 +20,12 @@ def setup_users(request, app):
         cursor = db.connection.cursor()
         cursor.execute("TRUNCATE TABLE ladder1v1_rating")
         cursor.execute("TRUNCATE TABLE global_rating")
-        cursor.execute("delete from login")
+        cursor.execute("DELETE FROM avatars")
+        cursor.execute("DELETE FROM login")
         cursor.execute("""INSERT INTO login
         (id, login, password, email) VALUES
-        (1, 'a', 'pw_a', 'a@aa.aa'),
-        (2, 'b', 'pw_b', 'b@bb.bb')""")
+        (1, 'abc', 'pw_a', 'a@aa.aa'),
+        (2, 'bcd', 'pw_b', 'b@bb.bb')""")
         cursor.execute("TRUNCATE TABLE email_domain_blacklist")
         cursor.execute("INSERT INTO email_domain_blacklist VALUES ('zzz.com'), ('abc.de')")
 
@@ -32,16 +38,38 @@ def setup_users(request, app):
     request.addfinalizer(finalizer)
 
 
+@pytest.fixture
+def oauth():
+    def get_token(access_token=None, refresh_token=None):
+        return Mock(
+            user=User(id=1, login="Dostya"),
+            expires=datetime.datetime.now() + datetime.timedelta(hours=1),
+            scopes=['write_account_data']
+        )
+
+    importlib.reload(api)
+    importlib.reload(api.oauth_handlers)
+    importlib.reload(api.users_route)
+
+    api.app.config.from_object('config')
+    api.api_init()
+    api.app.debug = True
+
+    api.oauth.tokengetter(get_token)
+
+    return api.app.test_client()
+
+
 def test_register_invalid_email(test_client, setup_users):
     response = test_client.post('/users/register',
-                                data={'name': 'a', 'email': 'abbb.cc', 'pw_hash': '0000'})
+                                data={'name': 'new_user', 'email': 'abbb.cc', 'pw_hash': '0000'})
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_INVALID_EMAIL.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.INVALID_EMAIL.value['code']
 
 
 def test_register_invalid_username(test_client, setup_users):
@@ -53,43 +81,43 @@ def test_register_invalid_username(test_client, setup_users):
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_INVALID_USERNAME.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.INVALID_USERNAME.value['code']
 
 
 def test_register_username_taken(test_client, setup_users):
     response = test_client.post('/users/register',
-                                data={'name': 'A', 'email': 'a@bbb.cc', 'pw_hash': '0000'})
+                                data={'name': 'Abc', 'email': 'a@bbb.cc', 'pw_hash': '0000'})
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_USERNAME_TAKEN.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.USERNAME_TAKEN.value['code']
 
 
 def test_register_email_taken(test_client, setup_users):
     response = test_client.post('/users/register',
-                                data={'name': 'abc', 'email': 'a@AA.aa', 'pw_hash': '0000'})
+                                data={'name': 'new_user', 'email': 'a@AA.aa', 'pw_hash': '0000'})
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_EMAIL_REGISTERED.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.EMAIL_REGISTERED.value['code']
 
 
 def test_register_email_blacklisted(test_client, setup_users):
     response = test_client.post('/users/register',
-                                data={'name': 'alpha', 'email': 'a@ZZZ.com', 'pw_hash': '0000'})
+                                data={'name': 'new_user', 'email': 'alpha@ZZZ.com', 'pw_hash': '0000'})
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_BLACKLISTED_EMAIL.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.BLACKLISTED_EMAIL.value['code']
 
 
 def test_register_success(test_client, setup_users):
@@ -100,52 +128,57 @@ def test_register_success(test_client, setup_users):
 
 
 def test_validate_registration_invalid_email(test_client, setup_users):
-    response = test_client.get('/users/validate_registration/' + create_token('a', 'abbb.cc', '0000', 0))
+    response = test_client.get(
+        '/users/validate_registration/' + create_token('register', time.time() + 60, 'new_user', 'abbb.cc', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_INVALID_EMAIL.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.INVALID_EMAIL.value['code']
 
 
 def test_validate_registration_username_taken(test_client, setup_users):
-    response = test_client.get('/users/validate_registration/' + create_token('A', 'a@bbb.cc', '0000', 0))
+    response = test_client.get(
+        '/users/validate_registration/' + create_token('register', time.time() + 60, 'Abc', 'a@bbb.cc', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_USERNAME_TAKEN.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.USERNAME_TAKEN.value['code']
 
 
 def test_validate_registration_email_taken(test_client, setup_users):
-    response = test_client.get('/users/validate_registration/' + create_token('abc', 'a@AA.aa', '0000', 0))
+    response = test_client.get(
+        '/users/validate_registration/' + create_token('register', time.time() + 60, 'new_user', 'a@AA.aa', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_EMAIL_REGISTERED.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.EMAIL_REGISTERED.value['code']
 
 
 def test_validate_registration_email_blacklisted(test_client, setup_users):
-    response = test_client.get('/users/validate_registration/' + create_token('alpha', 'a@ZZZ.com', '0000', 0))
+    response = test_client.get(
+        '/users/validate_registration/' + create_token('register', time.time() + 60, 'new_user', 'a@ZZZ.com', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.REGISTRATION_BLACKLISTED_EMAIL.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.BLACKLISTED_EMAIL.value['code']
 
 
 def test_validate_registration_success(test_client, setup_users):
     response = test_client.get(
-        '/users/validate_registration/' + create_token('alpha', 'a@faforever.com', '0000', time.time() + 60))
+        '/users/validate_registration/' + create_token('register', time.time() + 60, 'alpha', 'a@faforever.com',
+                                                       '0000'))
 
     assert response.status_code == 200
 
@@ -169,19 +202,20 @@ def test_validate_registration_success(test_client, setup_users):
 
 def test_validate_token_expired(test_client, setup_users):
     response = test_client.get(
-        '/users/validate_registration/' + create_token('alpha', 'a@faforever.com', '0000', time.time() - 60))
+        '/users/validate_registration/' + create_token('register', time.time() - 60, 'alpha', 'a@faforever.com',
+                                                       '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.USER_TOKEN_EXPIRED.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.TOKEN_EXPIRED.value['code']
 
 
 def test_reset_password_success(test_client, setup_users):
     response = test_client.post('/users/reset_password',
-                                data={'name': 'a', 'email': 'a@aa.aa', 'pw_hash': '0000'})
+                                data={'name': 'abc', 'email': 'a@aa.aa', 'pw_hash': '0000'})
 
     assert response.status_code == 200
 
@@ -195,35 +229,36 @@ def test_reset_password_wrong_username(test_client, setup_users):
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.PASSWORD_RESET_INVALID.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.TOKEN_INVALID.value['code']
 
 
 def test_reset_password_wrong_email(test_client, setup_users):
     response = test_client.post('/users/reset_password',
-                                data={'name': 'a', 'email': 'wrong_mail@bbb.cc', 'pw_hash': '0000'})
+                                data={'name': 'abc', 'email': 'wrong_mail@bbb.cc', 'pw_hash': '0000'})
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.PASSWORD_RESET_INVALID.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.TOKEN_INVALID.value['code']
 
 
 def test_validate_password_expired(test_client, setup_users):
-    response = test_client.get('/users/validate_password/' + create_token('a', 'a@aa.aa', '0000', time.time() - 60))
+    response = test_client.get(
+        '/users/validate_password/' + create_token('reset_password', time.time() - 60, 'abc', 'a@aa.aa', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.USER_TOKEN_EXPIRED.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.TOKEN_EXPIRED.value['code']
 
 
 def test_validate_password_invalid_data(test_client, setup_users):
     response = test_client.get(
-        '/users/validate_password/' + create_token('wrong_user', 'a@aa.aa', '0000', time.time() + 60))
+        '/users/validate_password/' + create_token('reset_password', time.time() + 60, 'wrong_user', 'a@aa.aa', '0000'))
 
     assert response.status_code == 400
     assert response.content_type == 'application/vnd.api+json'
@@ -233,19 +268,20 @@ def test_validate_password_invalid_data(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.PASSWORD_RESET_FAILED.value['code']
 
 
-def test_validate_password_success(test_client, setup_users):
-    response = test_client.get('/users/validate_password/' + create_token('a', 'a@aa.aa', 'test123', time.time() + 60))
+def test_validate_password_success(oauth, setup_users):
+    response = oauth.get(
+        '/users/validate_password/' + create_token('reset_password', time.time() + 60, 'abc', 'a@aa.aa', 'test123'))
 
     assert response.status_code == 200
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-        cursor.execute("SELECT * FROM login WHERE login = 'a' AND password = 'test123'")
+        cursor.execute("SELECT * FROM login WHERE login = 'abc' AND password = 'test123'")
         assert cursor.fetchone() is not None
 
 
-def test_change_password_invalid_user(test_client, setup_users):
-    response = test_client.post('/users/change_password', data={
+def test_change_password_invalid_user(oauth, setup_users):
+    response = oauth.post('/users/change_password', data={
         'name': 'wrong_user', 'pw_hash_old': '0000', 'pw_hash_new': '0001'
     })
 
@@ -257,9 +293,9 @@ def test_change_password_invalid_user(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.PASSWORD_CHANGE_FAILED.value['code']
 
 
-def test_change_password_invalid_password(test_client, setup_users):
-    response = test_client.post('/users/change_password', data={
-        'name': 'a', 'pw_hash_old': 'wrong_password', 'pw_hash_new': '0001'
+def test_change_password_invalid_password(oauth, setup_users):
+    response = oauth.post('/users/change_password', data={
+        'name': 'abc', 'pw_hash_old': 'wrong_password', 'pw_hash_new': '0001'
     })
 
     assert response.status_code == 400
@@ -270,14 +306,132 @@ def test_change_password_invalid_password(test_client, setup_users):
     assert result['errors'][0]['code'] == ErrorCode.PASSWORD_CHANGE_FAILED.value['code']
 
 
-def test_change_password_success(test_client, setup_users):
-    response = test_client.post('/users/change_password', data={
-        'name': 'a', 'pw_hash_old': 'pw_a', 'pw_hash_new': 'new_pw_a'
+def test_change_password_success(oauth, setup_users):
+    response = oauth.post('/users/change_password', data={
+        'name': 'abc', 'pw_hash_old': 'pw_a', 'pw_hash_new': 'new_pw_a'
     })
 
     assert response.status_code == 200
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-        cursor.execute("SELECT * FROM login WHERE login = 'a' AND password = 'new_pw_a'")
+        cursor.execute("SELECT * FROM login WHERE login = 'abc' AND password = 'new_pw_a'")
         assert cursor.fetchone() is not None
+
+
+def test_change_name_success(oauth, setup_users):
+    response = oauth.post('/users/change_name', data={
+        'desired_name': 'Xyz'
+    })
+
+    assert response.status_code == 200
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT * FROM login WHERE login = 'Xyz' AND id = 1")
+        assert cursor.fetchone() is not None
+
+
+def test_change_name_too_early(oauth, setup_users):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute(
+            "INSERT INTO name_history (change_time, user_id, previous_name) VALUES (NOW() - INTERVAL 10 DAY, 1, 'Dostya')")
+
+        response = oauth.post('/users/change_name', data={
+            'desired_name': 'Xyz'
+        })
+
+        assert response.status_code == 400
+        assert response.content_type == 'application/vnd.api+json'
+
+        result = json.loads(response.data.decode('utf-8'))
+        assert len(result['errors']) == 1
+        assert result['errors'][0]['code'] == ErrorCode.USERNAME_CHANGE_TOO_EARLY.value['code']
+
+
+def test_change_name_taken(oauth, setup_users):
+    response = oauth.post('/users/change_name', data={
+        'desired_name': 'bCD'
+    })
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.USERNAME_TAKEN.value['code']
+
+
+def test_link_to_steam_success(oauth, setup_users):
+    response = oauth.post('/users/link_to_steam', data={
+        'redirect_to': 'faforever.com'
+    })
+
+    assert response.status_code == 200
+    result = json.loads(response.data.decode('utf-8'))
+    assert result['steam_url'].startswith('https://steamcommunity.com/openid/login')
+
+
+def test_link_to_steam_already_linked(oauth, setup_users):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute("UPDATE login SET steamid = 123456 WHERE id = 1")
+
+    response = oauth.post('/users/link_to_steam', data={
+        'redirect_to': 'faforever.com'
+    })
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.STEAM_ID_UNCHANGEABLE.value['code']
+
+
+def test_validate_steam_fail(test_client, setup_users):
+    response = test_client.get('/users/validate_steam/' + create_token('link_to_steam', time.time() + 60, 'abc',
+                                                                       'http://localhost?test=true') + '?openid.identity=http://steamcommunity.com/openid/id/no-steam-id')
+
+    assert response.status_code == 302
+    assert response.headers['location'] == 'http://localhost?test=true&steam_link_result=fail'
+
+
+def test_validate_steam_success(test_client, setup_users):
+    response = test_client.get('/users/validate_steam/' + create_token('link_to_steam', time.time() + 60, 'abc',
+                                                                       'http://localhost') + '?openid.identity=http://steamcommunity.com/openid/id/12345678901234567890')
+
+    assert response.status_code == 302
+    assert response.headers['location'] == 'http://localhost/?steam_link_result=success'
+
+
+def test_change_password_success(oauth, setup_users):
+    response = oauth.post('/users/change_email', data={
+        'new_email': 'new@Email.com'
+    })
+
+    assert response.status_code == 200
+
+
+def test_validate_email_success(test_client, setup_users):
+    response = test_client.get(
+        '/users/validate_email/' + create_token('change_email', time.time() + 60, 1, 'new@Email.com'))
+
+    assert response.status_code == 200
+
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute("SELECT * FROM login WHERE email = 'new@email.com' AND id = 1")
+        assert cursor.fetchone() is not None
+
+
+def test_validate_email_failed(test_client, setup_users):
+    response = test_client.get(
+        '/users/validate_email/' + create_token('change_email', time.time() + 60, 99, 'new@Email.com'))
+
+    assert response.status_code == 400
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['errors']) == 1
+    assert result['errors'][0]['code'] == ErrorCode.EMAIL_CHANGE_FAILED.value['code']

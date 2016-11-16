@@ -42,3 +42,5 @@ SLACK_HOOK_URL = 'http://example.com'
 
 MANDRILL_API_KEY = os.getenv("MANDRILL_API_KEY", '')
 MANDRILL_API_URL = os.getenv("MANDRILL_API_URL", 'https://mandrillapp.com/api/1.0')
+
+STEAM_LOGIN_URL = os.getenv("STEAM_LOGIN_URL", 'https://steamcommunity.com/openid/login')
