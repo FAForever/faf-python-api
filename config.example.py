@@ -14,17 +14,13 @@ HOST_NAME = os.getenv("VIRTUAL_HOST", 'dev.faforever.com')
 
 ENVIRONMENT = os.getenv("FAF_API_ENVIRONMENT", 'testing')
 
-REPO_PATHS = {
-    "api": '.',
-    "fa": '/opt/stable/featured_mods',
-    "patchnotes": '/opt/dev/www/patchnotes'
-}
+REPO_CONTAINER = '/git/repos'
 
 DEPLOY_BRANCHES = {
     # branch name : game mode
-    'refs/heads/master': 'faf',
-    'refs/heads/deploy/fafbeta': 'fafbeta',
-    'refs/heads/deploy/fafdevelop': 'fafdevelop'
+    'master': 'faf',
+    'deploy/fafbeta': 'fafbeta',
+    'deploy/fafdevelop': 'fafdevelop'
 }
 
 GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'
@@ -43,7 +39,7 @@ GIT_URL = 'https://github.com/FAForever/'
 AUTO_DEPLOY = ['patchnotes']
 
 FLASK_LOGIN_SECRET_KEY = os.getenv("FLASK_LOGIN_SECRET_KEY", '1234')
-CRYPTO_KEY = os.getenv("CRYPTO_KEY", 'vx7rzvK2C5XxW58XRVc5vTQnQLq35UYOEP8-PYSShBs=')
+CRYPTO_KEY = 'vx7rzvK2C5XxW58XRVc5vTQnQLq35UYOEP8-PYSShBs='
 SECRET_KEY = os.getenv("SECRET_KEY", '1234')
 JWT_AUTH_URL_RULE = None
 JWT_AUTH_HEADER_PREFIX = "Bearer"

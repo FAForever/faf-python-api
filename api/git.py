@@ -8,9 +8,14 @@ else:
     GIT_PATH = '/usr/bin/git'
 
 
-def checkout_repo(repo_path: Path, remote_url: Path, branch: str, commit: str):
-    if not repo_path.exists():
-        raise Exception("Repository to deploy doesn't exist")
+def checkout_repo(repo_path: Path, remote_url: Path, branch: str, commit: str, container_path: Path):
+    git_command = [GIT_PATH, '-C', str(container_path)]
+
+    if not repo_path.exists(): # We don't have the repo, so we need to clone it
+        clone_exit_code = subprocess.call(git_command + ['clone', remote_url, str(repo_path)])
+        if clone_exit_code != 0:
+            raise Exception('git clone returned nonzero code: {}'.format(clone_exit_code))
+
     git_command = [GIT_PATH, '-C', str(repo_path)]
     fetch_exit_code = subprocess.call(git_command + ['fetch', remote_url, branch])
     if fetch_exit_code != 0:

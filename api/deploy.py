@@ -57,8 +57,10 @@ def github_hook():
         """
 
         body = request.get_json()
-        branch = body['ref']
+        branch = body['ref'].replace('refs/heads/', '')
         game_mode = app.config['DEPLOY_BRANCHES'][branch]
+
+        if not branch or not game_mode: return
 
         if game_mode:
             repo = body['repository']
@@ -94,15 +96,15 @@ def github_hook():
     return dict(status="OK"), 200
 
 
-def deploy_web(repo_path: Path, remote_url: Path, ref: str, sha: str):
-    checkout_repo(repo_path, remote_url, ref, sha)
+def deploy_web(repo_path: Path, repo_url: Path, ref: str, sha: str):
+    checkout_repo(repo_path, repo_url, ref, sha)
     restart_file = Path(repo_path, 'tmp/restart.txt')
     restart_file.touch()
     return 'success', 'Deployed'
 
 
-def deploy_game(repo_path: Path, remote_url: Path, branch: str, game_mode: str, sha: str):
-    checkout_repo(repo_path, remote_url, branch, sha)  # Checkout the intended state on the server repo
+def deploy_game(repo_path: Path, repo_url: Path, branch: str, game_mode: str, sha: str):
+    checkout_repo(repo_path, repo_url, branch, sha, Path(app.config['REPO_CONTAINER']))  # Checkout the intended state on the server repo
 
     mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))  # Harvest data from mod_info.lua
     version = str(mod_info['version'])
@@ -127,7 +129,7 @@ def deploy_game(repo_path: Path, remote_url: Path, branch: str, game_mode: str, 
                        'values (%s,%s,%s,%s)'.format(game_mode),
                        (file['id'], version, file['md5'], destination.name))  # In with the new
 
-    return 'Success', 'Deployed ' + repository + ' branch ' + branch + ' to ' + game_mode
+    return 'Success', 'Deployed ' + str(repo_url) + ' branch ' + branch + ' to ' + game_mode
 
 
 def deploy_route(repository, branch, game_mode, commit):
@@ -141,14 +143,20 @@ def deploy_route(repository, branch, game_mode, commit):
     """
 
     github_url = app.config['GIT_URL']
-    remote_url = github_url + repository + '.git'
+    repo_url = github_url + repository + '.git'
+    container_path = app.config['REPO_CONTAINER']
+
+    if not Path(container_path).exists():
+        raise Exception("No git repository container path")
+
+    repo_path = Path(container_path + '/' + repository)
 
     try:
         return {
             'api': deploy_web,
             'patchnotes': deploy_web,
             'fa': deploy_game
-        }[repository](Path(app.config['REPO_PATHS'][repository]), remote_url, branch, game_mode, commit)
+        }[repository](repo_path, repo_url, branch, game_mode, commit)
     except Exception as e:
         logger.exception(e)
         return 'error', "{}: {}".format(type(e), e)
