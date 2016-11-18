@@ -41,6 +41,7 @@ def deployments(repo):
 def github_hook():
     """
     Generic github hook suitable for receiving github status events.
+    Sent a 'request' from github consisting of a table upon an appropriate event (eg - Push)
     :return:
     """
 
@@ -51,16 +52,12 @@ def github_hook():
     event = request.headers['X-Github-Event']
 
     if event == 'push':
-        """
-        body_deployment['id'] is a numeric code identifying the deployment
-        body_deployment['environment'] is the environment to deploy to. Defaults to production
-        """
-
         body = request.get_json()
         branch = body['ref'].replace('refs/heads/', '')
-        game_mode = app.config['DEPLOY_BRANCHES'][branch]
+        game_mode = app.config['DEPLOY_BRANCHES'][branch]  # Check that this branch matches a game mode we want
 
-        if not branch or not game_mode: return
+        if not branch or not game_mode:
+            return
 
         if game_mode:
             repo = body['repository']
@@ -96,15 +93,15 @@ def github_hook():
     return dict(status="OK"), 200
 
 
-def deploy_web(repo_path: Path, repo_url: Path, ref: str, sha: str):
-    checkout_repo(repo_path, repo_url, ref, sha)
+def deploy_web(repo_path: Path, repo_url: Path, container_path: Path, branch: str, commit: str):
+    checkout_repo(repo_path, repo_url, container_path, branch, commit)
     restart_file = Path(repo_path, 'tmp/restart.txt')
     restart_file.touch()
     return 'success', 'Deployed'
 
 
-def deploy_game(repo_path: Path, repo_url: Path, branch: str, game_mode: str, sha: str):
-    checkout_repo(repo_path, repo_url, branch, sha, Path(app.config['REPO_CONTAINER']))  # Checkout the intended state on the server repo
+def deploy_game(repo_path: Path, repo_url: Path, container_path: Path, branch: str, game_mode: str, commit: str):
+    checkout_repo(repo_path, repo_url, container_path, branch, commit)  # Checkout the intended state on the server repo
 
     mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))  # Harvest data from mod_info.lua
     version = str(mod_info['version'])
@@ -132,7 +129,7 @@ def deploy_game(repo_path: Path, repo_url: Path, branch: str, game_mode: str, sh
     return 'Success', 'Deployed ' + str(repo_url) + ' branch ' + branch + ' to ' + game_mode
 
 
-def deploy_route(repository, branch, game_mode, commit):
+def deploy_route(repository: str, branch: str, game_mode: str, commit: str):
     """
     Perform deployment on this machine
     :param repository: the source repository
@@ -144,19 +141,19 @@ def deploy_route(repository, branch, game_mode, commit):
 
     github_url = app.config['GIT_URL']
     repo_url = github_url + repository + '.git'
-    container_path = app.config['REPO_CONTAINER']
+    container_path = Path(app.config['REPO_CONTAINER'])  # Contains all the git repositories on the server
 
-    if not Path(container_path).exists():
+    if not container_path.exists():
         raise Exception("No git repository container path")
 
-    repo_path = Path(container_path + '/' + repository)
+    repo_path = Path(container_path + '/' + repository)  # The repo we want to be using this time
 
     try:
         return {
             'api': deploy_web,
             'patchnotes': deploy_web,
             'fa': deploy_game
-        }[repository](repo_path, repo_url, branch, game_mode, commit)
+        }[repository](repo_path, repo_url, container_path, branch, game_mode, commit)
     except Exception as e:
         logger.exception(e)
         return 'error', "{}: {}".format(type(e), e)
