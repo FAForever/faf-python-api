@@ -14,7 +14,9 @@ HOST_NAME = os.getenv("VIRTUAL_HOST", 'dev.faforever.com')
 
 ENVIRONMENT = os.getenv("FAF_API_ENVIRONMENT", 'testing')
 
-REPO_CONTAINER = '/git/repos'  # Server path which will contain all git repositories. Primarily used for game files
+# Server path which will contain all git repositories. Primarily used for game files
+REPO_CONTAINER = '/opt/stable/repos'
+TEMP_CONTAINER = '/opt/stable/temp'
 
 DEPLOY_BRANCHES = {
     # branch name : game mode

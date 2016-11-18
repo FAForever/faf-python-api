@@ -96,34 +96,28 @@ def github_hook():
     return dict(status="OK"), 200
 
 
-def deploy_web(repo_path: Path, repo_url: Path, container_path: Path, branch: str, commit: str):
-    checkout_repo(repo_path, repo_url, container_path, branch, commit)
-    restart_file = Path(repo_path, 'tmp/restart.txt')
-    restart_file.touch()
-    return 'success', 'Deployed'
-
-
 def deploy_game(repo_path: Path, repo_url: Path, container_path: Path, branch: str, game_mode: str, commit: str):
     checkout_repo(repo_path, repo_url, container_path, branch, commit)  # Checkout the intended state on the server repo
 
     mod_info = parse_mod_info(repo_path)  # Harvest data from mod_info.lua
     version = mod_info['version']
 
-    files = build_mod(repo_path, mod_info)  # Build the mod from the fileset we just checked out
+    temp_path = Path(app.config['TEMP_CONTAINER'])
+    files = build_mod(repo_path, mod_info, temp_path)  # Build the mod from the fileset we just checked out
     logger.info('Build result: {}'.format(files))
 
-    deploy_path = Path(app.config['GAME_DEPLOY_PATH'] + '/' + str(version))
+    deploy_path = Path(app.config['GAME_DEPLOY_PATH'] + '/' + 'updates_' + game_mode + '_files')
     if not deploy_path.exists():
-        os.mkdir(str(deploy_path))
+        os.makedirs(str(deploy_path))
 
     logger.info('Deploying {} to {}'.format(game_mode, deploy_path))
 
     with db.connection:
         for file in files:
             # Organise the files needed into their final setup and pack as .zip
-            destination = deploy_path / (file['filename'] + '.' + game_mode + '.' + str(version) + file['sha1'][:6] + '.zip')
+            destination = deploy_path / (file['filename'] + '_0.' + str(version) + '.nxt')  # Renamed to nx# in client
             logger.info('Deploying {} to {}'.format(file, destination))
-            shutil.copy2(str(file['path']), str(destination))
+            shutil.move(str(file['path']), str(destination))
 
             # Update the database with the new mod
             cursor = db.connection.cursor(DictCursor)
@@ -135,6 +129,7 @@ def deploy_game(repo_path: Path, repo_url: Path, container_path: Path, branch: s
                            'values (%s,%s,%s,%s)'.format(game_mode),
                            (file['id'], version, file['md5'], destination.name))
 
+    logger.info('Deployment of {} branch {} to {} completed'.format(repo_url, branch, game_mode))
     return 'Success', 'Deployed ' + str(repo_url) + ' branch ' + branch + ' to ' + game_mode
 
 
@@ -153,16 +148,12 @@ def deploy_route(repository: str, branch: str, game_mode: str, commit: str):
     container_path = Path(app.config['REPO_CONTAINER'])  # Contains all the git repositories on the server
 
     if not container_path.exists():
-        raise Exception("No git repository container path")
+        os.makedirs(str(container_path))
 
     repo_path = Path(str(container_path) + '/' + repository)  # The repo we want to be using this time
 
     try:
-        return {
-            'api': deploy_web,
-            'patchnotes': deploy_web,
-            'fa': deploy_game
-        }[repository](repo_path, repo_url, container_path, branch, game_mode, commit)
+        return deploy_game(repo_path, repo_url, container_path, branch, game_mode, commit)
     except Exception as e:
         logger.exception(e)
         return 'error', "{}: {}".format(type(e), e)
