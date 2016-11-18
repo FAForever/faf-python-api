@@ -5,6 +5,7 @@ import hmac
 import logging
 import re
 import shutil
+import os
 from pathlib import Path
 
 from faf.tools.fa.build_mod import build_mod
@@ -106,18 +107,18 @@ def deploy_game(repo_path: Path, repo_url: Path, container_path: Path, branch: s
     mod_info = parse_mod_info(repo_path)  # Harvest data from mod_info.lua
     version = mod_info['version']
 
-    # TODO: build_mod calls parse_mod_info again, which is stupid since we just did it
-    # TODO: We should instead be passing it in to build_mod
-    # TODO: We should also just bail out of parse if not path, and just pass it paths(We already do) instead of forcing
-    files = build_mod(repo_path)  # Build the mod from the fileset we just checked out
+    files = build_mod(repo_path, mod_info)  # Build the mod from the fileset we just checked out
     logger.info('Build result: {}'.format(files))
 
-    deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_{}_files'.format(game_mode))
+    deploy_path = Path(app.config['GAME_DEPLOY_PATH'] + '/' + str(version))
+    if not deploy_path.exists():
+        os.mkdir(str(deploy_path))
+
     logger.info('Deploying {} to {}'.format(game_mode, deploy_path))
 
     for file in files:
         # Organise the files needed into their final setup and pack as .zip
-        destination = deploy_path / (file['filename'] + '.' + game_mode + '.' + version + file['sha1'][:6] + '.zip')
+        destination = deploy_path / (file['filename'] + '.' + game_mode + '.' + str(version) + file['sha1'][:6] + '.zip')
         logger.info('Deploying {} to {}'.format(file, destination))
         shutil.copy2(str(file['path']), str(destination))
 
