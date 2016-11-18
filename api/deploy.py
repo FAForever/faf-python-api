@@ -103,9 +103,12 @@ def deploy_web(repo_path: Path, repo_url: Path, container_path: Path, branch: st
 def deploy_game(repo_path: Path, repo_url: Path, container_path: Path, branch: str, game_mode: str, commit: str):
     checkout_repo(repo_path, repo_url, container_path, branch, commit)  # Checkout the intended state on the server repo
 
-    mod_info = parse_mod_info(Path(repo_path, 'mod_info.lua'))  # Harvest data from mod_info.lua
-    version = str(mod_info['version'])
+    mod_info = parse_mod_info(repo_path)  # Harvest data from mod_info.lua
+    version = mod_info['version']
 
+    # TODO: build_mod calls parse_mod_info again, which is stupid since we just did it
+    # TODO: We should instead be passing it in to build_mod
+    # TODO: We should also just bail out of parse if not path, and just pass it paths(We already do) instead of forcing
     files = build_mod(repo_path)  # Build the mod from the fileset we just checked out
     logger.info('Build result: {}'.format(files))
 
@@ -146,7 +149,7 @@ def deploy_route(repository: str, branch: str, game_mode: str, commit: str):
     if not container_path.exists():
         raise Exception("No git repository container path")
 
-    repo_path = Path(container_path + '/' + repository)  # The repo we want to be using this time
+    repo_path = Path(str(container_path) + '/' + repository)  # The repo we want to be using this time
 
     try:
         return {
