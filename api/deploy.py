@@ -3,13 +3,15 @@ Holds routes for deployment based off of Github events
 """
 import hmac
 import logging
-import re
 import shutil
 import os
 from pathlib import Path
 
+from pymysql.cursors import DictCursor
+
 from faf.tools.fa.build_mod import build_mod
 from faf.tools.fa.mods import parse_mod_info
+from faf import db
 
 from api.oauth_handlers import *
 from .git import checkout_repo
@@ -116,19 +118,22 @@ def deploy_game(repo_path: Path, repo_url: Path, container_path: Path, branch: s
 
     logger.info('Deploying {} to {}'.format(game_mode, deploy_path))
 
-    for file in files:
-        # Organise the files needed into their final setup and pack as .zip
-        destination = deploy_path / (file['filename'] + '.' + game_mode + '.' + str(version) + file['sha1'][:6] + '.zip')
-        logger.info('Deploying {} to {}'.format(file, destination))
-        shutil.copy2(str(file['path']), str(destination))
+    with db.connection:
+        for file in files:
+            # Organise the files needed into their final setup and pack as .zip
+            destination = deploy_path / (file['filename'] + '.' + game_mode + '.' + str(version) + file['sha1'][:6] + '.zip')
+            logger.info('Deploying {} to {}'.format(file, destination))
+            shutil.copy2(str(file['path']), str(destination))
 
-        # Update the database with the new mod
-        db.execute_sql('delete from updates_{}_files where fileId = %s and version = %s;'.format(game_mode),
-                       (file['id'], version))  # Out with the old
-        db.execute_sql('insert into updates_{}_files '
-                       '(fileId, version, md5, name) '
-                       'values (%s,%s,%s,%s)'.format(game_mode),
-                       (file['id'], version, file['md5'], destination.name))  # In with the new
+            # Update the database with the new mod
+            cursor = db.connection.cursor(DictCursor)
+            cursor.execute("delete from updates_{}_files where fileId = %s and version = %s;".format(game_mode),
+                           (file['id'], version))
+
+            cursor.execute('insert into updates_{}_files '
+                           '(fileId, version, md5, name) '
+                           'values (%s,%s,%s,%s)'.format(game_mode),
+                           (file['id'], version, file['md5'], destination.name))
 
     return 'Success', 'Deployed ' + str(repo_url) + ' branch ' + branch + ' to ' + game_mode
 
