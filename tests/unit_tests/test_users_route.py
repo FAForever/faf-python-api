@@ -229,7 +229,7 @@ def test_reset_password_wrong_username(test_client, setup_users):
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.TOKEN_INVALID.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.PASSWORD_RESET_FAILED.value['code']
 
 
 def test_reset_password_wrong_email(test_client, setup_users):
@@ -241,7 +241,7 @@ def test_reset_password_wrong_email(test_client, setup_users):
 
     result = json.loads(response.data.decode('utf-8'))
     assert len(result['errors']) == 1
-    assert result['errors'][0]['code'] == ErrorCode.TOKEN_INVALID.value['code']
+    assert result['errors'][0]['code'] == ErrorCode.PASSWORD_RESET_FAILED.value['code']
 
 
 def test_validate_password_expired(test_client, setup_users):
@@ -399,10 +399,10 @@ def test_validate_steam_fail(test_client, setup_users):
 
 def test_validate_steam_success(test_client, setup_users):
     response = test_client.get('/users/validate_steam/' + create_token('link_to_steam', time.time() + 60, 'abc',
-                                                                       'http://localhost') + '?openid.identity=http://steamcommunity.com/openid/id/12345678901234567890')
+                                                                       'http://faforever.com') + '?openid.identity=http://steamcommunity.com/openid/id/12345678901234567890')
 
     assert response.status_code == 302
-    assert response.headers['location'] == 'http://localhost/?steam_link_result=success'
+    assert response.headers['location'] == 'http://faforever.com?steam_link_result=success'
 
 
 def test_change_password_success(oauth, setup_users):

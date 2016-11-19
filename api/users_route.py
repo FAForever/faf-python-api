@@ -177,7 +177,7 @@ def reset_password():
                        (name.lower(), email))
 
         if cursor.fetchone() is None:
-            raise ApiException([Error(ErrorCode.TOKEN_INVALID)])
+            raise ApiException([Error(ErrorCode.PASSWORD_RESET_FAILED)])
 
     expiry = time.time() + 3600 * 24 * 14
     token = create_token('reset_password', expiry, name, email, pw_hash)
@@ -430,7 +430,7 @@ def validate_steam_request(token=None):
                 'id': user_id
             })
 
-        redirect_to = ('&' if urlparse(redirect_to).query else '?') + urlencode({'steam_link_result': 'success'})
+        redirect_to += ('&' if urlparse(redirect_to).query else '?') + urlencode({'steam_link_result': 'success'})
         return redirect(redirect_to)
 
 
