@@ -17,12 +17,20 @@ ENVIRONMENT = os.getenv("FAF_API_ENVIRONMENT", 'testing')
 # Server path which will contain all git repositories. Primarily used for game files
 REPO_CONTAINER = '/opt/stable/repos'
 TEMP_CONTAINER = '/opt/stable/temp'
+BASE_GAME_EXE = 'opt/stable/content/faf/updaterNew/updates_faf_files/ForgedAlliance.exe'
 
 DEPLOY_BRANCHES = {
     # branch name : game mode
     'master': 'faf',
     'deploy/fafbeta': 'fafbeta',
     'deploy/fafdevelop': 'fafdevelop'
+}
+
+MODE_NX = {
+    # game mode : .zip extension
+    'faf': '.nx2',
+    'fafbeta': '.nx4',
+    'fafdevelop': '.nx5'
 }
 
 GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'

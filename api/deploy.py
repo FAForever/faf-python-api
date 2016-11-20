@@ -11,6 +11,8 @@ from pymysql.cursors import DictCursor
 
 from faf.tools.fa.build_mod import build_mod
 from faf.tools.fa.mods import parse_mod_info
+from faf.tools.fa.update_version import update_exe_version
+
 from faf import db
 
 from api.oauth_handlers import *
@@ -106,16 +108,24 @@ def deploy_game(repo_path: Path, repo_url: Path, container_path: Path, branch: s
     files = build_mod(repo_path, mod_info, temp_path)  # Build the mod from the fileset we just checked out
     logger.info('Build result: {}'.format(files))
 
+    # Create the storage path for the version files. This is where the zips will be moved to from temp
     deploy_path = Path(app.config['GAME_DEPLOY_PATH'] + '/' + 'updates_' + game_mode + '_files')
     if not deploy_path.exists():
         os.makedirs(str(deploy_path))
 
     logger.info('Deploying {} to {}'.format(game_mode, deploy_path))
 
+    # Create a new ForgedAlliance.exe compatible with the new version
+    base_game_exe = Path(app.config['BASE_GAME_EXE'])
+    update_exe_version(base_game_exe, deploy_path, version)
+
+    extension = Path(app.config['game_mode'])
+
     with db.connection:
         for file in files:
             # Organise the files needed into their final setup and pack as .zip
-            destination = deploy_path / (file['filename'] + '_0.' + str(version) + '.nxt')  # Renamed to nx# in client
+            # TODO: Check client can handle NX# being dealt with here in API
+            destination = deploy_path / (file['filename'] + '_0.' + str(version) + extension)
             logger.info('Deploying {} to {}'.format(file, destination))
             shutil.move(str(file['path']), str(destination))
 
