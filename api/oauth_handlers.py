@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta
 
+import flask_oauthlib
 from flask_login import current_user
-from flask_oauthlib.contrib.cache import Cache
 
 from api import *
 from api.oauth_client import OAuthClient
 from api.oauth_token import OAuthToken
 
-cache = Cache(app, 'OAUTH2')
+cache = flask_oauthlib.contrib.cache.Cache(app, 'OAUTH2')
 
 
 @oauth.clientgetter

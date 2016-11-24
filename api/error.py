@@ -175,6 +175,11 @@ class ErrorCode(Enum):
         title='Linking to Steam failed',
         detail='Your account is already bound to another Steam ID.'
     )
+    UNKNOWN_FEATURED_MOD = dict(
+        code=142,
+        title='Unknown featured mod',
+        detail='There is no featured mod with ID \"{}\".'
+    )
 
 
 class Error:
