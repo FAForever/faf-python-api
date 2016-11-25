@@ -291,8 +291,9 @@ def extract_thumbnail(zip_file, mod_info):
         return
 
     with ZipFile(zip_file) as zip:
+        mod_icon_path = mod_info['icon'].replace('/mods/', '')
         for member in zip.namelist():
-            if member.endswith(mod_info['icon']):
+            if member == mod_icon_path:
                 thumbnail_file_name = generate_thumbnail_file_name(mod_info['name'], mod_info['version'])
                 target_path = os.path.join(app.config['MOD_THUMBNAIL_PATH'], thumbnail_file_name)
                 with zip.open(member) as source, open(target_path, "wb") as target:
