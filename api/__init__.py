@@ -4,6 +4,9 @@ Forged Alliance Forever API project
 Distributed under GPLv3, see license.txt
 """
 import sys
+from urllib.parse import urlencode
+
+import flask
 import statsd
 import time
 
@@ -55,6 +58,12 @@ def handle_api_exception(error):
     response.headers['content-type'] = 'application/vnd.api+json'
     return response
 
+
+def default_cache_key():
+    args = flask.request.args
+    key = flask.request.path + '?' + urlencode(
+        [(k, v) for k in sorted(args) for v in sorted(args.getlist(k))])
+    return key
 
 def jwt_identity(payload):
     return User.get_by_id(payload['identity'])

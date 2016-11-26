@@ -5,7 +5,7 @@ from faf.api.featured_mod_schema import FeaturedModSchema
 from flask import request
 from pymysql.cursors import DictCursor
 
-from api import app, cache
+from api import app, cache, default_cache_key
 from api.error import Error, ErrorCode, ApiException
 from api.query_commons import fetch_data
 import urllib.parse
@@ -46,7 +46,7 @@ MAX_PAGE_SIZE = 1000
 
 
 @app.route('/featured_mods')
-@cache.cached(timeout=300)
+@cache.cached(timeout=300, key_prefix=default_cache_key)
 def featured_mods():
     """
     Lists featured mods.
@@ -93,7 +93,7 @@ def featured_mods():
 
 
 @app.route('/featured_mods/<string:id>/files')
-@cache.cached(timeout=300)
+@cache.cached(timeout=300, key_prefix=default_cache_key)
 def featured_mod_files_latest(id):
     """
     Lists the latest files of the specified mod.
@@ -134,7 +134,7 @@ def featured_mod_files_latest(id):
 
 
 @app.route('/featured_mods/<string:id>/files/<string:version>')
-@cache.cached(timeout=300)
+@cache.cached(timeout=300, key_prefix=default_cache_key)
 def featured_mod_files(id, version):
     """
     Lists the files of a specific version of the specified mod. If the version is "latest", the latest version is
