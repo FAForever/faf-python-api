@@ -6,6 +6,8 @@ Distributed under GPLv3, see license.txt
 import sys
 import statsd
 import time
+
+from flask_cache import Cache
 from flask_jwt import JWT
 from flask import Flask, session, jsonify, request
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
@@ -32,6 +34,8 @@ if sys.version_info.major != 3:
 
 app = Flask('api')
 CORS(app)
+cache = Cache(config={'CACHE_TYPE': 'simple'}, with_jinja2_ext=False)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -107,6 +111,7 @@ def api_init():
 
     app.secret_key = app.config['FLASK_LOGIN_SECRET_KEY']
     flask_jwt.init_app(app)
+    cache.init_app(app)
 
 
     if app.config.get('STATSD_SERVER'):
