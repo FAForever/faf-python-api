@@ -141,3 +141,29 @@ def test_featured_mod_files_unknown_mod(test_client, featured_mods):
             'title': 'Unknown featured mod'
         }]
     }
+
+
+def test_get_featured_mod(test_client, featured_mods):
+    response = test_client.get('/featured_mods/1')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+
+    assert result == {
+        'data': {
+            'id': '1',
+            'type': 'featured_mod',
+            'attributes': {
+                'id': '1',
+                'display_order': 1,
+                'display_name': 'FA Forever',
+                'git_branch': 'master',
+                'technical_name': 'faf',
+                'description': '<html>Description</html>',
+                'git_url': 'https://github.com/FAForever/fa.git',
+                'visible': True
+            }
+        }
+    }

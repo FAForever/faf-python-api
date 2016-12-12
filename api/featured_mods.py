@@ -92,6 +92,49 @@ def featured_mods():
     return result
 
 
+@app.route('/featured_mods/<int:mod_id>')
+@cache.cached(timeout=300, key_prefix=default_cache_key)
+def get_featured_mod(mod_id):
+    """
+    Gets a  featured mod.
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       GET /featured_mods
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": {
+            "attributes": {
+              "id": "123",
+              "technical_name": "faf",
+              "display_name": "FA Forever",
+              "description": "<html>HTML Description</html>",
+              "visible": true,
+              "display_order": 1,
+              "git_url": "https://github.com/FAForever/fa.git",
+              "git_branch": "master"
+            },
+            "id": "123",
+            "type": "featured_mod"
+          }
+        }
+
+
+    """
+    return fetch_data(FeaturedModSchema(), FEATURED_MODS_TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
+                      many=False, where='id = %s', args=mod_id)
+
+
 @app.route('/featured_mods/<string:id>/files')
 @cache.cached(timeout=300, key_prefix=default_cache_key)
 def featured_mod_files_latest(id):
