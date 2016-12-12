@@ -269,16 +269,16 @@ def test_map_by_name(test_client, app, maps):
     assert response.content_type == 'application/vnd.api+json'
 
     result = json.loads(response.data.decode('utf-8'))
-    assert 'data' in result
-    assert result['data']['id'] == '2'
-    assert result['data']['attributes']['author'] == 'User 2'
-    assert result['data']['attributes']['display_name'] == 'SCMP_002'
-    assert result['data']['attributes'][
+    assert len(result) == 1
+    assert result['data'][0]['id'] == '2'
+    assert result['data'][0]['attributes']['author'] == 'User 2'
+    assert result['data'][0]['attributes']['display_name'] == 'SCMP_002'
+    assert result['data'][0]['attributes'][
                'download_url'] == 'http://content.faforever.com/faf/vault/maps/scmp_002.v0001.zip'
-    assert result['data']['attributes']['thumbnail_url_small'] == 'http://content.faforever.com/faf/vault' \
-                                                                  '/map_previews/small/scmp_002.v0001.png'
-    assert result['data']['attributes']['thumbnail_url_large'] == 'http://content.faforever.com/faf/vault' \
-                                                                  '/map_previews/large/scmp_002.v0001.png'
+    assert result['data'][0]['attributes']['thumbnail_url_small'] == 'http://content.faforever.com/faf/vault' \
+                                                                     '/map_previews/small/scmp_002.v0001.png'
+    assert result['data'][0]['attributes']['thumbnail_url_large'] == 'http://content.faforever.com/faf/vault' \
+                                                                     '/map_previews/large/scmp_002.v0001.png'
 
 
 @pytest.mark.parametrize("ranked", [True, False])
@@ -389,3 +389,39 @@ def test_ladder_maps(test_client, maps):
     assert len(result['data']) == 1
     assert 'type' in result['data'][0]
     assert result['data'][0]['attributes']['id'] == '1'
+
+
+def test_get_map(test_client, maps):
+    response = test_client.get('maps/1')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert result == {
+        'data': {
+            'attributes': {
+                'folder_name': 'scmp_001.v0001',
+                'max_players': 4,
+                'id': '1',
+                'thumbnail_url_small': 'http://content.faforever.com/faf/vault/map_previews/small/scmp_001.v0001.png',
+                'description': 'SCMP 001',
+                'num_draws': 0,
+                'times_played': 0,
+                'height': 5,
+                'thumbnail_url_large': 'http://content.faforever.com/faf/vault/map_previews/large/scmp_001.v0001.png',
+                'map_type': 'FFA',
+                'version': 1,
+                'rating': None,
+                'display_name': 'SCMP_001',
+                'battle_type': 'skirmish',
+                'width': 5,
+                'downloads': 0,
+                'create_time': result['data']['attributes']['create_time'],
+                'author': 'User 1',
+                'download_url': 'http://content.faforever.com/faf/vault/maps/scmp_001.v0001.zip'
+            },
+            'id': '1',
+            'type': 'map'
+        }
+    }
