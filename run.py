@@ -12,6 +12,9 @@ Options:
   -d             Enable debug mode
   -p --port=<port>  Listen on given port [default: 8080].
 """
+import logging
+import sys
+
 from docopt import docopt
 
 from api import app, api_init
@@ -23,6 +26,13 @@ if __name__ == '__main__':
     port = int(args.get("--port"))
     print('listen on port {0}'.format(port))
     if args.get('-d'):
+        root = logging.getLogger()
+        loghandler = logging.StreamHandler(sys.stdout)
+        loghandler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(name)-25s - %(levelname)-5s - %(message)s')
+        loghandler.setFormatter(formatter)
+        root.addHandler(loghandler)
+
         app.debug = True
         app.run(host='0.0.0.0', port=port)
     else:
