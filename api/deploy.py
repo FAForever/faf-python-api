@@ -3,17 +3,15 @@ Holds routes for deployment based off of Github events
 """
 import hmac
 import logging
-import shutil
 import os
+import shutil
 from pathlib import Path
 
-from pymysql.cursors import DictCursor
-
+from faf import db
 from faf.tools.fa.build_mod import build_mod
 from faf.tools.fa.mods import parse_mod_info
 from faf.tools.fa.update_version import update_exe_version
-
-from faf import db
+from pymysql.cursors import DictCursor
 
 from api.oauth_handlers import *
 from .git import checkout_repo
@@ -119,7 +117,7 @@ def deploy_game(repo_path: Path, repo_url: Path, container_path: Path, branch: s
     base_game_exe = Path(app.config['BASE_GAME_EXE'])
     update_exe_version(base_game_exe, deploy_path, version)
 
-    extension = Path(app.config['game_mode'])
+    extension = app.config['MODE_NX'][game_mode]
 
     with db.connection:
         for file in files:
