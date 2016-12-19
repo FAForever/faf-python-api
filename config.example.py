@@ -33,7 +33,7 @@ MODE_NX = {
     'fafdevelop': '.nx5'
 }
 
-GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'
+GAME_DEPLOY_PATH = '/content/faf/updaterNew'
 MOD_UPLOAD_PATH = '/content/faf/vault/mods'
 MOD_THUMBNAIL_PATH = '/content/faf/vault/mods_thumbs'
 MAP_UPLOAD_PATH = '/content/faf/vault/maps'
