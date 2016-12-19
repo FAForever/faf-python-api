@@ -27,6 +27,7 @@ if __name__ == '__main__':
     print('listen on port {0}'.format(port))
     if args.get('-d'):
         root = logging.getLogger()
+        root.setLevel(logging.DEBUG)
         loghandler = logging.StreamHandler(sys.stdout)
         loghandler.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(name)-25s - %(levelname)-5s - %(message)s')
