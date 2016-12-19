@@ -15,9 +15,9 @@ HOST_NAME = os.getenv("VIRTUAL_HOST", 'dev.faforever.com')
 ENVIRONMENT = os.getenv("FAF_API_ENVIRONMENT", 'testing')
 
 # Server path which will contain all git repositories. Primarily used for game files
-REPO_CONTAINER = '/opt/stable/repos'
-TEMP_CONTAINER = '/opt/stable/temp'
-BASE_GAME_EXE = '/opt/stable/content/faf/updaterNew/updates_faf_files/ForgedAlliance.exe'
+REPO_CONTAINER = '/content/faf/repos'
+TEMP_CONTAINER = '/content/faf/temp'
+BASE_GAME_EXE = '/content/faf/updaterNew/updates_faf_files/ForgedAlliance.exe'
 
 DEPLOY_BRANCHES = {
     # branch name : game mode
