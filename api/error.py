@@ -175,6 +175,11 @@ class ErrorCode(Enum):
         title='Linking to Steam failed',
         detail='Your account is already bound to another Steam ID.'
     )
+    INVALID_BRANCH = dict(
+        code=142,
+        title='Invalid branch',
+        detail='The branch {0} is empty or not configured'
+    )
 
 
 class Error:

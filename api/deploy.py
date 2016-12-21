@@ -12,7 +12,8 @@ from faf.tools.fa.mods import parse_mod_info
 from faf.tools.fa.update_version import update_exe_version
 from pymysql.cursors import DictCursor
 
-from api.oauth_handlers import *
+from api import app
+from api.error import *
 from .git import checkout_repo
 
 logger = logging.getLogger(__name__)
@@ -55,11 +56,16 @@ def github_hook():
 
     if event == 'push':
         body = request.get_json()
-        branch = body['ref'].replace('refs/heads/', '')
-        game_mode = app.config['DEPLOY_BRANCHES'][branch]  # Check that this branch matches a game mode we want
 
-        if not branch or not game_mode:
-            return
+        if not 'ref' in body:
+            raise ApiException([Error(ErrorCode.INVALID_BRANCH, '')])
+
+        branch = body['ref'].replace('refs/heads/', '')
+
+        if not branch in app.config['DEPLOY_BRANCHES']:
+            raise ApiException([Error(ErrorCode.INVALID_BRANCH, branch)])
+
+        game_mode = app.config['DEPLOY_BRANCHES'][branch]  # Check that this branch matches a game mode we want
 
         if game_mode:
             repo = body['repository']
