@@ -3,7 +3,6 @@ Holds routes for deployment based off of Github events
 """
 import hmac
 import logging
-import os
 import shutil
 from pathlib import Path
 
@@ -96,7 +95,7 @@ def github_hook():
     return dict(status="OK"), 200
 
 
-def deploy_game(repo_path: Path, repo_url: Path, container_path: Path, branch: str, game_mode: str, commit: str):
+def deploy_game(repo_path: Path, repo_url: str, container_path: Path, branch: str, game_mode: str, commit: str):
     checkout_repo(repo_path, repo_url, container_path, branch, commit)  # Checkout the intended state on the server repo
 
     mod_info = parse_mod_info(repo_path)  # Harvest data from mod_info.lua
@@ -107,9 +106,8 @@ def deploy_game(repo_path: Path, repo_url: Path, container_path: Path, branch: s
     logger.info('Build result: {}'.format(files))
 
     # Create the storage path for the version files. This is where the zips will be moved to from temp
-    deploy_path = Path(app.config['GAME_DEPLOY_PATH'] + '/' + 'updates_' + game_mode + '_files')
-    if not deploy_path.exists():
-        os.makedirs(str(deploy_path))
+    deploy_path = Path(app.config['GAME_DEPLOY_PATH']) / Path('updates_' + game_mode + '_files')
+    deploy_path.mkdir(parents=True, exist_ok=True)
 
     logger.info('Deploying {} to {}'.format(game_mode, deploy_path))
 
@@ -138,7 +136,7 @@ def deploy_game(repo_path: Path, repo_url: Path, container_path: Path, branch: s
                            (file['id'], version, file['md5'], destination.name))
 
     logger.info('Deployment of {} branch {} to {} completed'.format(repo_url, branch, game_mode))
-    return 'Success', 'Deployed ' + str(repo_url) + ' branch ' + branch + ' to ' + game_mode
+    return 'Success', 'Deployed ' + repo_url + ' branch ' + branch + ' to ' + game_mode
 
 
 def deploy_route(repository: str, branch: str, game_mode: str, commit: str):
@@ -151,14 +149,11 @@ def deploy_route(repository: str, branch: str, game_mode: str, commit: str):
     :return: (status: str, description: str)
     """
 
-    github_url = app.config['GIT_URL']
-    repo_url = github_url + repository + '.git'
-    container_path = Path(app.config['REPO_CONTAINER'])  # Contains all the git repositories on the server
+    repo_url = app.config['GIT_URL'] + repository + '.git'
+    container_path = Path(app.config['REPO_CONTAINER'])  # Path : Contains all the git repositories on the server
 
-    if not container_path.exists():
-        os.makedirs(str(container_path))
-
-    repo_path = Path(str(container_path) + '/' + repository)  # The repo we want to be using this time
+    container_path.mkdir(parents=True, exist_ok=True)
+    repo_path = container_path / Path(repository)  # The repo we want to be using this time
 
     try:
         return deploy_game(repo_path, repo_url, container_path, branch, game_mode, commit)

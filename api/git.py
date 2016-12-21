@@ -1,5 +1,5 @@
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 if sys.platform == 'win32':
@@ -8,7 +8,7 @@ else:
     GIT_PATH = '/usr/bin/git'
 
 
-def checkout_repo(repo_path: Path, remote_url: Path, container_path: Path, branch: str, commit: str):
+def checkout_repo(repo_path: Path, remote_url: str, container_path: Path, branch: str, commit: str):
     git_command = [GIT_PATH, '-C', str(container_path)]
 
     if not repo_path.exists():  # We don't have the repo, so we need to clone it
