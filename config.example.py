@@ -14,12 +14,26 @@ HOST_NAME = os.getenv("VIRTUAL_HOST", 'dev.faforever.com')
 
 ENVIRONMENT = os.getenv("FAF_API_ENVIRONMENT", 'testing')
 
-REPO_PATHS = {
-    "api": '.',
-    "patchnotes": '/opt/dev/www/patchnotes'
+# Server path which will contain all git repositories. Primarily used for game files
+REPO_CONTAINER = '/content/faf/repos'
+TEMP_CONTAINER = '/content/faf/temp'
+BASE_GAME_EXE = '/content/faf/updaterNew/updates_faf_files/ForgedAlliance.exe'
+
+DEPLOY_BRANCHES = {
+    # branch name : game mode
+    'master': 'faf',
+    'deploy/fafbeta': 'fafbeta',
+    'deploy/fafdevelop': 'fafdevelop'
 }
 
-GAME_DEPLOY_PATH = '/opt/dev/www/content/faf/updaterNew'
+MODE_NX = {
+    # game mode : .zip extension
+    'faf': '.nx2',
+    'fafbeta': '.nx4',
+    'fafdevelop': '.nx5'
+}
+
+GAME_DEPLOY_PATH = '/content/faf/updaterNew'
 MOD_UPLOAD_PATH = '/content/faf/vault/mods'
 MOD_THUMBNAIL_PATH = '/content/faf/vault/mods_thumbs'
 MAP_UPLOAD_PATH = '/content/faf/vault/maps'
@@ -30,11 +44,12 @@ STATSD_SERVER = os.getenv('STATSD_SERVER', None)
 
 GITHUB_USER = 'some-user'
 GITHUB_TOKEN = 'some-token'
+GIT_URL = 'https://github.com/FAForever/'
 
 AUTO_DEPLOY = ['patchnotes']
 
 FLASK_LOGIN_SECRET_KEY = os.getenv("FLASK_LOGIN_SECRET_KEY", '1234')
-CRYPTO_KEY = os.getenv("CRYPTO_KEY", 'vx7rzvK2C5XxW58XRVc5vTQnQLq35UYOEP8-PYSShBs=')
+CRYPTO_KEY = 'vx7rzvK2C5XxW58XRVc5vTQnQLq35UYOEP8-PYSShBs='
 SECRET_KEY = os.getenv("SECRET_KEY", '1234')
 JWT_AUTH_URL_RULE = None
 JWT_AUTH_HEADER_PREFIX = "Bearer"
