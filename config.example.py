@@ -15,6 +15,7 @@ HOST_NAME = os.getenv("VIRTUAL_HOST", 'dev.faforever.com')
 ENVIRONMENT = os.getenv("FAF_API_ENVIRONMENT", 'testing')
 
 REPO_PATHS = {
+    "fa": '/content/faf/updaterNew',
     "api": '.',
     "patchnotes": '/opt/dev/www/patchnotes'
 }
@@ -31,7 +32,11 @@ STATSD_SERVER = os.getenv('STATSD_SERVER', None)
 GITHUB_USER = 'some-user'
 GITHUB_TOKEN = 'some-token'
 
-AUTO_DEPLOY = ['patchnotes']
+AUTO_DEPLOY = {
+    # repository: [branches]
+    'patchnotes': ['master'],
+    'fa': ['deploy/fafbeta', 'deploy/fafdevelop']
+}
 
 FLASK_LOGIN_SECRET_KEY = os.getenv("FLASK_LOGIN_SECRET_KEY", '1234')
 CRYPTO_KEY = os.getenv("CRYPTO_KEY", 'vx7rzvK2C5XxW58XRVc5vTQnQLq35UYOEP8-PYSShBs=')
