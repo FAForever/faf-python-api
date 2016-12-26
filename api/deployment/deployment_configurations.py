@@ -1,8 +1,10 @@
 import logging
 import shutil
+import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from threading import Thread
 from typing import Callable
 
 from faf import db
@@ -87,6 +89,15 @@ class GameDeploymentConfiguration(DeploymentConfiguration):
             description='Game-deployment started (repo=%s, branch=%s, featured_mod=%s)' % (
                 self.repo.name, self._branch, self._featured_mod))
 
+        # zipping the game files takes much io resources, but few cpu resources
+        # putting it into a separate python thread should be enough to unblock api
+        work_thread = threading.Thread(target=self._perform_deploy, name='deploy_worker',
+                                       args=(deploy_id, commit_signature, callback_on_finished))
+        work_thread.start()
+
+    def _perform_deploy(self, deploy_id: str, commit_signature: str,
+                        callback_on_finished: Callable[[str, str, 'DeploymentConfiguration'], None]) -> None:
+
         checkout_repo(Path(self.repo.path), self.repo.url, self._branch, commit_signature)
 
         mod_info = parse_mod_info(Path(self.repo.path))  # Harvest data from mod_info.lua
@@ -105,9 +116,9 @@ class GameDeploymentConfiguration(DeploymentConfiguration):
                                           "Configuration prohibits override (repo=%s, branch=%s)" % (
                                               self.repo.name, self._branch))])
 
-            # TODO: move this into separate process to prevent api from blocking
-
             logger.debug('Begin building mod (this may take a while)')
+
+            io_thread = Thread()
             files = build_mod(self.repo.path, mod_info,
                               Path(temp_dir.name))  # Build the mod from the fileset we just checked out
             logger.debug('Build result: {}'.format(files))
