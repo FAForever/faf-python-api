@@ -4,7 +4,6 @@ import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from threading import Thread
 from typing import Callable
 
 from faf import db
@@ -15,6 +14,7 @@ from flask import app
 from pymysql.cursors import Cursor
 
 from api import app
+from api.deployment.deployment_manager import DeploymentManager
 from api.deployment.git import checkout_repo, GitRepository
 from api.error import ApiException, Error, ErrorCode
 
@@ -29,7 +29,7 @@ class DeploymentConfiguration(ABC):
 
     @abstractmethod
     def deploy(self, deploy_id: str, commit_signature: str,
-               callback_on_finished: Callable[[str, str, 'DeploymentConfiguration'], None]) -> None:
+               callback_on_finished: Callable[[DeploymentManager, str, str, 'DeploymentConfiguration'], None]) -> None:
         pass
 
     def matches(self, repo_url: str, repo_name: str, branch: str, force_deploy: bool) -> bool:
@@ -118,7 +118,6 @@ class GameDeploymentConfiguration(DeploymentConfiguration):
 
             logger.debug('Begin building mod (this may take a while)')
 
-            io_thread = Thread()
             files = build_mod(self.repo.path, mod_info,
                               Path(temp_dir.name))  # Build the mod from the fileset we just checked out
             logger.debug('Build result: {}'.format(files))

@@ -1,6 +1,7 @@
 import re
+from typing import List
 
-from flask import Request, Response
+from flask import Request
 
 from api.deployment.deployment_configurations import *
 from api.deployment.github import validate_github_request
@@ -15,7 +16,7 @@ class DeploymentManager(object):
     def add(self, deployment_conf: DeploymentConfiguration) -> None:
         self._configurations.append(deployment_conf)
 
-    def handle_request(self, request: Request) -> Response:
+    def handle_request(self, request: Request):
         logger.debug('Handling incoming github request')
 
         body = request.get_json()
@@ -25,7 +26,7 @@ class DeploymentManager(object):
                                                 request.data, request.headers[
                                                     'X-Hub-Signature'].split("sha1=")[
                                                     1]):
-            logger.warn('Github verification failed')
+            logger.warning('Github verification failed')
             return dict(status='Github verification failed'), 400
 
         event = request.headers['X-Github-Event']
@@ -50,10 +51,11 @@ class DeploymentManager(object):
 
             # find a list of valid configurations
             configurations = list(filter(lambda conf: conf.matches(repo_url, repo_name, branch, manual_deploy),
-                                         self._configurations))  # type: list[DeploymentConfiguration]
+                                         self._configurations))  # type: List[DeploymentConfiguration]
 
             if len(configurations) == 0:
-                logger.debug("Github request ignored (no matching configuration)")
+                logger.debug("Github request ignored (no matching configuration for repo=%s, branch=%s)", repo_name,
+                             branch)
                 return dict(status='Github request ignored (no matching configuration)'), 200
             elif len(configurations) == 1:
                 response = app.github.create_deployment(owner=app.config['GIT_OWNER'],
@@ -68,8 +70,10 @@ class DeploymentManager(object):
                     logger.error('Github-deployment failed (repo=%s, branch=%s)', repo_name, branch)
                     raise ApiException([Error(ErrorCode.DEPLOYMENT_ERROR, response.content)])
             else:
-                logger.error("Invalid deployment configuration for (repo=%s, branch=%s) ", repo_name, branch)
-                raise ApiException([Error(ErrorCode.DEPLOYMENT_ERROR, "Invalid deployment configuration")])
+                logger.error("Invalid deployment configuration for repo=%s, branch=%s ", repo_name, branch)
+                raise ApiException([Error(ErrorCode.DEPLOYMENT_ERROR,
+                                          "Invalid deployment configuration for repo=%s, branch=%s" % (
+                                              repo_name, branch))])
 
         # check for relevance and deploy
         elif event == 'deployment':
@@ -78,11 +82,12 @@ class DeploymentManager(object):
             branch = deploy_info['ref'].replace('refs/heads/', '')
 
             configurations = list(filter(lambda conf: conf.matches(repo_url, repo_name, branch, True),
-                                         self._configurations))  # type: list[DeploymentConfiguration]
+                                         self._configurations))  # type: List[DeploymentConfiguration]
 
             if len(configurations) == 0:
-                logger.debug("Github request ignored (no matching configuration)")
-                return dict(status='Github request ignored (no matching configuration)'), 200
+                logger.debug("Github request ignored (no matching configuration for repo=%s, branch=%s)", repo_name,
+                             repo_url)
+                return dict(status='Github request ignored (no matching configuration'), 200
             elif len(configurations) == 1:
                 if deploy_info['environment'] == app.config['ENVIRONMENT']:
                     configurations[0].deploy(deploy_info['id'], deploy_info['sha'], self.on_deployment_finished)
