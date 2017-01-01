@@ -10,11 +10,8 @@ from faf import db
 from faf.tools.fa.build_mod import build_mod
 from faf.tools.fa.mods import parse_mod_info
 from faf.tools.fa.update_version import update_exe_version
-from flask import app
 from pymysql.cursors import Cursor
 
-from api import app
-from api.deployment.deployment_manager import DeploymentManager
 from api.deployment.git import checkout_repo, GitRepository
 from api.error import ApiException, Error, ErrorCode
 
@@ -29,7 +26,8 @@ class DeploymentConfiguration(ABC):
 
     @abstractmethod
     def deploy(self, deploy_id: str, commit_signature: str,
-               callback_on_finished: Callable[[DeploymentManager, str, str, 'DeploymentConfiguration'], None]) -> None:
+               callback_on_finished: Callable[
+                   ['DeploymentManager', str, str, 'DeploymentConfiguration'], None]) -> None:
         pass
 
     def matches(self, repo_url: str, repo_name: str, branch: str, force_deploy: bool) -> bool:
@@ -53,7 +51,7 @@ class WebDeploymentConfiguration(DeploymentConfiguration):
         restart_file = Path(self.repo.path, 'tmp/restart.txt')
         restart_file.touch()
 
-        app.github.create_deployment_status(
+        self._github.create_deployment_status(
             owner='FAForever',
             repo=self.repo.name,
             id=deploy_id,
@@ -70,9 +68,12 @@ class GameDeploymentConfiguration(DeploymentConfiguration):
     GameDeploymentConfiguration is able to build a new game version and deploy it
     """
 
-    def __init__(self, repo: GitRepository, branch: str, autodeploy: bool, featured_mod: str,
-                 file_extension: str, allow_override: bool):
+    def __init__(self, repo: GitRepository, branch: str, autodeploy: bool, git_owner: str, deploy_path: str,
+                 base_game_exe: str, featured_mod: str, file_extension: str, allow_override: bool):
         super().__init__(repo, branch, autodeploy)
+        self._git_owner = git_owner
+        self._deploy_path = deploy_path
+        self._base_game_exe = base_game_exe
         self._featured_mod = featured_mod
         self._file_extension = file_extension
         self._allow_override = allow_override
@@ -80,14 +81,6 @@ class GameDeploymentConfiguration(DeploymentConfiguration):
     def deploy(self, deploy_id: str, commit_signature: str,
                callback_on_finished: Callable[[str, str, 'DeploymentConfiguration'], None]) -> None:
         logger.info('Game-deployment started (repo=%s, branch=%s)', self.repo.name, self._branch)
-
-        app.github.create_deployment_status(
-            owner=app.config['GIT_OWNER'],
-            repo=self.repo.name,
-            id=deploy_id,
-            state='pending',
-            description='Game-deployment started (repo=%s, branch=%s, featured_mod=%s)' % (
-                self.repo.name, self._branch, self._featured_mod))
 
         # zipping the game files takes much io resources, but few cpu resources
         # putting it into a separate python thread should be enough to unblock api
@@ -123,12 +116,12 @@ class GameDeploymentConfiguration(DeploymentConfiguration):
             logger.debug('Build result: {}'.format(files))
 
             # Create the storage path for the version files. This is where the zips will be moved to from temp
-            deploy_path = Path(app.config['GAME_DEPLOY_PATH'], 'updates_%s_files' % self._featured_mod)
+            deploy_path = Path(self._deploy_path, 'updates_%s_files' % self._featured_mod)
             deploy_path.mkdir(parents=True, exist_ok=True)
 
             # Create a new ForgedAlliance.exe compatible with the new version
             logger.debug('Create version of ForgedAlliance.exe')
-            base_game_exe = Path(app.config['BASE_GAME_EXE'])
+            base_game_exe = Path(self._base_game_exe)
             update_exe_version(base_game_exe, deploy_path, version)
 
             logger.debug('Deploying %s to %s', self._featured_mod, deploy_path)

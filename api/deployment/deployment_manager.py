@@ -4,13 +4,19 @@ from typing import List
 from flask import Request
 
 from api.deployment.deployment_configurations import *
-from api.deployment.github import validate_github_request
+from api.deployment.github import validate_github_request, Github
+from api.deployment.slack import Slack
 
 logger = logging.getLogger(__name__)
 
 
 class DeploymentManager(object):
-    def __init__(self):
+    def __init__(self, environment: str, github_secret: bytes, git_owner: str, github: Github, slack: Slack):
+        self._environment = environment
+        self._github_secret = github_secret
+        self._git_owner = git_owner
+        self._github = github
+        self._slack = slack
         self._configurations = []  # list[DeploymentConfiguration]
 
     def add(self, deployment_conf: DeploymentConfiguration) -> None:
@@ -21,8 +27,8 @@ class DeploymentManager(object):
 
         body = request.get_json()
 
-        if len(app.config['GITHUB_SECRET']) > 0 \
-                and not validate_github_request(app.config['GITHUB_SECRET'],
+        if len(self._github_secret) > 0 \
+                and not validate_github_request(self._github_secret,
                                                 request.data, request.headers[
                                                     'X-Hub-Signature'].split("sha1=")[
                                                     1]):
@@ -47,7 +53,7 @@ class DeploymentManager(object):
                 return dict(status='Github request ignored (commit already known)'), 200
 
             manual_deploy = re.search('Deploy: ([\w\W]+)', head_commit['message'])
-            environment = manual_deploy.group(1) if manual_deploy else app.config['ENVIRONMENT']
+            environment = manual_deploy.group(1) if manual_deploy else self._environment
 
             # find a list of valid configurations
             configurations = list(filter(lambda conf: conf.matches(repo_url, repo_name, branch, manual_deploy),
@@ -58,11 +64,11 @@ class DeploymentManager(object):
                              branch)
                 return dict(status='Github request ignored (no matching configuration)'), 200
             elif len(configurations) == 1:
-                response = app.github.create_deployment(owner=app.config['GIT_OWNER'],
-                                                        repo=repo_name,
-                                                        ref=body['ref'],
-                                                        environment=environment,
-                                                        description=head_commit['message'])
+                response = self._github.create_deployment(owner=self._git_owner,
+                                                          repo=repo_name,
+                                                          ref=body['ref'],
+                                                          environment=environment,
+                                                          description=head_commit['message'])
                 if response.status_code == 201:
                     logger.info('Github-deployment invoked (repo=%s, branch=%s)', repo_name, branch)
                     return dict(status='deployment invoked'), 201
@@ -89,11 +95,12 @@ class DeploymentManager(object):
                              repo_url)
                 return dict(status='Github request ignored (no matching configuration'), 200
             elif len(configurations) == 1:
-                if deploy_info['environment'] == app.config['ENVIRONMENT']:
+                if deploy_info['environment'] == self._environment:
                     configurations[0].deploy(deploy_info['id'], deploy_info['sha'], self.on_deployment_finished)
                     return dict(status='deployment started'), 201
                 else:
-                    logger.debug('Skip deployment due to wrong environment')
+                    logger.debug('Github request skipped due to wrong environment')
+                    return dict(status='Github request skipped due to wrong environment'), 200
             else:
                 logger.error("Invalid deployment configuration for (repo=%s, branch=%s)", repo_name, branch)
                 raise ApiException([Error(ErrorCode.DEPLOYMENT_ERROR, "Invalid deployment configuration")])
@@ -105,12 +112,12 @@ class DeploymentManager(object):
     def on_deployment_finished(self, deploy_id: str, message: str, configuration: DeploymentConfiguration) -> None:
         logger.debug("performing post-deployment activities")
 
-        deploy_message = "[%s] %s" % (app.config['ENVIRONMENT'], message)
+        deploy_message = "[%s] %s" % (self._environment, message)
 
-        app.slack.send_message(username='deploybot', text=deploy_message)
+        self._slack.send_message(username='deploybot', text=deploy_message)
 
-        app.github.create_deployment_status(
-            owner=app.config['GIT_OWNER'],
+        self._github.create_deployment_status(
+            owner=self._git_owner,
             repo=configuration.repo.name,
             id=deploy_id,
             state='success',

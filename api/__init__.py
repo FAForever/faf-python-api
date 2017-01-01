@@ -17,6 +17,7 @@ from flask_login import LoginManager
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
 from flask_oauthlib.provider import OAuth2Provider
 
+from api.deployment.deployment_manager import DeploymentManager
 from api.error import ApiException
 from api.jwt_user import JwtUser
 from api.user import User
@@ -113,9 +114,15 @@ def api_init():
     """
 
     faf.db.init_db(app.config)
-    app.github = api.deployment.github.make_session(app.config['GITHUB_USER'],
-                                                    app.config['GITHUB_TOKEN'])
-    app.slack = slack.make_session(app.config['SLACK_HOOK_URL'])
+    github = api.deployment.github.make_session(app.config['GITHUB_USER'],
+                                                app.config['GITHUB_TOKEN'])
+    slack = api.deployment.slack.make_session(app.config['SLACK_HOOK_URL'])
+
+    app.deployment_manager = DeploymentManager(app.config['ENVIRONMENT'], app.config['GITHUB_SECRET'],
+                                               app.config['GIT_OWNER'], github, slack)
+    for deploy_configuration in app.config['DEPLOYMENTS']:
+        app.deployment_manager.add(deploy_configuration)
+    app.github = github
 
     app.secret_key = app.config['FLASK_LOGIN_SECRET_KEY']
     flask_jwt.init_app(app)
@@ -154,16 +161,14 @@ bind_cache_grant(app, oauth, get_current_user)
 # ======== Import (initialize) oauth2 handlers =====
 import api.oauth_handlers
 # ======== Import (initialize) routes =========
-import api.deployment.routes
 import api.auth
 import api.avatars
 import api.bugreports
 import api.mods
 import api.maps
-import api.deployment.github
 import api.oauth_client
 import api.oauth_token
-import api.slack
+import api.deployment.slack
 import api.achievements
 import api.events
 import api.query_commons
@@ -173,5 +178,4 @@ import api.coop
 import api.players
 import api.users_route
 import api.featured_mods
-import api.deployment.deployment_manager
-import api.deployment.deployment_configurations
+import api.deployment.routes

@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 
 from api.deployment.deployment_configurations import WebDeploymentConfiguration, GameDeploymentConfiguration
-from api.deployment.deployment_manager import DeploymentManager
 from api.deployment.git import GitRepository
 
 DATABASE = dict(
@@ -39,17 +38,16 @@ PATCHNOTES_REPO = GitRepository('https://github.com/%s/patchnotes.git' % GIT_OWN
                                 Path('/content/faf/patchnotes'))
 GAME_REPO = GitRepository('https://github.com/%s/fa.git' % GIT_OWNER, 'fa', Path('/content/faf/repos/fa'))
 
-DEPLOYMENTS = DeploymentManager()  # type: DeploymentManager
-DEPLOYMENTS.add(WebDeploymentConfiguration(repo=API_REPO, branch='master', autodeploy=False))
-DEPLOYMENTS.add(WebDeploymentConfiguration(repo=PATCHNOTES_REPO, branch='master', autodeploy=False))
-DEPLOYMENTS.add(GameDeploymentConfiguration(repo=GAME_REPO, branch='master', autodeploy=False, featured_mod='faf',
-                                            allow_override=False, file_extension='.nx2'))
-DEPLOYMENTS.add(
-    GameDeploymentConfiguration(repo=GAME_REPO, branch='deploy/fafbeta', autodeploy=True, featured_mod='fafbeta',
-                                allow_override=True, file_extension='.nx4'))
-DEPLOYMENTS.add(
-    GameDeploymentConfiguration(repo=GAME_REPO, branch='deploy/fafdevelop', autodeploy=True, featured_mod='fafdevelop',
-                                allow_override=True, file_extension='.nx5'))
+DEPLOYMENTS = [
+    WebDeploymentConfiguration(API_REPO, 'master', False),
+    WebDeploymentConfiguration(PATCHNOTES_REPO, 'master', False),
+    GameDeploymentConfiguration(GAME_REPO, 'master', False, GIT_OWNER, GAME_DEPLOY_PATH, BASE_GAME_EXE, 'faf', '.nx2',
+                                False),
+    GameDeploymentConfiguration(GAME_REPO, 'deploy/fafbeta', True, GIT_OWNER, GAME_DEPLOY_PATH, BASE_GAME_EXE,
+                                'fafbeta', '.nx4', True),
+    GameDeploymentConfiguration(GAME_REPO, 'deploy/fafdevelop', True, GIT_OWNER, GAME_DEPLOY_PATH, BASE_GAME_EXE,
+                                'fafdevelop', '.nx5', True)
+]
 
 
 FLASK_LOGIN_SECRET_KEY = os.getenv("FLASK_LOGIN_SECRET_KEY", '1234')

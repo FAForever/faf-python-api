@@ -3,6 +3,7 @@ Holds routes for deployment based off of Github events
 """
 from api import app, request
 
+
 @app.route('/deployment/<repo>/<int:id>', methods=['GET'])
 def deployment(repo, id):
     return app.github.deployment(owner=app.config['GIT_OWNER'], repo=repo, id=id).json()
@@ -22,4 +23,4 @@ def github_hook():
     Generic github hook suitable for receiving github status events.
     :return:
     """
-    return app.config['DEPLOYMENTS'].handle_request(request)
+    return app.deployment_manager.handle_request(request)
