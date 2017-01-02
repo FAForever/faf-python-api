@@ -180,7 +180,8 @@ def test_validate_registration_success(test_client, setup_users):
         '/users/validate_registration/' + create_token('register', time.time() + 60, 'alpha', 'a@faforever.com',
                                                        '0000'))
 
-    assert response.status_code == 200
+    assert response.status_code == 302
+    assert response.headers['location'] == 'http://www.faforever.com/account_activated'
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
@@ -272,7 +273,8 @@ def test_validate_password_success(oauth, setup_users):
     response = oauth.get(
         '/users/validate_password/' + create_token('reset_password', time.time() + 60, 'abc', 'a@aa.aa', 'test123'))
 
-    assert response.status_code == 200
+    assert response.status_code == 302
+    assert response.headers['location'] == 'http://www.faforever.com/password_resetted'
 
     with db.connection:
         cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
