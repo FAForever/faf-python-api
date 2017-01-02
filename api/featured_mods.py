@@ -1,5 +1,7 @@
+import urllib.parse
 from functools import partial
 
+from faf import db
 from faf.api.featured_mod_file_schema import FeaturedModFileSchema
 from faf.api.featured_mod_schema import FeaturedModSchema
 from flask import request
@@ -8,9 +10,6 @@ from pymysql.cursors import DictCursor
 from api import app, cache, default_cache_key
 from api.error import Error, ErrorCode, ApiException
 from api.query_commons import fetch_data
-import urllib.parse
-
-from faf import db
 
 SELECT_EXPRESSIONS = {
     'id': 'id',
@@ -38,7 +37,8 @@ FILES_TABLE_FORMAT = """updates_{0}_files u
         ON u.fileid = u2.fileid
             AND u.version < u2.version
     LEFT JOIN updates_{0} b
-        ON b.id = u.fileId"""
+        ON b.id = u.fileId
+    WHERE u2.version IS NULL """
 
 FEATURED_MODS_TABLE = 'game_featuredMods'
 
@@ -223,14 +223,15 @@ def featured_mod_files(id, version):
     featured_mod_name = 'faf' if mods.get(id) == 'ladder1v1' else mods.get(id)
     files_table = FILES_TABLE_FORMAT.format(featured_mod_name)
 
-    where = 'u2.version IS NULL'
+    where = ''
     args = None
     if version and version != 'latest':
         where += ' AND u.version <= %s'
         args = (version,)
 
     return fetch_data(FeaturedModFileSchema(), files_table, FILES_SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request,
-                      enricher=partial(file_enricher, 'updates_{}_files'.format(featured_mod_name)), where=where,
+                      enricher=partial(file_enricher, 'updates_{}_files'.format(featured_mod_name)),
+                      where_extension=where,
                       args=args)
 
 

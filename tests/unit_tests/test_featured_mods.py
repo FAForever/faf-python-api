@@ -1,7 +1,6 @@
 import json
 
 import pytest
-
 from faf import db
 
 
@@ -27,6 +26,7 @@ delete from updates_faf_files;
 insert into updates_faf_files (id, fileId, version, name, md5, obselete) values
     (711, 1, 3658, 'ForgedAlliance.3658.exe', '2cd7784fb131ea4955e992cfee8ca9b8', 0),
     (745, 1, 3659, 'ForgedAlliance.3659.exe', 'ee2df6c3cb80dc8258428e8fa092bce1', 0),
+    (710, 11, 3657, 'effects_0.3657.nxt', 'edd083b3dc54ec79c354be2b845f25ee', 0),
     (723, 11, 3658, 'effects_0.3658.nxt', '3758baad77531dd5323c766433412e91', 0),
     (734, 11, 3659, 'effects_0.3659.nxt', '3758baad77531dd5323c766433412e91', 0),
     (680, 12, 3656, 'env_0.3656.nxt', '32a50729cb5155ec679771f38a151d29', 0);
