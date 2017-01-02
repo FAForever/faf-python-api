@@ -13,7 +13,6 @@ from faf.tools.fa.update_version import update_exe_version
 from pymysql.cursors import Cursor
 
 from api.deployment.git import checkout_repo, GitRepository
-from api.error import ApiException, Error, ErrorCode
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +94,7 @@ class GameDeploymentConfiguration(DeploymentConfiguration):
 
         mod_info = parse_mod_info(Path(self.repo.path))  # Harvest data from mod_info.lua
         version = mod_info['version']
+        logger.debug("Version is %s", version)
         temp_dir = TemporaryDirectory(prefix="deploy_%s_" % self._featured_mod)  # type: TemporaryDirectory
 
         with db.connection:
@@ -105,9 +105,8 @@ class GameDeploymentConfiguration(DeploymentConfiguration):
             file_count = cursor.fetchone()
 
             if file_count[0] > 0 and not self._allow_override:
-                raise ApiException([Error(ErrorCode.DEPLOYMENT_ERROR,
-                                          "Configuration prohibits override (repo=%s, branch=%s)" % (
-                                              self.repo.name, self._branch))])
+                logger.warning("Configuration prohibits override (repo=%s, branch=%s)", self.repo.name, self._branch)
+                return
 
             logger.debug('Begin building mod (this may take a while)')
 
