@@ -134,7 +134,7 @@ def validate_account(token=None):
                 'deviation': deviation
             })
 
-    return "ok"
+    return redirect(app.config['ACCOUNT_ACTIVATION_REDIRECT'])
 
 
 @app.route('/users/reset_password', methods=['POST'])
@@ -248,7 +248,7 @@ def validate_password(token=None):
         if cursor.rowcount == 0:
             raise ApiException([Error(ErrorCode.PASSWORD_RESET_FAILED)])
 
-    return "ok"
+        return redirect(app.config['PASSWORD_RESET_REDIRECT'])
 
 
 @app.route('/users/change_password', methods=['POST'])
