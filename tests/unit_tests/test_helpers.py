@@ -52,7 +52,7 @@ def test_validate_username_success(setup_users):
 
 def test_validate_username_illegal_syntax(setup_users):
     with pytest.raises(ApiException) as excInfo:
-        validate_username("x,y")
+        validate_username("xxx yyy")
 
     assert excInfo.value.errors[0].code == ErrorCode.INVALID_USERNAME
 
