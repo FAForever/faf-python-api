@@ -14,7 +14,7 @@ import config
 from api.error import ApiException, Error, ErrorCode
 from config import CRYPTO_KEY
 
-USERNAME_REGEX = re.compile("[A-Za-z]{1}[A-Za-z0-9_-]{2,15}")
+USERNAME_REGEX = re.compile("[A-Za-z]{1}[A-Za-z0-9_-]{2,15}$")
 EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$")
 
 
