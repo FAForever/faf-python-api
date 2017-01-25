@@ -180,6 +180,11 @@ class ErrorCode(Enum):
         title='Unknown featured mod',
         detail='There is no featured mod with ID \"{}\".'
     )
+    DEPLOYMENT_ERROR = dict(
+        code=143,
+        title='Deployment caused an error',
+        detail='Error message: {}'
+    )
 
 
 class Error:
