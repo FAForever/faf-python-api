@@ -1,30 +1,15 @@
-import base64
 import datetime
-import email
-import json
 import logging
-import marisa_trie
-import re
-import time
-from email.mime.text import MIMEText
+import urllib
+from urllib.parse import urlparse, urlencode
 
-import faf.db as db
-import requests
-from cryptography.fernet import Fernet
-from flask import request
+from flask import request, redirect
 
-import config
-from api import app
-from api.error import ApiException, Error, ErrorCode, req_post_param
-from config import CRYPTO_KEY
+from api import app, oauth
+from api.error import req_post_param
+from api.helpers import *
 
 logger = logging.getLogger(__name__)
-
-
-def create_token(name: str, email: str, pw_hash: str, expiry: int) -> str:
-    plaintext = name + "," + email + "," + pw_hash + "," + str(expiry)
-    request_hmac = Fernet(CRYPTO_KEY).encrypt(plaintext.encode())
-    return base64.urlsafe_b64encode(request_hmac).decode("utf-8")
 
 
 @app.route('/users/register', methods=['POST'])
@@ -59,10 +44,11 @@ def create_account():
     email = request.form.get('email')
     pw_hash = request.form.get('pw_hash')
 
-    validate_registration_input(name, email)  # raises exception if not valid
+    validate_username(name)
+    validate_email(email)
 
     expiry = time.time() + 3600 * 24 * 14
-    token = create_token(name, email, pw_hash, str(expiry))
+    token = create_token('register', expiry, name, email, pw_hash)
 
     # send email with link to activation url
     logger.info(
@@ -72,19 +58,19 @@ def create_account():
 
     passwordLink = "http://" + config.HOST_NAME + "/users/validate_registration/" + token
 
+    text = "Dear " + name + ",\n\n\
+    welcome to the Forged Alliance Forever community.\
+    Please visit the following link to activate your FAF account:\n\
+    -----------------------\n\
+    " + passwordLink + "\n\
+    -----------------------\n\n\
+    Thanks,\n\
+    -- The FA Forever team"
+
     if (config.ENVIRONMENT == "testing"):
         print(passwordLink)
     else:
-        text = "Dear " + name + ",\n\n\
-        welcome to the Forged Alliance Forever community.\
-        Please visit the following link to activate your FAF account:\n\
-        -----------------------\n\
-        " + passwordLink + "\n\
-        -----------------------\n\n\
-        Thanks,\n\
-        -- The FA Forever team"
-
-        send_email(text, name, email, 'Forged Alliance Forever - Account validation')
+        send_email(logger, text, name, email, 'Forged Alliance Forever - Account validation')
 
     return "ok"
 
@@ -110,24 +96,13 @@ def validate_account(token=None):
 
         "ok"
 
-    :token contains the required data (username, email, password hash, expiration date
+    :token contains the required data (username, email, password hash)
 
     """
 
-
-    # Fuck you urlsafe_b64encode & padding and fuck you overzealous http implementations
-    token = token.replace('%3d', '=')
-    token = token.replace('%3D', '=')
-
-    ciphertext = base64.urlsafe_b64decode(token.encode())
-    plaintext = Fernet(CRYPTO_KEY).decrypt(ciphertext).decode("utf-8")
-
-    name, email, pw_hash, expiry = plaintext.split(',')
-    validate_registration_input(name, email)  # raises exception if not valid
-
-    if (float(expiry) < time.time()):
-        logger.error("Registration of user {} with email address {} failed (token expired)".format(name, email))
-        raise ApiException([Error(ErrorCode.USER_TOKEN_EXPIRED)])
+    name, email, pw_hash = decrypt_token('register', token)
+    validate_username(name)
+    validate_email(email)
 
     with db.connection:
         cursor = db.connection.cursor()
@@ -159,48 +134,8 @@ def validate_account(token=None):
                 'deviation': deviation
             })
 
-    return "ok"
+    return redirect(app.config['ACCOUNT_ACTIVATION_REDIRECT'])
 
-
-def validate_registration_input(login: str, user_email: str) -> bool:
-    username_pattern = re.compile(r"^[^,]{1,20}$")
-    email_pattern = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$")
-
-    if not email_pattern.match(user_email):
-        raise ApiException([Error(ErrorCode.REGISTRATION_INVALID_EMAIL, user_email)])
-
-    if not username_pattern.match(login):
-        raise ApiException([Error(ErrorCode.REGISTRATION_INVALID_USERNAME, login)])
-
-    with db.connection:
-        cursor = db.connection.cursor()
-
-        # ensure that username is unique
-        cursor.execute("SELECT id FROM `login` WHERE LOWER(`login`) = %s",
-                       (login.lower(),))
-
-        if cursor.fetchone() is not None:
-            raise ApiException([Error(ErrorCode.REGISTRATION_USERNAME_TAKEN, login)])
-
-        # ensue that email adress is unique
-        cursor.execute("SELECT id FROM `login` WHERE LOWER(`email`) = %s",
-                       (user_email.lower(),))
-
-        if cursor.fetchone() is not None:
-            raise ApiException([Error(ErrorCode.REGISTRATION_EMAIL_REGISTERED, user_email)])
-
-        # checkBlacklisted email domains (we don't like disposable email)
-        cursor.execute("SELECT lower(domain) FROM email_domain_blacklist")
-        rows = cursor.fetchall()
-        # Get list of  blacklisted domains (so we can suffix-match incoming emails
-        # in sublinear time)
-        blacklisted_email_domains = marisa_trie.Trie(map(lambda x: x[0], rows))
-
-        domain = user_email.split("@")[1].lower()
-        if domain in blacklisted_email_domains:
-            raise ApiException([Error(ErrorCode.REGISTRATION_BLACKLISTED_EMAIL, user_email)])
-
-    return True
 
 @app.route('/users/reset_password', methods=['POST'])
 @req_post_param('name', 'email', 'pw_hash')
@@ -237,15 +172,15 @@ def reset_password():
     with db.connection:
         cursor = db.connection.cursor()
 
-        # ensure that username is unique
+        # validate username and email in the database
         cursor.execute("SELECT id FROM `login` WHERE LOWER(`login`) = %s AND LOWER(`email`) = %s",
                        (name.lower(), email))
 
         if cursor.fetchone() is None:
-            raise ApiException([Error(ErrorCode.PASSWORD_RESET_INVALID)])
+            raise ApiException([Error(ErrorCode.PASSWORD_RESET_FAILED)])
 
     expiry = time.time() + 3600 * 24 * 14
-    token = create_token(name, email, pw_hash, str(expiry))
+    token = create_token('reset_password', expiry, name, email, pw_hash)
 
     # send email with link to activation url
     logger.info(
@@ -255,20 +190,20 @@ def reset_password():
 
     passwordLink = "http://" + config.HOST_NAME + "/users/validate_password/" + token
 
+    text = "Dear " + name + ",\n\n\
+    a new password was requested for your user.\n\
+    If you did not request a new password, please delete this email.\n\n\
+    Otherwise please click on the following link to reset your password:\n\
+    -----------------------\n\
+    " + passwordLink + "\n\
+    -----------------------\n\n\
+    Thanks,\n\
+    -- The FA Forever team"
+
     if (config.ENVIRONMENT == "testing"):
         print(passwordLink)
     else:
-        text = "Dear " + name + ",\n\n\
-        a new password was requested for your user.\n\
-        If you did not request a new password, please delete this email.\n\n\
-        Otherwise please click on the following link to reset your password:\n\
-        -----------------------\n\
-        " + passwordLink + "\n\
-        -----------------------\n\n\
-        Thanks,\n\
-        -- The FA Forever team"
-
-        send_email(text, name, email, 'Forged Alliance Forever - Password reset')
+        send_email(logger, text, name, email, 'Forged Alliance Forever - Password reset')
 
     return "ok"
 
@@ -282,7 +217,7 @@ def validate_password(token=None):
 
     .. sourcecode:: http
 
-       POST /users/validate_password/Z0FBQUFBQllHbVdoNFdHblhjUE01Z2l2RTQ0Z2xneXpRZ19fYUgxcmY2endsaEJ4TzdjS1EwM1QxNG8yblVwNlFhMFVuLUdKR0JETW9PZWdDdm1hLThNYUhwZnVaa0s1OGhVVF9ER09YMzFPS2RnM0dLV0hoZkUzMU9ONm1DTnFkWEgwU1VvZzZBWGs=
+       GET /users/validate_password/Z0FBQUFBQllHbVdoNFdHblhjUE01Z2l2RTQ0Z2xneXpRZ19fYUgxcmY2endsaEJ4TzdjS1EwM1QxNG8yblVwNlFhMFVuLUdKR0JETW9PZWdDdm1hLThNYUhwZnVaa0s1OGhVVF9ER09YMzFPS2RnM0dLV0hoZkUzMU9ONm1DTnFkWEgwU1VvZzZBWGs=
 
     **Example Response**:
 
@@ -294,22 +229,11 @@ def validate_password(token=None):
 
         "ok"
 
-    :token contains the required data (username, email, password hash, expiration date
+    :token contains the required data (username, email, password hash)
 
     """
 
-    # Fuck you urlsafe_b64encode & padding and fuck you overzealous http implementations
-    token = token.replace('%3d', '=')
-    token = token.replace('%3D', '=')
-
-    ciphertext = base64.urlsafe_b64decode(token.encode())
-    plaintext = Fernet(CRYPTO_KEY).decrypt(ciphertext).decode("utf-8")
-
-    name, email, pw_hash, expiry = plaintext.split(',')
-
-    if (float(expiry) < time.time()):
-        logger.error("Registration of user {} with email address {} failed (token expired)".format(name, email))
-        raise ApiException([Error(ErrorCode.USER_TOKEN_EXPIRED)])
+    name, email, pw_hash = decrypt_token('reset_password', token)
 
     with db.connection:
         cursor = db.connection.cursor()
@@ -324,38 +248,13 @@ def validate_password(token=None):
         if cursor.rowcount == 0:
             raise ApiException([Error(ErrorCode.PASSWORD_RESET_FAILED)])
 
-    return "ok"
-
-
-def send_email(text, to_name, to_email, subject):
-    msg = MIMEText(text)
-
-    msg['Subject'] = subject
-    msg['From'] = email.utils.formataddr(('Forged Alliance Forever', "admin@faforever.com"))
-    msg['To'] = email.utils.formataddr((to_name, to_email))
-
-    logger.debug("Sending mail to " + to_email)
-    url = config.MANDRILL_API_URL + "/messages/send-raw.json"
-    headers = {'content-type': 'application/json'}
-    resp = requests.post(url,
-                         data=json.dumps({
-                             "key": config.MANDRILL_API_KEY,
-                             "raw_message": msg.as_string(),
-                             "from_email": 'admin@faforever.com',
-                             "from_name": "Forged Alliance Forever",
-                             "to": [
-                                 to_email
-                             ],
-                             "async": False
-                         }),
-                         headers=headers)
-
-    logger.debug("Mandrill response: %s", json.dumps(resp.text))
+        return redirect(app.config['PASSWORD_RESET_REDIRECT'])
 
 
 @app.route('/users/change_password', methods=['POST'])
+@oauth.require_oauth('write_account_data')
 @req_post_param('name', 'pw_hash_old', 'pw_hash_new')
-def change_password(token=None):
+def change_password():
     """
     Request a password change for a user
 
@@ -397,5 +296,247 @@ def change_password(token=None):
 
         if cursor.rowcount == 0:
             raise ApiException([Error(ErrorCode.PASSWORD_CHANGE_FAILED)])
+
+    return "ok"
+
+
+@app.route('/users/change_name', methods=['POST'])
+@oauth.require_oauth('write_account_data')
+@req_post_param('desired_name')
+def change_name():
+    """
+    Request a name change for a user
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       POST /users/change_name
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        "ok"
+
+    :desired_name the new username
+
+    """
+
+    desired_name = request.form.get('desired_name')
+
+    validate_username(desired_name)
+
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute(
+            "SELECT DATEDIFF(NOW(), change_time) as days_since_last_change FROM name_history WHERE user_id=%(id)s AND DATEDIFF(NOW(), change_time) < 30 ORDER BY change_time DESC",
+            {
+                'id': request.oauth.user.id
+            })
+
+        entry = cursor.fetchone()
+
+        if entry is not None:
+            raise ApiException([Error(ErrorCode.USERNAME_CHANGE_TOO_EARLY, 30 - int(entry[0]))])
+
+        cursor.execute(
+            "INSERT INTO name_history (user_id, previous_name) SELECT id, login FROM login WHERE id = %(id)s",
+            {
+                'id': request.oauth.user.id
+            }
+        )
+
+        cursor.execute(
+            "UPDATE login SET login = %(name)s WHERE id = %(id)s",
+            {
+                'id': request.oauth.user.id,
+                'name': desired_name
+            }
+        )
+
+    return "ok"
+
+
+@app.route('/users/link_to_steam', methods=['POST'])
+@oauth.require_oauth('write_account_data')
+@req_post_param('redirect_to')
+def link_to_steam():
+    """
+    API stores the steam link request in a token.
+    The user gets redirected to a steam login page.
+    The redirect contains a callback-url where steam redirects after login to route users/validate_steam/<token>
+    """
+
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+        cursor.execute(
+            "SELECT steamid from login WHERE id = %(id)s",
+            {
+                'id': request.oauth.user.id
+            })
+
+        entry = cursor.fetchone()
+
+        if entry['steamid'] is not None:
+            raise ApiException([Error(ErrorCode.STEAM_ID_UNCHANGEABLE)])
+
+    expiry = time.time() + 600
+    token = create_token('link_to_steam', expiry, request.oauth.user.id, request.form.get('redirect_to'))
+
+    logger.info(
+        "User {} has requested steam account linking -- Token expires at {:%Y-%m-%d %H:%M}".format(
+            request.oauth.user.username,
+            datetime.datetime.fromtimestamp(
+                expiry)))
+
+    openid_args = {
+        'openid.ns': 'http://specs.openid.net/auth/2.0',
+        'openid.mode': 'checkid_setup',
+        'openid.return_to': request.host_url + 'users/validate_steam/' + token,
+        'openid.realm': request.host_url,
+        'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select',
+        'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select'
+    }
+
+    steam_url = config.STEAM_LOGIN_URL + '?' + urllib.parse.urlencode(openid_args)
+
+    return {'steam_url': steam_url}
+
+
+@app.route('/users/validate_steam/<token>', methods=['GET'])
+def validate_steam_request(token=None):
+    user_id, redirect_to = decrypt_token('link_to_steam', token)
+
+    # extract steam account id
+    match = re.search('^http://steamcommunity.com/openid/id/([0-9]{17,25})', request.args.get('openid.identity'))
+
+    if match is None:
+        redirect_to += ('&' if urlparse(redirect_to).query else '?') + urlencode({'steam_link_result': 'fail'})
+        return redirect(redirect_to)
+
+    steamID = match.group(1)
+
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute(
+            "UPDATE login SET steamid = %(steam_id)s WHERE id = %(id)s",
+            {
+                'steam_id': steamID,
+                'id': user_id
+            })
+
+        redirect_to += ('&' if urlparse(redirect_to).query else '?') + urlencode({'steam_link_result': 'success'})
+        return redirect(redirect_to)
+
+
+@app.route('/users/change_email', methods=['POST'])
+@oauth.require_oauth('write_account_data')
+@req_post_param('new_email')
+def change_email():
+    """
+    Request a name change for a user
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       POST /users/change_email
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        "ok"
+
+    :desired_name the new username
+
+    """
+
+    name = request.oauth.user.username
+    new_email = request.form.get('new_email')
+
+    validate_email(new_email)
+
+    expiry = time.time() + 3600 * 24 * 14
+    token = create_token('change_email', expiry, request.oauth.user.id, new_email)
+
+    # send email with link to activation url
+    logger.info(
+        "User {} has requested change of email -- Token expires at {:%Y-%m-%d %H:%M}".format(name,
+                                                                                             datetime.datetime.fromtimestamp(
+                                                                                                 expiry)))
+
+    changeLink = "http://" + config.HOST_NAME + "/users/validate_email/" + token
+
+    with db.connection:
+        cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+        cursor.execute("SELECT email FROM login WHERE id = %s", request.oauth.user.id)
+
+        user = cursor.fetchone()
+
+        text = "Dear " + name + ",\n\n\
+        you have requested to change your email account to " + new_email + ".\n\
+        To confirm this change please click on the following link:\n\
+        -----------------------\n\
+        " + changeLink + "\n\
+        -----------------------\n\n\
+        Thanks,\n\
+        -- The FA Forever team"
+
+        if (config.ENVIRONMENT == "testing"):
+            print(changeLink)
+        else:
+            send_email(logger, text, name, user['email'], 'Forged Alliance Forever - Change of email address')
+
+    return "ok"
+
+
+@app.route('/users/validate_email/<token>', methods=['GET'])
+def validate_email_request(token=None):
+    """
+    Sets a new password based on a token from /users/change_email
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       GET /users/validate_email/Z0FBQUFBQllHbVdoNFdHblhjUE01Z2l2RTQ0Z2xneXpRZ19fYUgxcmY2endsaEJ4TzdjS1EwM1QxNG8yblVwNlFhMFVuLUdKR0JETW9PZWdDdm1hLThNYUhwZnVaa0s1OGhVVF9ER09YMzFPS2RnM0dLV0hoZkUzMU9ONm1DTnFkWEgwU1VvZzZBWGs=
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        "ok"
+
+    :token contains the required data (userid, new email)
+
+    """
+
+    userId, email = decrypt_token('change_email', token)
+
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute(
+            "UPDATE `login` SET `email` = %(email)s WHERE id = %(userid)s",
+            {
+                'userid': userId,
+                'email': email.lower()
+            })
+
+        if cursor.rowcount == 0:
+            raise ApiException([Error(ErrorCode.EMAIL_CHANGE_FAILED)])
 
     return "ok"

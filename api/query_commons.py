@@ -1,7 +1,7 @@
+from faf import db
 from pymysql.cursors import DictCursor
 
 from api.error import ApiException, Error, ErrorCode
-from faf import db
 
 
 def get_select_expressions(fields, field_expression_dict):
@@ -97,7 +97,8 @@ def get_limit(page, limit):
     return 'LIMIT {}, {}'.format((page - 1) * limit, limit)
 
 
-def fetch_data(schema, table, root_select_expression_dict, max_page_size, request, where='', args=None, many=True,
+def fetch_data(schema, table, root_select_expression_dict, max_page_size, request, where='', where_extension='',
+               args=None, many=True,
                enricher=None, sort=None, limit=True, **nested_expression_dict):
     """ Fetches data in an JSON-API conforming way.
 
@@ -150,6 +151,9 @@ def fetch_data(schema, table, root_select_expression_dict, max_page_size, reques
 
     if where:
         where = "WHERE {}".format(where)
+
+    if where_extension:
+        where = where + " " + where_extension
 
     with db.connection:
         cursor = db.connection.cursor(DictCursor)

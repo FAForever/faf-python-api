@@ -125,31 +125,31 @@ class ErrorCode(Enum):
         code=129,
         title='Name clash',
         detail='Another mod with file name "{0}" already exists.')
-    REGISTRATION_INVALID_EMAIL = dict(
+    INVALID_EMAIL = dict(
         code=130,
-        title='Registration failed',
+        title='Invalid account data',
         detail='The entered email-adress is invalid: {0}')
-    REGISTRATION_INVALID_USERNAME = dict(
+    INVALID_USERNAME = dict(
         code=131,
-        title='Registration failed',
+        title='Invalid account data',
         detail='The entered username is invalid: {0}')
-    REGISTRATION_USERNAME_TAKEN = dict(
+    USERNAME_TAKEN = dict(
         code=132,
-        title='Registration failed',
+        title='Invalid account data',
         detail='The entered username is already in use: {0}')
-    REGISTRATION_EMAIL_REGISTERED = dict(
+    EMAIL_REGISTERED = dict(
         code=133,
-        title='Registration failed',
-        detail='The entered email address `{0}` already has an associated account. Please request a new password instead.')
-    REGISTRATION_BLACKLISTED_EMAIL = dict(
+        title='Invalid account data',
+        detail='The entered email address `{0}` already has an associated account.')
+    BLACKLISTED_EMAIL = dict(
         code=134,
-        title='Registration failed',
+        title='Invalid account data',
         detail='The domain of your email is blacklisted: {0}')
-    PASSWORD_RESET_INVALID = dict(
+    TOKEN_INVALID = dict(
         code=135,
         title='Invalid operation',
         detail='The delivered token is invalid.')
-    USER_TOKEN_EXPIRED = dict(
+    TOKEN_EXPIRED = dict(
         code=136,
         title='Invalid operation',
         detail='The delivered token has expired.')
@@ -161,6 +161,30 @@ class ErrorCode(Enum):
         code=138,
         title='Password change failed',
         detail='Username and/or old password did not match.')
+    USERNAME_CHANGE_TOO_EARLY = dict(
+        code=139,
+        title='Username change not allowed',
+        detail='Only one name change per 30 days is allowed. {0} more days to go.')
+    EMAIL_CHANGE_FAILED = dict(
+        code=140,
+        title='Email change failed',
+        detail='An unknown error happened while updating the database.'
+    )
+    STEAM_ID_UNCHANGEABLE = dict(
+        code=141,
+        title='Linking to Steam failed',
+        detail='Your account is already bound to another Steam ID.'
+    )
+    UNKNOWN_FEATURED_MOD = dict(
+        code=142,
+        title='Unknown featured mod',
+        detail='There is no featured mod with ID \"{}\".'
+    )
+    DEPLOYMENT_ERROR = dict(
+        code=143,
+        title='Deployment caused an error',
+        detail='Error message: {}'
+    )
 
 
 class Error:

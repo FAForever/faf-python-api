@@ -1,8 +1,10 @@
+import hmac
 import json
-import requests
-from requests.auth import HTTPBasicAuth
 import sys
+
+import requests
 import uritemplate
+from requests.auth import HTTPBasicAuth
 
 
 def make_session(user: str, token: str):
@@ -11,8 +13,15 @@ def make_session(user: str, token: str):
     s.auth = HTTPBasicAuth(user, token)
     return Github(s)
 
+
+def validate_github_request(secret, body, signature):
+    digest = hmac.new(secret, body, 'sha1').hexdigest()
+    return hmac.compare_digest(digest, signature)
+
+
 DEPLOYMENTS_URI = "https://api.github.com/repos/{owner}/{repo}/deployments{/id}"
 DEPLOYMENT_STATUS_URI = DEPLOYMENTS_URI + "/statuses"
+
 
 class Github:
     """

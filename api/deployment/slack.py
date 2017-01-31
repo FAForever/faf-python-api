@@ -1,5 +1,7 @@
 import json
+
 import requests
+
 
 def make_session(hook_url):
     s = requests.Session()

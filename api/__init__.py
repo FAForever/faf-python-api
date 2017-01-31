@@ -4,20 +4,25 @@ Forged Alliance Forever API project
 Distributed under GPLv3, see license.txt
 """
 import sys
-import statsd
 import time
-from flask_jwt import JWT
+from urllib.parse import urlencode
+
+import flask
+import statsd
 from flask import Flask, session, jsonify, request
+from flask_cache import Cache
+from flask_cors import CORS
+from flask_jwt import JWT
+from flask_login import LoginManager
 from flask_oauthlib.contrib.oauth2 import bind_cache_grant
 from flask_oauthlib.provider import OAuth2Provider
-from flask_login import LoginManager
-from flask_cors import CORS
 
+from api.deployment.deployment_manager import DeploymentManager
 from api.error import ApiException
 from api.jwt_user import JwtUser
 from api.user import User
 
-__version__ = '0.5.2'
+__version__ = '0.6.0'
 __author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus, Michel Jung'
 __contact__ = 'admin@faforever.com'
 __license__ = 'GPLv3'
@@ -32,6 +37,8 @@ if sys.version_info.major != 3:
 
 app = Flask('api')
 CORS(app)
+cache = Cache(config={'CACHE_TYPE': 'simple'}, with_jinja2_ext=False)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -51,6 +58,12 @@ def handle_api_exception(error):
     response.headers['content-type'] = 'application/vnd.api+json'
     return response
 
+
+def default_cache_key():
+    args = flask.request.args
+    key = flask.request.path + '?' + urlencode(
+        [(k, v) for k in sorted(args) for v in sorted(args.getlist(k))])
+    return key
 
 def jwt_identity(payload):
     return User.get_by_id(payload['identity'])
@@ -101,12 +114,19 @@ def api_init():
     """
 
     faf.db.init_db(app.config)
-    app.github = github.make_session(app.config['GITHUB_USER'],
-                                     app.config['GITHUB_TOKEN'])
-    app.slack = slack.make_session(app.config['SLACK_HOOK_URL'])
+    github = api.deployment.github.make_session(app.config['GITHUB_USER'],
+                                                app.config['GITHUB_TOKEN'])
+    slack = api.deployment.slack.make_session(app.config['SLACK_HOOK_URL'])
+
+    app.deployment_manager = DeploymentManager(app.config['ENVIRONMENT'], app.config['GITHUB_SECRET'],
+                                               app.config['GIT_OWNER'], github, slack)
+    for deploy_configuration in app.config['DEPLOYMENTS']:
+        app.deployment_manager.add(deploy_configuration)
+    app.github = github
 
     app.secret_key = app.config['FLASK_LOGIN_SECRET_KEY']
     flask_jwt.init_app(app)
+    cache.init_app(app)
 
 
     if app.config.get('STATSD_SERVER'):
@@ -141,16 +161,14 @@ bind_cache_grant(app, oauth, get_current_user)
 # ======== Import (initialize) oauth2 handlers =====
 import api.oauth_handlers
 # ======== Import (initialize) routes =========
-import api.deploy
 import api.auth
 import api.avatars
 import api.bugreports
 import api.mods
 import api.maps
-import api.github
 import api.oauth_client
 import api.oauth_token
-import api.slack
+import api.deployment.slack
 import api.achievements
 import api.events
 import api.query_commons
@@ -160,3 +178,4 @@ import api.coop
 import api.players
 import api.users_route
 import api.featured_mods
+import api.deployment.routes

@@ -19,6 +19,8 @@ def app():
     importlib.reload(api.players)
     importlib.reload(api.users_route)
     importlib.reload(api.featured_mods)
+    importlib.reload(api.helpers)
+    importlib.reload(api.deployment.routes)
 
     api.app.config.from_object('config')
     api.app.debug = True

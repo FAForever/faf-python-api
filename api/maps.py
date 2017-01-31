@@ -22,7 +22,7 @@ ALLOWED_EXTENSIONS = ['zip']
 MAX_PAGE_SIZE = 1000
 
 SELECT_EXPRESSIONS = {
-    'id': 'map.id',
+    'id': 'version.id',
     'display_name': 'map.display_name',
     'description': 'version.description',
     'max_players': 'version.max_players',
@@ -127,7 +127,7 @@ def maps():
                 "display_name": "canis3v3",
                 "download_url": "http://content.faforever.com/faf/vault/maps/canis3v3.v0001.zip",
                 "downloads": 5970,
-                "id": 0,
+                "id": "0",
                 "map_type": "skirmish",
                 "max_players": 6,
                 "num_draws": 0,
@@ -139,7 +139,7 @@ def maps():
                 "version": 1,
                 "author": "Someone"
               },
-              "id": 0,
+              "id": "0",
               "type": "map"
             },
             ...
@@ -156,10 +156,60 @@ def maps():
     if filename_filter:
         where = ' filename = %s'
         args = 'maps/' + filename_filter + '.zip'
-        many = False
 
     results = fetch_data(MapSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, where=where, args=args,
                          many=many, enricher=enricher)
+    return results
+
+
+@app.route('/maps/<int:map_id>')
+def get_map(map_id):
+    """
+    Gets a map.
+
+    **Example Request**:
+
+    .. sourcecode:: http
+
+       GET /maps/1
+
+    **Example Response**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+        Vary: Accept
+        Content-Type: text/javascript
+
+        {
+          "data": {
+            "attributes": {
+              "battle_type": "FFA",
+              "description": "<LOC canis3v3_Description>",
+              "display_name": "canis3v3",
+              "download_url": "http://content.faforever.com/faf/vault/maps/canis3v3.v0001.zip",
+              "downloads": 5970,
+              "id": "1",
+              "map_type": "skirmish",
+              "max_players": 6,
+              "num_draws": 0,
+              "rating": 2.94119,
+              "folder_name": "canis3v3.v0001",
+              "thumbnail_url_large": "http://content.faforever.com/faf/vault/map_previews/large/canis3v3.v0001.png",
+              "thumbnail_url_small": "http://content.faforever.com/faf/vault/map_previews/small/canis3v3.v0001.png",
+              "times_played": 1955,
+              "version": 1,
+              "author": "Someone"
+            },
+            "id": "1",
+            "type": "map"
+          }
+        }
+
+
+    """
+    results = fetch_data(MapSchema(), TABLE, SELECT_EXPRESSIONS, MAX_PAGE_SIZE, request, where='version.id = %s',
+                         args=str(map_id), many=False, enricher=enricher)
     return results
 
 

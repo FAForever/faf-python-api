@@ -5,6 +5,7 @@ flask-cors == 3.0.0
 Flask-JWT == 0.3.2
 Flask-Login == 0.3.2
 Flask-OAuthlib == 0.9.3
+Flask-Cache == 0.13.1
 oauthlib == 1.1.2
 iso8601 == 0.1.11
 PyJWT == 1.4.2
@@ -12,7 +13,7 @@ pillow == 3.3.1
 coveralls
 cryptography == 1.5
 geoip2 == 2.4.0
-git+https://github.com/FAForever/faftools.git@c7f13ede3f866f58ff74eaa6bb7058ce16e82a46#egg=faftools
+git+https://github.com/FAForever/faftools.git@982073d556b43963e6fc9f6356aad484416d8b84#egg=faftools
 marshmallow == 2.9.1
 marshmallow_jsonapi == 0.8.0
 peewee >= 2.4.2
