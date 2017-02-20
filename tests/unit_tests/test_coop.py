@@ -21,6 +21,7 @@ from faf import db
 def test_data(request):
     with db.connection:
         cursor = db.connection.cursor()
+        cursor.execute("TRUNCATE TABLE avatars")
         cursor.execute("TRUNCATE TABLE game_player_stats")
         cursor.execute("TRUNCATE TABLE game_stats")
         cursor.execute("TRUNCATE TABLE coop_leaderboard")
