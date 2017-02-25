@@ -20,7 +20,7 @@ from flask_oauthlib.provider import OAuth2Provider
 from api.deployment.deployment_manager import DeploymentManager
 from api.error import ApiException
 from api.jwt_user import JwtUser
-from api.user import User
+from api.user import User, UserGroup
 
 __version__ = '0.7.0'
 __author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus, Michel Jung'

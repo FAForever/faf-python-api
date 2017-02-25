@@ -1,6 +1,13 @@
 from flask_login import UserMixin
 
+from enum import IntEnum
+
 import faf.db as db
+
+class UserGroup(IntEnum):
+    NONE = 0,
+    MODERATOR = 1,
+    ADMIN = 2
 
 
 class User(UserMixin):
@@ -83,3 +90,33 @@ class User(UserMixin):
             result = cursor.fetchone()
             reason = result['reason'] if result else None
             return result is not None, reason
+
+    def usergroup(self):
+        with db.connection:
+            cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+            cursor.execute("SELECT `group` from lobby_admin WHERE user_id=%s", self.id)
+            result = cursor.fetchone()
+            group = UserGroup(result['group']) if result else UserGroup.NONE
+            return group
+
+    @classmethod
+    def get_usergroup(cls, username):
+        """
+        Checks whether a user is a mod/admin according to lobby_admin table.
+
+        :param str username: The username to check
+        :returns: UserGroup enum
+
+        """
+        with db.connection:
+            cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+            # Need to use lowercase comparison until we change the collation in the db and prune dupes
+            cursor.execute("SELECT la.group FROM lobby_admin la "
+                           "JOIN `login` l ON l.id = la.user_id "
+                           "WHERE LOWER(l.login) = %s", username.lower())
+
+            result = cursor.fetchone()
+            group = UserGroup(result['group']) if result else UserGroup.NONE
+            return group
+
+
