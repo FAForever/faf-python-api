@@ -14,7 +14,6 @@ def app():
     importlib.reload(api.events)
     importlib.reload(api.achievements)
     importlib.reload(api.leaderboards)
-    importlib.reload(api.clans)
     importlib.reload(api.coop)
     importlib.reload(api.players)
     importlib.reload(api.users_route)

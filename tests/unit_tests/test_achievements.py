@@ -37,6 +37,7 @@ class AchievementsTestCase(unittest.TestCase):
 
         with db.connection:
             cursor = db.connection.cursor()
+            cursor.execute('delete from game_stats')
             cursor.execute('delete from avatars')
             cursor.execute('delete from login')
             cursor.execute('delete from player_achievements')
