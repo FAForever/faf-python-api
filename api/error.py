@@ -185,6 +185,16 @@ class ErrorCode(Enum):
         title='Deployment caused an error',
         detail='Error message: {}'
     )
+    AUTHENTICATION_NEEDED = dict(
+        code=401,
+        title='Unauthorized',
+        detail='You are not logged in'
+    )
+    FORBIDDEN = dict(
+        code=403,
+        title='Unauthorized',
+        detail='You are not authorized to perform this action'
+    )
 
 
 class Error:

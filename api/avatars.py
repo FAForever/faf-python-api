@@ -6,6 +6,7 @@ from api import *
 from urllib.parse import urlparse
 
 import faf.db as db
+from api.error import ApiException, Error, ErrorCode
 
 from flask import request
 
@@ -104,7 +105,7 @@ class Avatar:
             cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
             cursor.execute('select al.* from avatars_list as al JOIN avatars as a on (al.id = a.idUser) where a.idUser = %s', user)
             avatars = cursor.fetchall()
-            return [Avatar(**record) for record in avatars]
+            return avatars
 
     @classmethod
     def remove_user_avatars(cls, user, avatars):
@@ -127,6 +128,7 @@ class Avatar:
                     avatar_id = int(avatar)
                 cursor.execute('delete from avatars where idUser=%s and idAvatar=%s', [user_id, avatar_id])
 
+    @classmethod
     def add_user_avatars(cls, user, avatars):
         """
         Add avatars to user
@@ -146,6 +148,21 @@ class Avatar:
                 else:
                     avatar_id = int(avatar)
                 cursor.execute('insert into avatars (idUser, idAvatar) values (%s, %s)', [user_id, avatar_id])
+
+    def get_avatar_users(self):
+        """
+        Get all users that have this avatar
+
+        Returns None if avatar instance does not have an id, otherwise list of user id's
+        """
+        if self.id is not None:
+            with db.connection:
+                cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+                cursor.execute('SELECT idUser from avatars WHERE idAvatar = %s', self.id)
+
+                return [rec['idUser'] for rec in cursor.fetchall()]
+        else:
+            return None
 
     def insert(self):
         """
@@ -192,6 +209,32 @@ class Avatar:
             cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
             cursor.execute("DELETE FROM avatars_list WHERE id=%s", self.id)
 
+
+@app.route("/user_avatars", methods=['GET', 'POST', 'DELETE'])
+def user_avatars():
+    if request.method != 'GET':
+        valid, req = oauth.verify_request([])
+        if not valid:
+            raise ApiException([Error(ErrorCode.AUTHENTICATION_NEEDED)])
+        else:
+            current_user = User.get_by_id(req.user.id)
+            if not current_user.usergroup() >= UserGroup.MODERATOR:
+                raise ApiException([Error(ErrorCode.FORBIDDEN)])
+
+    if request.method == 'POST':
+        user_id = request.form.get('user_id', type=int)
+        avatar_ids = request.form.getlist('avatar_id', type=int)
+        Avatar.add_user_avatars(user_id, avatar_ids)
+        return 'ok'
+    elif request.method == 'DELETE':
+        user_id = request.form.get('user_id', type=int)
+        avatar_ids = request.form.getlist('avatar_id', type=int)
+        Avatar.remove_user_avatars(user_id, avatar_ids)
+        return 'ok'
+    elif request.method == 'GET':
+        user_id = request.args.get('id')
+        avatars = Avatar.get_user_avatars(user_id)
+        return json.dumps(avatars)
 
 
 @app.route("/avatar", methods=['GET', 'POST', 'PUT', 'DELETE'])
