@@ -103,7 +103,7 @@ class Avatar:
 
         with db.connection:
             cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-            cursor.execute('select al.* from avatars_list as al JOIN avatars as a on (al.id = a.idUser) where a.idUser = %s', user)
+            cursor.execute('select al.* from avatars_list as al JOIN avatars as a on (al.id = a.idAvatar) where a.idUser = %s', user)
             avatars = cursor.fetchall()
             return avatars
 
@@ -149,7 +149,7 @@ class Avatar:
                     avatar_id = int(avatar)
                 cursor.execute('insert into avatars (idUser, idAvatar) values (%s, %s)', [user_id, avatar_id])
 
-    def get_avatar_users(self):
+    def get_avatar_users(self, attrs = ['id', 'login']):
         """
         Get all users that have this avatar
 
@@ -158,9 +158,9 @@ class Avatar:
         if self.id is not None:
             with db.connection:
                 cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-                cursor.execute('SELECT idUser from avatars WHERE idAvatar = %s', self.id)
+                cursor.execute('SELECT l.* from login as l join avatars as a on (a.idUser = l.id) WHERE idAvatar = %s', self.id)
 
-                return [rec['idUser'] for rec in cursor.fetchall()]
+                return [{key: rec[key] for key in attrs} for rec in cursor.fetchall()]
         else:
             return None
 
@@ -209,7 +209,6 @@ class Avatar:
             cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
             cursor.execute("DELETE FROM avatars_list WHERE id=%s", self.id)
 
-
 @app.route("/user_avatars", methods=['GET', 'POST', 'DELETE'])
 def user_avatars():
     if request.method != 'GET':
@@ -228,13 +227,19 @@ def user_avatars():
         return 'ok'
     elif request.method == 'DELETE':
         user_id = request.form.get('user_id', type=int)
-        avatar_ids = request.form.getlist('avatar_id', type=int)
-        Avatar.remove_user_avatars(user_id, avatar_ids)
-        return 'ok'
+        if user_id is not None:
+            avatar_ids = request.form.getlist('avatar_id', type=int)
+            Avatar.remove_user_avatars(user_id, avatar_ids)
+            return 'ok'
+        else:
+            raise ApiException([Error(ErrorCode.PARAMETER_MISSING, 'id')])
     elif request.method == 'GET':
-        user_id = request.args.get('id')
-        avatars = Avatar.get_user_avatars(user_id)
-        return json.dumps(avatars)
+        user_id = request.args.get('id', type=int)
+        if user_id is not None:
+            avatars = Avatar.get_user_avatars(user_id)
+            return json.dumps(avatars)
+        else:
+            raise ApiException([Error(ErrorCode.PARAMETER_MISSING, 'id')])
 
 
 @app.route("/avatar", methods=['GET', 'POST', 'PUT', 'DELETE'])
@@ -355,3 +360,16 @@ def avatar(id):
             return avatar.dict()
         else:
             return json.dumps(dict(error='Not found')), 404
+
+@app.route("/avatar/<int:id>/users", methods=['GET'])
+def avatar_users(id):
+    if request.method == 'GET':
+        avatar = Avatar.get_by_id(id)
+        attrs = request.args.getlist('attr')
+        if len(attrs) < 1:
+            attrs = ['id', 'login']
+        if avatar is not None:
+            return json.dumps(avatar.get_avatar_users(attrs))
+        else:
+            return json.dumps(dict(error='Not found')), 404
+
