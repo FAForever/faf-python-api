@@ -5,6 +5,18 @@ from flask import request
 
 
 class ErrorCode(Enum):
+    AVATAR_NOT_FOUND = dict(
+        code=404,
+        title='Not found',
+        detail='Avatar not found')
+    AVATAR_ID_MISSING = dict(
+        code=400,
+        title='Not found',
+        detail='Required parameter id is missing')
+    AVATAR_FILE_EXISTS = dict(
+        code=400,
+        title='File exists',
+        detail='Avatar file already exists')
     ACHIEVEMENT_CANT_INCREMENT_STANDARD = dict(
         code=100,
         title='Invalid operation',

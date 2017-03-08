@@ -195,7 +195,7 @@ class Avatar:
         """
         dest = self._path()
         if os.path.exists(dest) and not overwrite:
-            raise Exception('Avatar file exists!')
+            raise ApiException([Error(ErrorCode.AVATAR_FILE_EXISTS)])
         with open(dest, 'wb') as fh:
             fh.write(avatar_file.read())
 
@@ -266,11 +266,11 @@ def avatars():
     if request.method != 'GET':
         valid, req = oauth.verify_request([])
         if not valid:
-            return json.dumps('You are not authenticated.'), 401
+            raise ApiException([Error(ErrorCode.AUTHENTICATION_NEEDED)])
         else:
             current_user = User.get_by_id(req.user.id)
             if not current_user.usergroup() >= UserGroup.MODERATOR:
-                return json.dumps('You are not authorized to do this.'), 401
+                raise ApiException([Error(ErrorCode.FORBIDDEN)])
 
     if request.method == 'POST':
         logger.debug('Handling POST')
@@ -289,18 +289,14 @@ def avatars():
                 avatar.upload(avatar_file, overwrite=True)
             return avatar.dict()
         else:
-            return json.dumps(dict(error="Avatar not found")), 404
+            raise ApiException([Error(ErrorCode.AVATAR_NOT_FOUND)])
     elif request.method == 'PUT':
         avatar_file = request.files['file']
         avatar_filename = secure_filename(avatar_file.filename)
         avatar_tooltip = request.form['tooltip']
 
         avatar = Avatar(filename=avatar_filename, tooltip=avatar_tooltip)
-        try:
-            avatar.upload(avatar_file)
-        except Exception as e:
-            return json.dumps(dict(error=e.args)), 400
-
+        avatar.upload(avatar_file)
         avatar.insert()
 
         return avatar.dict()
@@ -312,9 +308,9 @@ def avatars():
                 avatar.delete()
                 return json.dumps(dict(status='Deleted avatar')), 204
             else:
-                return json.dumps(dict(error='Not found')), 404
+                raise ApiException([Error(ErrorCode.AVATAR_NOT_FOUND)])
         else:
-            return json.dumps(dict(error='id parameter missing')), 400
+            raise ApiException([Error(ErrorCode.AVATAR_ID_MISSING)])
     elif request.method == 'GET':
         avatar_id = request.args.get('id')
         if avatar_id is not None:
@@ -322,7 +318,7 @@ def avatars():
             if avatar is not None:
                 return avatar.dict()
             else:
-                return json.dumps(dict(error='Not found')), 404
+                raise ApiException([Error(ErrorCode.AVATAR_NOT_FOUND)])
         else:
             return json.dumps(Avatar.get_all())
 
