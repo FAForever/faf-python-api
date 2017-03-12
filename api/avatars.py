@@ -1,9 +1,7 @@
 import json
 import os
-from peewee import IntegrityError
 from werkzeug.utils import secure_filename
 from api import *
-from urllib.parse import urlparse
 
 import faf.db as db
 from api.error import ApiException, Error, ErrorCode
@@ -19,10 +17,10 @@ class Avatar:
 
     The implementation of this class is a little tricky since we have to handle
     the url and filename.
-    """
 
-    URLBASE = app.config.get('AVATAR_URL', 'http://content.faforever.com/faf/avatars/')
-    FILEBASE = app.config.get('AVATAR_FOLDER', '/content/faf/avatars/')
+    It also does not ensure 100% consistency. E.g. it allows for avatars to be
+    inserted without uploading the corresponding avatar file.
+    """
 
     def __init__(self, id=None, filename=None, url=None, tooltip=None, **kwargs):
         """
@@ -32,6 +30,9 @@ class Avatar:
         :param string filename: filename / url / whatever
         :param string tooltip: tooltip
         """
+        self.URLBASE = app.config.get('AVATAR_URL', 'http://content.faforever.com/faf/avatars/')
+        self.FILEBASE = app.config.get('AVATAR_FOLDER', '/content/faf/avatars/')
+
         self.id = id
         # FIXME: Dirty hack, done dirt cheap
         filename = filename or url
@@ -337,7 +338,7 @@ def avatar(id):
 
     .. sourcecode:: http
 
-       GET, PUT /avatar/781
+       GET /avatar/781
 
     **Example Response**:
 
@@ -359,7 +360,7 @@ def avatar(id):
         if avatar is not None:
             return avatar.dict()
         else:
-            return json.dumps(dict(error='Not found')), 404
+            raise ApiException([Error(ErrorCode.AVATAR_NOT_FOUND)])
 
 @app.route("/avatar/<int:id>/users", methods=['GET'])
 def avatar_users(id):
