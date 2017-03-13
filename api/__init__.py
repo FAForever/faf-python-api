@@ -22,7 +22,7 @@ from api.error import ApiException
 from api.jwt_user import JwtUser
 from api.user import User
 
-__version__ = '0.6.0'
+__version__ = '0.7.0'
 __author__ = 'Chris Kitching, Michael Søndergaard, Vytautas Mickus, Michel Jung'
 __contact__ = 'admin@faforever.com'
 __license__ = 'GPLv3'
