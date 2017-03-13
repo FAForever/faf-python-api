@@ -10,6 +10,8 @@ def setup_users(request, app):
     app.debug = True
     with db.connection:
         cursor = db.connection.cursor()
+        cursor.execute("TRUNCATE TABLE game_player_stats")
+        cursor.execute("TRUNCATE TABLE game_stats")
         cursor.execute("TRUNCATE TABLE ladder1v1_rating")
         cursor.execute("TRUNCATE TABLE global_rating")
         cursor.execute("delete from login")
