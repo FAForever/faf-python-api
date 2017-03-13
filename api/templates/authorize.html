@@ -9,8 +9,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
 
     <link href="https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz" rel="stylesheet" type="text/css">
-    <link href="https://test.faforever.com/styles/css/site.min.css" rel="stylesheet">
-    <link href="https://test.faforever.com/styles/css/index.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='site.min.css') }}" rel="stylesheet">
 
     <style type="text/css">
 
@@ -142,7 +141,7 @@
                 <div class="navbar-header">
                     <!-- TODO serve image from static content -->
                     <a class="navbar-brand" href="http://www.faforever.com"><img
-                            src="https://test.faforever.com/images/faf_32x32.png"></a></div>
+                            src="{{ url_for('static', filename='faf_32x32.png') }}"></a></div>
                 <span class="navbar-text">Forged Alliance Forever</span>
             </div>
         </div>
