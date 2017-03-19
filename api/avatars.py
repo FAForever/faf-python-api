@@ -99,7 +99,7 @@ class Avatar:
 
         Get back list of avatars
         """
-        if user is User:
+        if isinstance(user, User):
             user = user.id
 
         with db.connection:
@@ -114,7 +114,7 @@ class Avatar:
         Remove avatars from user
         """
 
-        if user is User:
+        if isinstance(user, User):
             user_id = user.id
         else:
             user_id = int(user)
@@ -123,7 +123,7 @@ class Avatar:
             cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
             #FIXME: make "where idAvatar in (set)" query?
             for avatar in avatars:
-                if avatar is Avatar:
+                if isinstance(avatar, cls):
                     avatar_id = avatar.id
                 else:
                     avatar_id = int(avatar)
@@ -135,7 +135,7 @@ class Avatar:
         Add avatars to user
         """
 
-        if user is User:
+        if isinstance(user, User):
             user_id = user.id
         else:
             user_id = int(user)
@@ -144,7 +144,7 @@ class Avatar:
             cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
             #FIXME: make "where idAvatar in (set)" query?
             for avatar in avatars:
-                if avatar is Avatar:
+                if isinstance(avatar, cls):
                     avatar_id = avatar.id
                 else:
                     avatar_id = int(avatar)
@@ -218,6 +218,8 @@ def user_avatars():
             raise ApiException([Error(ErrorCode.AUTHENTICATION_NEEDED)])
         else:
             current_user = User.get_by_id(req.user.id)
+            print("user:", current_user.id, current_user.username)
+            print("checking usergroup:", current_user.usergroup())
             if not current_user.usergroup() >= UserGroup.MODERATOR:
                 raise ApiException([Error(ErrorCode.FORBIDDEN)])
 
@@ -231,7 +233,7 @@ def user_avatars():
         if user_id is not None:
             avatar_ids = request.form.getlist('avatar_id', type=int)
             Avatar.remove_user_avatars(user_id, avatar_ids)
-            return 'ok'
+            return json.dumps(dict(status='Removed avatar from user')), 204
         else:
             raise ApiException([Error(ErrorCode.PARAMETER_MISSING, 'id')])
     elif request.method == 'GET':

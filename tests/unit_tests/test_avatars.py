@@ -18,6 +18,7 @@ def avatar_setup(request):
     importlib.reload(api)
     importlib.reload(api.oauth_handlers)
     importlib.reload(api.avatars)
+    importlib.reload(api.user)
 
     api.app.config.from_object('config')
     avatar_dir = tempfile.mkdtemp()
@@ -136,3 +137,70 @@ def test_avatar_delete(oauth):
     response = oauth.delete('/avatar', data=dict(id=avatar.id))
     assert 204 == response.status_code
     assert Avatar.get_by_id(avatar.id) is None
+
+@pytest.fixture
+def avatar_user(request):
+    with db.connection:
+        cursor = db.connection.cursor()
+        cursor.execute("""insert into login
+        (login, password, email)
+        values
+        ('Test User', '', 'user@example.com')""")
+        user_id = cursor.lastrowid
+
+    user = User.get_by_id(user_id)
+    print(user.usergroup())
+
+    avatar = Avatar(filename='notreal_test_userava.png', tooltip='test tooltip')
+    avatar.insert()
+    Avatar.add_user_avatars(user_id, [avatar])
+
+    def finalizer():
+        Avatar.remove_user_avatars(user, [Avatar(**a) for a in Avatar.get_user_avatars(user)])
+        avatar.delete()
+
+        with db.connection:
+            db.connection.cursor().execute('DELETE FROM login WHERE id=%s', user_id)
+        db.connection.close()
+    request.addfinalizer(finalizer)
+
+    return user, avatar
+
+def test_user_avatar_get(test_client, avatar_user):
+    user, avatar = avatar_user
+
+    response = test_client.get('/user_avatars?id={}'.format(user.id))
+    response_data = json.loads(response.data.decode("utf-8"))
+    assert 200 == response.status_code
+    assert len(response_data) >= 0
+    assert avatar.id in [a['id'] for a in response_data]
+
+@pytest.mark.skip
+def test_user_avatar_cannot_be_added_by_unauthed_user(test_client, avatar_user):
+    user, old_avatar = avatar_user
+
+    new_avatar = Avatar(filename='notreal_test_userava_add_unauth.png', tooltip='test tooltip')
+    new_avatar.insert()
+
+    user_id=user.id
+    avatar_id=new_avatar.id
+
+    response = test_client.post('/user_avatars', data=dict(user_id=user_id, avatar_id=avatar_id))
+    assert 401 == response.status_code
+
+def test_user_avatar_can_be_added_by_authed_user(oauth, avatar_user):
+    user, old_avatar = avatar_user
+
+    new_avatar = Avatar(filename='notreal_test_userava_add_auth.png', tooltip='test tooltip')
+    new_avatar.insert()
+
+    response = oauth.post('/user_avatars', data=dict(user_id=user.id, avatar_id=new_avatar.id))
+    assert 200 == response.status_code
+    assert new_avatar.id in [a['id'] for a in Avatar.get_user_avatars(user)]
+
+def test_user_avatar_delete(oauth, avatar_user):
+    user, old_avatar = avatar_user
+
+    response = oauth.delete('/user_avatars', data=dict(user_id=user.id, avatar_id=old_avatar.id))
+    assert 204 == response.status_code
+    assert old_avatar.id not in [a['id'] for a in Avatar.get_user_avatars(user)]
