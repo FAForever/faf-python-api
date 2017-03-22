@@ -15,6 +15,21 @@ PLAYER_SELECT_EXPRESSIONS = {
     'login': 'l.login'
 }
 
+@app.route('/players/active')
+def get_active_players():
+    """Gets active players, i.e. active in the last x days, max. 30, def. 7"""
+    days = request.args.get('days', 7, type=int)
+    days = min(days, 30)
+    return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1000, request, many=True, limit=False,
+                      where='l.update_time >= DATE_SUB(NOW(), INTERVAL %s DAY)', args=(days,))
+
+@app.route('/players/prefix/<prefix>')
+def get_prefix_players(prefix):
+    # escape mysql LIKE chars
+    prefix = prefix.replace('%', '\\%')
+    prefix = prefix.replace('_', '\\%')
+    return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1000, request, many=True, limit=False, sort='login',
+                      where='LOWER(l.login) LIKE %s', args=(prefix.lower() + '%',))
 
 @app.route('/players/<int:player_id>')
 def get_player(player_id):

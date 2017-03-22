@@ -8,6 +8,7 @@ import api
 @pytest.fixture
 def app():
     importlib.reload(api)
+    importlib.reload(api.avatars)
     importlib.reload(api.mods)
     importlib.reload(api.bugreports)
     importlib.reload(api.maps)

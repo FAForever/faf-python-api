@@ -5,6 +5,18 @@ from flask import request
 
 
 class ErrorCode(Enum):
+    AVATAR_NOT_FOUND = dict(
+        code=404,
+        title='Not found',
+        detail='Avatar not found')
+    AVATAR_ID_MISSING = dict(
+        code=400,
+        title='Not found',
+        detail='Required parameter id is missing')
+    AVATAR_FILE_EXISTS = dict(
+        code=400,
+        title='File exists',
+        detail='Avatar file already exists')
     ACHIEVEMENT_CANT_INCREMENT_STANDARD = dict(
         code=100,
         title='Invalid operation',
@@ -184,6 +196,16 @@ class ErrorCode(Enum):
         code=143,
         title='Deployment caused an error',
         detail='Error message: {}'
+    )
+    AUTHENTICATION_NEEDED = dict(
+        code=401,
+        title='Unauthorized',
+        detail='You are not logged in'
+    )
+    FORBIDDEN = dict(
+        code=403,
+        title='Unauthorized',
+        detail='You are not authorized to perform this action'
     )
 
 
