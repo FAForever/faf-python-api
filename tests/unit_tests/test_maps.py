@@ -20,8 +20,8 @@ def maps(request):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-        cursor.execute("TRUNCATE TABLE map_version")
-        cursor.execute("TRUNCATE TABLE map")
+        cursor.execute("TRUNCATE map_version")
+        cursor.execute("TRUNCATE map")
         cursor.execute("DELETE FROM login")
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
         # TODO use common fixtures
@@ -52,10 +52,10 @@ def maps(request):
         with db.connection:
             cursor = db.connection.cursor()
             cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-            cursor.execute("TRUNCATE TABLE map_version")
-            cursor.execute("TRUNCATE TABLE map")
+            cursor.execute("DELETE FROM map_version")
+            cursor.execute("DELETE FROM map")
             cursor.execute("DELETE FROM login")
-            cursor.execute("TRUNCATE TABLE ladder_map;")
+            cursor.execute("DELETE FROM ladder_map;")
             cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
 
     request.addfinalizer(finalizer)

@@ -17,8 +17,8 @@ def test_data(request, app):
         cursor = db.connection.cursor()
         cursor.execute("delete from game_player_stats")
         cursor.execute("delete from game_stats")
-        cursor.execute("TRUNCATE TABLE ladder1v1_rating")
-        cursor.execute("TRUNCATE TABLE global_rating")
+        cursor.execute("DELETE FROM ladder1v1_rating")
+        cursor.execute("DELETE FROM global_rating")
         cursor.execute("delete from avatars")
         cursor.execute("delete from login")
 

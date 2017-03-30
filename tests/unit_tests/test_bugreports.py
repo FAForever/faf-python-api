@@ -12,8 +12,8 @@ def reset_database(app):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-        cursor.execute("TRUNCATE TABLE bugreport_targets")
-        cursor.execute("TRUNCATE TABLE bugreports")
+        cursor.execute("DELETE FROM bugreport_targets")
+        cursor.execute("DELETE FROM bugreports")
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
 
 pytestmark = pytest.mark.usefixtures("reset_database")

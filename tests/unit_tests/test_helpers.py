@@ -10,16 +10,16 @@ def setup_users(request, app):
     app.debug = True
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute("TRUNCATE TABLE game_player_stats")
-        cursor.execute("TRUNCATE TABLE game_stats")
-        cursor.execute("TRUNCATE TABLE ladder1v1_rating")
-        cursor.execute("TRUNCATE TABLE global_rating")
+        cursor.execute("DELETE FROM game_player_stats")
+        cursor.execute("DELETE FROM game_stats")
+        cursor.execute("DELETE FROM ladder1v1_rating")
+        cursor.execute("DELETE FROM global_rating")
         cursor.execute("delete from login")
         cursor.execute("""INSERT INTO login
         (id, login, password, email) VALUES
         (1, 'abc', 'pw_a', 'a@aa.aa'),
         (2, 'bcd', 'pw_b', 'b@bb.bb')""")
-        cursor.execute("TRUNCATE TABLE email_domain_blacklist")
+        cursor.execute("DELETE FROM email_domain_blacklist")
         cursor.execute("INSERT INTO email_domain_blacklist VALUES ('zzz.com'), ('abc.de')")
 
 
