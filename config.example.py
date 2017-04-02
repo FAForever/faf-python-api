@@ -8,7 +8,7 @@ from api.deployment.deployment_configurations import WebDeploymentConfiguration,
 from api.deployment.git import GitRepository
 
 DATABASE = dict(
-    db=os.getenv("FAF_DB_NAME", "faf_test"),
+    db=os.getenv("FAF_DB_NAME", "faf"),
     user=os.getenv("FAF_DB_LOGIN", "root"),
     password=os.getenv("FAF_DB_PASSWORD", "banana"),
     host=os.getenv("DB_PORT_3306_TCP_ADDR", "127.0.0.1"),

@@ -1,4 +1,3 @@
-import json
 import os
 from werkzeug.utils import secure_filename
 from api import *
@@ -6,7 +5,7 @@ from api import *
 import faf.db as db
 from api.error import ApiException, Error, ErrorCode
 
-from flask import request
+from flask import request, jsonify
 
 import logging
 logger = logging.getLogger(__name__)
@@ -233,14 +232,14 @@ def user_avatars():
         if user_id is not None:
             avatar_ids = request.form.getlist('avatar_id', type=int)
             Avatar.remove_user_avatars(user_id, avatar_ids)
-            return json.dumps(dict(status='Removed avatar from user')), 204
+            return jsonify(dict(status='Removed avatar from user')), 204
         else:
             raise ApiException([Error(ErrorCode.PARAMETER_MISSING, 'id')])
     elif request.method == 'GET':
         user_id = request.args.get('id', type=int)
         if user_id is not None:
             avatars = Avatar.get_user_avatars(user_id)
-            return json.dumps(avatars)
+            return jsonify(avatars)
         else:
             raise ApiException([Error(ErrorCode.PARAMETER_MISSING, 'id')])
 
@@ -314,7 +313,7 @@ def avatars():
             avatar = Avatar.get_by_id(avatar_id)
             if avatar is not None:
                 avatar.delete()
-                return json.dumps(dict(status='Deleted avatar')), 204
+                return jsonify(dict(status='Deleted avatar')), 204
             else:
                 raise ApiException([Error(ErrorCode.AVATAR_NOT_FOUND)])
         else:
@@ -328,7 +327,7 @@ def avatars():
             else:
                 raise ApiException([Error(ErrorCode.AVATAR_NOT_FOUND)])
         else:
-            return json.dumps(Avatar.get_all())
+            return jsonify(Avatar.get_all())
 
 
 @app.route("/avatar/<int:id>", methods=['GET'])
@@ -372,7 +371,7 @@ def avatar_users(id):
         if len(attrs) < 1:
             attrs = ['id', 'login']
         if avatar is not None:
-            return json.dumps(avatar.get_avatar_users(attrs))
+            return jsonify(avatar.get_avatar_users(attrs))
         else:
-            return json.dumps(dict(error='Not found')), 404
+            return jsonify(dict(error='Not found')), 404
 

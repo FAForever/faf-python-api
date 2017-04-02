@@ -36,7 +36,7 @@ class EventsTestCase(unittest.TestCase):
 
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute('TRUNCATE TABLE player_events')
+            cursor.execute('TRUNCATE player_events')
 
     def tearDown(self):
         db.connection.close()

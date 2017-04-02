@@ -12,8 +12,8 @@ def rating_ratings(request, app):
     app.debug = True
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute("TRUNCATE TABLE ladder1v1_rating")
-        cursor.execute("TRUNCATE TABLE global_rating")
+        cursor.execute("DELETE FROM ladder1v1_rating")
+        cursor.execute("DELETE FROM global_rating")
         cursor.execute("delete from login")
         cursor.execute("delete from game_player_stats")
         cursor.execute("delete from game_stats")
@@ -41,7 +41,7 @@ def rating_ratings(request, app):
     def finalizer():
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute("TRUNCATE TABLE ladder1v1_rating")
+            cursor.execute("DELETE FROM ladder1v1_rating")
 
     request.addfinalizer(finalizer)
 

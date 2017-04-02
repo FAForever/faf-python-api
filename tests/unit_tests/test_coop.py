@@ -21,11 +21,11 @@ from faf import db
 def test_data(request):
     with db.connection:
         cursor = db.connection.cursor()
-        cursor.execute("TRUNCATE TABLE avatars")
-        cursor.execute("TRUNCATE TABLE game_player_stats")
-        cursor.execute("TRUNCATE TABLE game_stats")
-        cursor.execute("TRUNCATE TABLE coop_leaderboard")
-        cursor.execute("TRUNCATE TABLE coop_map")
+        cursor.execute("DELETE FROM avatars")
+        cursor.execute("DELETE FROM game_player_stats")
+        cursor.execute("DELETE FROM game_stats")
+        cursor.execute("DELETE FROM coop_leaderboard")
+        cursor.execute("DELETE FROM coop_map")
         cursor.execute("DELETE FROM game_featuredMods")
         cursor.execute("DELETE FROM login")
         # TODO use common fixtures
@@ -72,8 +72,8 @@ def test_data(request):
     def finalizer():
         with db.connection:
             cursor = db.connection.cursor()
-            cursor.execute("TRUNCATE TABLE coop_leaderboard")
-            cursor.execute("TRUNCATE TABLE coop_map")
+            cursor.execute("DELETE FROM coop_leaderboard")
+            cursor.execute("DELETE FROM coop_map")
 
     request.addfinalizer(finalizer)
 
