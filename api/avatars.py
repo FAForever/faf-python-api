@@ -7,6 +7,8 @@ from api.error import ApiException, Error, ErrorCode
 
 from flask import request, jsonify
 
+import pymysql
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -199,6 +201,14 @@ class Avatar:
         with open(dest, 'wb') as fh:
             fh.write(avatar_file.read())
 
+    def delete_file(self):
+        """
+        Deletes avatar file
+        """
+        os.unlink(self._path())
+
+
+
     def delete(self):
         """
         Deletes avatar
@@ -304,7 +314,14 @@ def avatars():
 
         avatar = Avatar(filename=avatar_filename, tooltip=avatar_tooltip)
         avatar.upload(avatar_file)
-        avatar.insert()
+        try:
+            avatar.insert()
+        except pymysql.err.IntegrityError as e:
+            try:
+                avatar.delete_file()
+            except:
+                pass
+            raise ApiException([Error(ErrorCode.AVATAR_INTEGRITY_ERROR, e.args)])
 
         return avatar.dict()
     elif request.method == 'DELETE':
@@ -312,8 +329,15 @@ def avatars():
         if id is not None:
             avatar = Avatar.get_by_id(avatar_id)
             if avatar is not None:
-                avatar.delete()
-                return jsonify(dict(status='Deleted avatar')), 204
+                try:
+                    avatar.delete()
+                    try:
+                        avatar.delete_file()
+                    except:
+                        return jsonify(dict(status='Deleted avatar', detail='Couldn\'t delete the file though')), 204
+                    return jsonify(dict(status='Deleted avatar')), 204
+                except pymysql.err.IntegrityError:
+                    raise ApiException([Error(ErrorCode.AVATAR_IN_USE)])
             else:
                 raise ApiException([Error(ErrorCode.AVATAR_NOT_FOUND)])
         else:
