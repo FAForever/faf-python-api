@@ -27,12 +27,13 @@ def get_active_players():
 def get_prefix_players(prefix):
     # escape mysql LIKE chars
     prefix = prefix.replace('%', '\\%')
-    prefix = prefix.replace('_', '\\%')
+    prefix = prefix.replace('_', '\\_')
     return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1000, request, many=True, limit=False, sort='login',
                       where='LOWER(l.login) LIKE %s', args=(prefix.lower() + '%',))
 
 @app.route('/players/<int:player_id>')
-def get_player(player_id):
+@app.route('/players/byname/<string:player_name>')
+def get_player(player_id=None, player_name=None):
     """
         Gets a player's public profile.
 
@@ -67,8 +68,12 @@ def get_player(player_id):
         :status 200: No error
 
         """
-    return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1, request, many=False,
-                      where='l.id = %s', args=(player_id,))
+    if player_id is not None:
+        return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1, request, many=False,
+                          where='l.id = %s', args=(player_id,))
+    elif player_name is not None:
+        return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1, request, many=False,
+                          where='l.login = %s', args=(player_name,))
 
 
 @app.route('/players/me')
