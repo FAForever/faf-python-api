@@ -17,6 +17,14 @@ class ErrorCode(Enum):
         code=400,
         title='File exists',
         detail='Avatar file already exists')
+    AVATAR_IN_USE = dict(
+        code=400,
+        title='Avatar in use',
+        detail='Avatar cannot be deleted because it is still in use')
+    AVATAR_INTEGRITY_ERROR = dict(
+        code=400,
+        title='Not allowed',
+        detail='{0}')
     ACHIEVEMENT_CANT_INCREMENT_STANDARD = dict(
         code=100,
         title='Invalid operation',

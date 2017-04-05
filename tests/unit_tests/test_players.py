@@ -30,7 +30,7 @@ def test_data(request, app):
         (1, 'a', '', 'a'),
         (2, 'b', '', 'b'),
         (3, 'c', '', 'c'),
-        (4, 'd', '', 'd')""")
+        (4, 'A_Long_Name', '', 'd')""")
         cursor.execute("""INSERT INTO ladder1v1_rating
         (id, mean, deviation, numGames, winGames, is_active) VALUES
         (1, 1000, 300, 10, 5, 0),
@@ -133,6 +133,30 @@ def test_get_player(test_client, test_data):
         'login': 'b'
     }
 
+def test_get_player_by_name(test_client, test_data):
+    response = test_client.get('/players/byname/b')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert result['data']['attributes'] == {
+        'id': '2',
+        'login': 'b'
+    }
+
+def test_player_search(test_client, test_data):
+    response = test_client.get('/players/prefix/A_Long')
+
+    assert response.status_code == 200
+    assert response.content_type == 'application/vnd.api+json'
+
+    result = json.loads(response.data.decode('utf-8'))
+    assert len(result['data']) == 1
+    assert result['data'][0]['attributes'] == {
+        'id': '4',
+        'login': 'A_Long_Name'
+    }
 
 def test_get_player_me(oauth, test_data):
     response = oauth.get('/players/me')
