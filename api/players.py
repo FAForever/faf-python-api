@@ -32,8 +32,7 @@ def get_prefix_players(prefix):
                       where='LOWER(l.login) LIKE %s', args=(prefix.lower() + '%',))
 
 @app.route('/players/<int:player_id>')
-@app.route('/players/byname/<string:player_name>')
-def get_player(player_id=None, player_name=None):
+def get_player_by_id(player_id):
     """
         Gets a player's public profile.
 
@@ -68,12 +67,13 @@ def get_player(player_id=None, player_name=None):
         :status 200: No error
 
         """
-    if player_id is not None:
-        return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1, request, many=False,
-                          where='l.id = %s', args=(player_id,))
-    elif player_name is not None:
-        return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1, request, many=False,
-                          where='l.login = %s', args=(player_name,))
+    return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1, request, many=False,
+                      where='l.id = %s', args=(player_id,))
+
+@app.route('/players/byname/<string:player_name>')
+def get_player_by_name(player_name):
+    return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1, request, many=False,
+                      where='l.login = %s', args=(player_name,))
 
 
 @app.route('/players/me')
@@ -113,7 +113,7 @@ def get_player_me():
         :status 200: No error
 
         """
-    return get_player(request.oauth.user.id)
+    return get_player_by_id(request.oauth.user.id)
 
 
 @app.route('/players/<int:player_id>/ratings/<string:rating_type>/history')

@@ -5,26 +5,6 @@ from flask import request
 
 
 class ErrorCode(Enum):
-    AVATAR_NOT_FOUND = dict(
-        code=404,
-        title='Not found',
-        detail='Avatar not found')
-    AVATAR_ID_MISSING = dict(
-        code=400,
-        title='Not found',
-        detail='Required parameter id is missing')
-    AVATAR_FILE_EXISTS = dict(
-        code=400,
-        title='File exists',
-        detail='Avatar file already exists')
-    AVATAR_IN_USE = dict(
-        code=400,
-        title='Avatar in use',
-        detail='Avatar cannot be deleted because it is still in use')
-    AVATAR_INTEGRITY_ERROR = dict(
-        code=400,
-        title='Not allowed',
-        detail='{0}')
     ACHIEVEMENT_CANT_INCREMENT_STANDARD = dict(
         code=100,
         title='Invalid operation',
@@ -206,15 +186,35 @@ class ErrorCode(Enum):
         detail='Error message: {}'
     )
     AUTHENTICATION_NEEDED = dict(
-        code=401,
+        code=144,
         title='Unauthorized',
         detail='You are not logged in'
     )
     FORBIDDEN = dict(
-        code=403,
+        code=145,
         title='Unauthorized',
         detail='You are not authorized to perform this action'
     )
+    AVATAR_NOT_FOUND = dict(
+        code=146,
+        title='Not found',
+        detail='Avatar not found')
+    AVATAR_ID_MISSING = dict(
+        code=147,
+        title='Not found',
+        detail='Required parameter id is missing')
+    AVATAR_FILE_EXISTS = dict(
+        code=148,
+        title='File exists',
+        detail='Avatar file already exists')
+    AVATAR_IN_USE = dict(
+        code=149,
+        title='Avatar in use',
+        detail='Avatar cannot be deleted because it is still in use')
+    AVATAR_INTEGRITY_ERROR = dict(
+        code=150,
+        title='Not allowed',
+        detail='{0}')
 
 
 class Error:
