@@ -27,12 +27,12 @@ def get_active_players():
 def get_prefix_players(prefix):
     # escape mysql LIKE chars
     prefix = prefix.replace('%', '\\%')
-    prefix = prefix.replace('_', '\\%')
+    prefix = prefix.replace('_', '\\_')
     return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1000, request, many=True, limit=False, sort='login',
                       where='LOWER(l.login) LIKE %s', args=(prefix.lower() + '%',))
 
 @app.route('/players/<int:player_id>')
-def get_player(player_id):
+def get_player_by_id(player_id):
     """
         Gets a player's public profile.
 
@@ -69,6 +69,11 @@ def get_player(player_id):
         """
     return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1, request, many=False,
                       where='l.id = %s', args=(player_id,))
+
+@app.route('/players/byname/<string:player_name>')
+def get_player_by_name(player_name):
+    return fetch_data(PlayerSchema(), PLAYER_TABLE, PLAYER_SELECT_EXPRESSIONS, 1, request, many=False,
+                      where='l.login = %s', args=(player_name,))
 
 
 @app.route('/players/me')
@@ -108,7 +113,7 @@ def get_player_me():
         :status 200: No error
 
         """
-    return get_player(request.oauth.user.id)
+    return get_player_by_id(request.oauth.user.id)
 
 
 @app.route('/players/<int:player_id>/ratings/<string:rating_type>/history')

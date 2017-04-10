@@ -7,6 +7,8 @@ from api.error import ApiException, Error, ErrorCode
 
 from flask import request, jsonify
 
+import pymysql
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -103,7 +105,7 @@ class Avatar:
 
         with db.connection:
             cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-            cursor.execute('select al.* from avatars_list as al JOIN avatars as a on (al.id = a.idAvatar) where a.idUser = %s', user)
+            cursor.execute('select al.*, a.selected as selected, a.expires_at as assignment_expires_at, a.create_time as assignment_create_time, a.update_time as assignment_update_time from avatars_list as al JOIN avatars as a on (al.id = a.idAvatar) where a.idUser = %s', user)
             avatars = cursor.fetchall()
             return avatars
 
@@ -129,7 +131,7 @@ class Avatar:
                 cursor.execute('delete from avatars where idUser=%s and idAvatar=%s', [user_id, avatar_id])
 
     @classmethod
-    def add_user_avatars(cls, user, avatars):
+    def add_user_avatars(cls, user, avatars, expires_in=None):
         """
         Add avatars to user
         """
@@ -147,7 +149,10 @@ class Avatar:
                     avatar_id = avatar.id
                 else:
                     avatar_id = int(avatar)
-                cursor.execute('insert into avatars (idUser, idAvatar) values (%s, %s)', [user_id, avatar_id])
+                if expires_in is not None:
+                    cursor.execute('insert into avatars (idUser, idAvatar, expires_at) values (%s, %s, DATE_ADD(NOW(), INTERVAL %s DAY))', [user_id, avatar_id, expires_in])
+                else:
+                    cursor.execute('insert into avatars (idUser, idAvatar) values (%s, %s)', [user_id, avatar_id])
 
     def get_avatar_users(self, attrs = ['id', 'login']):
         """
@@ -199,6 +204,14 @@ class Avatar:
         with open(dest, 'wb') as fh:
             fh.write(avatar_file.read())
 
+    def delete_file(self):
+        """
+        Deletes avatar file
+        """
+        os.unlink(self._path())
+
+
+
     def delete(self):
         """
         Deletes avatar
@@ -224,8 +237,9 @@ def user_avatars():
 
     if request.method == 'POST':
         user_id = request.form.get('user_id', type=int)
+        expires_in = request.form.get('expires_in', type=int)
         avatar_ids = request.form.getlist('avatar_id', type=int)
-        Avatar.add_user_avatars(user_id, avatar_ids)
+        Avatar.add_user_avatars(user_id, avatar_ids, expires_in)
         return 'ok'
     elif request.method == 'DELETE':
         user_id = request.form.get('user_id', type=int)
@@ -304,7 +318,14 @@ def avatars():
 
         avatar = Avatar(filename=avatar_filename, tooltip=avatar_tooltip)
         avatar.upload(avatar_file)
-        avatar.insert()
+        try:
+            avatar.insert()
+        except pymysql.err.IntegrityError as e:
+            try:
+                avatar.delete_file()
+            except:
+                pass
+            raise ApiException([Error(ErrorCode.AVATAR_INTEGRITY_ERROR, e.args)])
 
         return avatar.dict()
     elif request.method == 'DELETE':
@@ -312,8 +333,15 @@ def avatars():
         if id is not None:
             avatar = Avatar.get_by_id(avatar_id)
             if avatar is not None:
-                avatar.delete()
-                return jsonify(dict(status='Deleted avatar')), 204
+                try:
+                    avatar.delete()
+                    try:
+                        avatar.delete_file()
+                    except:
+                        return jsonify(dict(status='Deleted avatar', detail='Couldn\'t delete the file though')), 204
+                    return jsonify(dict(status='Deleted avatar')), 204
+                except pymysql.err.IntegrityError:
+                    raise ApiException([Error(ErrorCode.AVATAR_IN_USE)])
             else:
                 raise ApiException([Error(ErrorCode.AVATAR_NOT_FOUND)])
         else:
