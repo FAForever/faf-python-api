@@ -230,8 +230,6 @@ def user_avatars():
             raise ApiException([Error(ErrorCode.AUTHENTICATION_NEEDED)])
         else:
             current_user = User.get_by_id(req.user.id)
-            print("user:", current_user.id, current_user.username)
-            print("checking usergroup:", current_user.usergroup())
             if not current_user.usergroup() >= UserGroup.MODERATOR:
                 raise ApiException([Error(ErrorCode.FORBIDDEN)])
 
