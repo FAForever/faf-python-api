@@ -53,10 +53,36 @@ def after_request(response):
 
 @app.errorhandler(ApiException)
 def handle_api_exception(error):
-    response = jsonify(error.to_dict())
-    response.status_code = error.status_code
-    response.headers['content-type'] = 'application/vnd.api+json'
-    return response
+    mt = request.accept_mimetypes.best_match([
+        'application/vnd.api+json',
+        'application/json',
+        'text/plain',
+        'text/html'
+        ],
+        'application/vnd.api+json',
+        )
+    if mt.startswith('application'):
+        response = jsonify(error.to_dict())
+        response.status_code = error.status_code
+        response.headers['content-type'] = mt
+        return response
+    elif mt == 'text/plain':
+        response = error.to_text()
+    elif mt == 'text/html':
+        response = """
+<html>
+<head><title>API Error</title></head>
+<body>
+<pre>
+{}
+</pre>
+</body>
+</html>
+        """.format(error.to_text())
+    resp = _make_response(response)
+    resp.status_code = error.status_code
+    resp.headers['content-type'] =  mt
+    return resp
 
 
 def default_cache_key():

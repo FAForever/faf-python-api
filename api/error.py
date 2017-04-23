@@ -232,6 +232,18 @@ class Error:
             }
         }
 
+    def to_text(self):
+        return """
+Code: {}
+Title: {}
+Detail: {}
+Meta: {}
+        """.format(
+            self.code.value['code'],
+            self.code.value['title'],
+            self.code.value['detail'].format(*self.args),
+            str(self.args)
+            )
 
 class ApiException(Exception):
     def __init__(self, errors, status_code=400):
@@ -242,6 +254,13 @@ class ApiException(Exception):
         return {
             'errors': [error.to_dict() for error in self.errors]
         }
+
+    def to_text(self):
+        return """
+Errors:
+
+{}
+        """.format("\n".join(error.to_text() for error in self.errors))
 
 
 # ======== Usefull decorators =======
