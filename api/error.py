@@ -148,7 +148,7 @@ class ErrorCode(Enum):
     TOKEN_INVALID = dict(
         code=135,
         title='Invalid operation',
-        detail='The delivered token is invalid.')
+        detail='The delivered token is invalid - if you clicked a link, please try copying it manually.')
     TOKEN_EXPIRED = dict(
         code=136,
         title='Invalid operation',

@@ -141,9 +141,17 @@ def decrypt_token(action: str, token: str):
     # Fuck you urlsafe_b64encode & padding and fuck you overzealous http implementations
     token = token.replace('%3d', '=')
     token = token.replace('%3D', '=')
+    # Some e-mail clients will cut off the trailing '=' chars.
+    # The python binascii implementation will ignore superfluous padding chars.
+    # So we can just add two padding chars.
+    token = token + '=='
 
-    ciphertext = base64.urlsafe_b64decode(token.encode())
-    plaintext = Fernet(CRYPTO_KEY).decrypt(ciphertext).decode("utf-8")
+    try:
+        ciphertext = base64.urlsafe_b64decode(token.encode())
+        plaintext = Fernet(CRYPTO_KEY).decrypt(ciphertext).decode("utf-8")
+    except:
+        raise ApiException([Error(ErrorCode.TOKEN_INVALID)])
+
 
     token_action, expiry, *result = plaintext.split(',')
 
