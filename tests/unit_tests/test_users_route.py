@@ -401,6 +401,8 @@ def test_validate_steam_fail(test_client, setup_users):
     assert response.headers['location'] == 'http://localhost?test=true&steam_link_result=fail'
 
 
+#Cannot test without steam api key
+@pytest.mark.skip
 def test_validate_steam_success(test_client, setup_users):
     response = test_client.get('/users/validate_steam/' + create_token('link_to_steam', time.time() + 60, 'abc',
                                                                        'http://faforever.com') + '?openid.identity=http://steamcommunity.com/openid/id/12345678901234567890')
