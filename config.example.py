@@ -64,3 +64,5 @@ STEAM_LOGIN_URL = os.getenv("STEAM_LOGIN_URL", 'https://steamcommunity.com/openi
 
 ACCOUNT_ACTIVATION_REDIRECT = 'http://www.faforever.com/account_activated'
 PASSWORD_RESET_REDIRECT = 'http://www.faforever.com/password_resetted'
+
+STEAM_API_KEY = os.getenv("STEAM_API_KEY", '')

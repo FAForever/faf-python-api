@@ -2,6 +2,7 @@ import datetime
 import logging
 import urllib
 from urllib.parse import urlparse, urlencode
+import requests
 
 from flask import request, redirect
 
@@ -420,6 +421,24 @@ def validate_steam_request(token=None):
         return redirect(redirect_to)
 
     steamID = match.group(1)
+
+    found_game = False
+
+    steam_req = requests.get('http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001', params = {
+        'key': config.STEAM_API_KEY,
+        'steamid': steamID,
+        'format': 'json'
+        })
+    if steam_req.status_code == 200:
+        steam_rep = steam_req.json()
+        for game in steam_rep['response']['games']:
+            if game['appid'] == 9420:
+                found_game = True
+                break
+
+    if not found_game:
+        redirect_to += ('&' if urlparse(redirect_to).query else '?') + urlencode({'steam_link_result': 'fail'})
+        return redirect(redirect_to)
 
     with db.connection:
         cursor = db.connection.cursor()
