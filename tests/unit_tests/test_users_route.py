@@ -398,8 +398,9 @@ def test_validate_steam_fail(test_client, setup_users):
                                                                        'http://localhost?test=true') + '?openid.identity=http://steamcommunity.com/openid/id/no-steam-id')
 
     assert response.status_code == 302
-    assert response.headers['location'] == 'http://localhost?test=true&steam_link_result=fail'
-
+    # startswith / in because we don't care if there's a &steam_link_msg=... after it or what's in it
+    assert response.headers['location'].startswith('http://localhost?test=true')
+    assert 'steam_link_result=fail' in response.headers['location']
 
 #Cannot test without steam api key
 @pytest.mark.skip
