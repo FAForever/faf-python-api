@@ -2,6 +2,7 @@ import datetime
 import logging
 import urllib
 from urllib.parse import urlparse, urlencode
+import requests
 
 from flask import request, redirect
 
@@ -412,14 +413,43 @@ def link_to_steam():
 def validate_steam_request(token=None):
     user_id, redirect_to = decrypt_token('link_to_steam', token)
 
+    def validate_steam_redir(redirect_to, result, msg):
+        if result:
+            result = 'success'
+        else:
+            result = 'fail'
+        params = {'steam_link_result': result}
+        if msg is not None:
+            params['steam_link_msg'] = msg
+        redirect_to += ('&' if urlparse(redirect_to).query else '?') + urlencode(params)
+        return redirect(redirect_to)
+
     # extract steam account id
     match = re.search('^http://steamcommunity.com/openid/id/([0-9]{17,25})', request.args.get('openid.identity'))
 
     if match is None:
-        redirect_to += ('&' if urlparse(redirect_to).query else '?') + urlencode({'steam_link_result': 'fail'})
-        return redirect(redirect_to)
+        return validate_steam_redir(redirect_to, False, 'Could not find SteamID.')
 
     steamID = match.group(1)
+
+    found_game = False
+
+    steam_req = requests.get('http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001', params = {
+        'key': config.STEAM_API_KEY,
+        'steamid': steamID,
+        'format': 'json'
+        })
+    if steam_req.status_code == 200:
+        steam_rep = steam_req.json()
+        for game in steam_rep['response']['games']:
+            if game['appid'] == 9420:
+                found_game = True
+                break
+    else:
+        return validate_steam_redir(redirect_to, False, 'Could not look up games list - make sure your Steam profile is set to public.')
+
+    if not found_game:
+        return validate_steam_redir(redirect_to, False, 'You do not appear to own Supreme Commander Forged Alliance on Steam.')
 
     with db.connection:
         cursor = db.connection.cursor()
@@ -430,9 +460,7 @@ def validate_steam_request(token=None):
                 'id': user_id
             })
 
-        redirect_to += ('&' if urlparse(redirect_to).query else '?') + urlencode({'steam_link_result': 'success'})
-        return redirect(redirect_to)
-
+        return validate_steam_redir(redirect_to, True, None)
 
 @app.route('/users/change_email', methods=['POST'])
 @oauth.require_oauth('write_account_data')
