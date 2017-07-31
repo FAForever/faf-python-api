@@ -54,6 +54,7 @@ def oauth():
     importlib.reload(api.users_route)
 
     api.app.config.from_object('config')
+    api.app.config['TESTING'] = True
     api.api_init()
     api.app.debug = True
 
@@ -402,11 +403,13 @@ def test_validate_steam_fail(test_client, setup_users):
     assert response.headers['location'].startswith('http://localhost?test=true')
     assert 'steam_link_result=fail' in response.headers['location']
 
-#Cannot test without steam api key
-@pytest.mark.skip
 def test_validate_steam_success(test_client, setup_users):
+    #Cannot test without steam api key
+    if not test_client.application.config.get('STEAM_API_KEY'):
+        pytest.skip('Cannot test steam link without api key')
+
     response = test_client.get('/users/validate_steam/' + create_token('link_to_steam', time.time() + 60, 'abc',
-                                                                       'http://faforever.com') + '?openid.identity=http://steamcommunity.com/openid/id/12345678901234567890')
+                                                                       'http://faforever.com') + '?openid.identity=http://steamcommunity.com/openid/id/76561198007601820')
 
     assert response.status_code == 302
     assert response.headers['location'] == 'http://faforever.com?steam_link_result=success'

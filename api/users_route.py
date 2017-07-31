@@ -434,17 +434,25 @@ def validate_steam_request(token=None):
 
     found_game = False
 
+    FA_APPID = 9420
+
     steam_req = requests.get('http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001', params = {
         'key': config.STEAM_API_KEY,
         'steamid': steamID,
-        'format': 'json'
+        'format': 'json',
+        'appids_filter[0]': FA_APPID
         })
     if steam_req.status_code == 200:
-        steam_rep = steam_req.json()
-        for game in steam_rep['response']['games']:
-            if game['appid'] == 9420:
-                found_game = True
-                break
+        try:
+            steam_rep = steam_req.json()
+            if steam_rep['response']['game_count'] > 0:
+                for game in steam_rep['response']['games']:
+                    if game['appid'] == FA_APPID:
+                        found_game = True
+                        break
+        except:
+            logger.exception('Steam request parsing failed for steamid={}, user_id={}'.format(steamID, user_id))
+
     else:
         return validate_steam_redir(redirect_to, False, 'Could not look up games list - make sure your Steam profile is set to public.')
 
