@@ -25,14 +25,14 @@ if __name__ == '__main__':
     api_init()
     port = int(args.get("--port"))
     print('listen on port {0}'.format(port))
+    root = logging.getLogger()
+    loghandler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('%(asctime)s - %(name)-25s - %(levelname)-5s - %(message)s')
+    loghandler.setFormatter(formatter)
+    root.addHandler(loghandler)
     if args.get('-d'):
-        root = logging.getLogger()
         root.setLevel(logging.DEBUG)
-        loghandler = logging.StreamHandler(sys.stdout)
         loghandler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(name)-25s - %(levelname)-5s - %(message)s')
-        loghandler.setFormatter(formatter)
-        root.addHandler(loghandler)
 
         app.debug = True
         app.run(host='0.0.0.0', port=port)
