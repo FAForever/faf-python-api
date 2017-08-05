@@ -41,5 +41,7 @@ if __name__ == '__main__':
         from aiohttp_wsgi import serve
         from concurrent.futures import ThreadPoolExecutor
 
+        app.logger.setLevel(logging.INFO)
+
         with ThreadPoolExecutor(max_workers=1) as executor:
             serve(app, executor=executor, port=port)
