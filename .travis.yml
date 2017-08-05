@@ -3,6 +3,9 @@ language: python
 python:
   - "3.5"
 
+notifications:
+  email: false
+
 sudo: required
 dist: trusty
 
@@ -27,7 +30,7 @@ install:
   - docker build -t faf-api .
 
 script:
-  - docker run --name faf-api --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api py.test --cov-report term-missing --cov=api
+  - docker run --name faf-api --link faf-db:db -e FAF_DB_PASSWORD=banana -e STEAM_API_KEY=$STEAM_API_KEY faf-api py.test --cov-report term-missing --cov=api
   - docker run --link faf-db:db -e FAF_DB_PASSWORD=banana faf-api pyflakes . || true
 
 after_success:
