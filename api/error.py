@@ -219,6 +219,10 @@ class ErrorCode(Enum):
         code=151,
         title='Client ID missing',
         detail='You must pass client_id')
+    AUTH_NOT_PUBLIC_CLIENT = dict(
+        code=152,
+        title='Not Public Client',
+        detail='Password grant authorization is only available to public clients')
 
 
 class Error:
