@@ -215,6 +215,10 @@ class ErrorCode(Enum):
         code=150,
         title='Not allowed',
         detail='{0}')
+    USERNAME_CHANGE_RESTRICTED = dict(
+        code=151,
+        title='Username change not allowed (Name reserved)',
+        detail='This name has been used by another player within the last {} months and is therefore reserved. (Last used on {})')
 
 
 class Error:

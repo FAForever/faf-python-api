@@ -333,6 +333,7 @@ def change_name():
     validate_username(desired_name)
 
     with db.connection:
+        # Check if 30 days have passed since this user last changed their name
         cursor = db.connection.cursor()
         cursor.execute(
             "SELECT DATEDIFF(NOW(), change_time) as days_since_last_change FROM name_history WHERE user_id=%(id)s AND DATEDIFF(NOW(), change_time) < 30 ORDER BY change_time DESC",
@@ -344,6 +345,20 @@ def change_name():
 
         if entry is not None:
             raise ApiException([Error(ErrorCode.USERNAME_CHANGE_TOO_EARLY, 30 - int(entry[0]))])
+
+        # Check if 6 months have passed since requested name was last used
+        cursor.execute(
+            "SELECT change_time FROM name_history WHERE previous_name=%(name)s AND user_id !=%(id)s AND DATEDIFF(NOW(), change_time) < %(time)s ORDER BY change_time DESC",
+            {
+                'id': request.oauth.user.id,
+                'name': desired_name,
+                'time': 30*6 # 6 months
+            })
+
+        entry = cursor.fetchone()
+
+        if entry is not None:
+            raise ApiException([Error(ErrorCode.USERNAME_CHANGE_RESTRICTED, entry[0]]))
 
         cursor.execute(
             "INSERT INTO name_history (user_id, previous_name) SELECT id, login FROM login WHERE id = %(id)s",
