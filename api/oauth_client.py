@@ -1,6 +1,9 @@
 from oauthlib.oauth2.rfc6749 import utils
 import faf.db as db
+from api.helpers import *
 
+import logging
+logger = logging.getLogger(__name__)
 
 class OAuthClient(object):
     """
@@ -29,22 +32,27 @@ class OAuthClient(object):
 
     @classmethod
     def get(cls, client_id):
-        with db.connection:
-            cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
-            cursor.execute("""
-            SELECT
-                id,
-                name,
-                client_secret,
-                client_type,
-                redirect_uris as _redirect_uris,
-                default_redirect_uri,
-                default_scope
-            FROM oauth_clients
-            WHERE id = %s""", client_id)
+        if client_id and len(client_id) > 0:
+            with db.connection:
+                cursor = db.connection.cursor(db.pymysql.cursors.DictCursor)
+                qstring = """
+                SELECT
+                    id,
+                    name,
+                    client_secret,
+                    client_type,
+                    redirect_uris as _redirect_uris,
+                    default_redirect_uri,
+                    default_scope
+                FROM oauth_clients
+                WHERE id = %s"""
+                logger.debug("{} -> {}".format(client_id, cursor.mogrify(qstring, client_id)))
+                cursor.execute(qstring, client_id)
 
-            client = cursor.fetchone()
-            return OAuthClient(**client) if client else None
+                client = cursor.fetchone()
+                return OAuthClient(**client) if client else None
+        else:
+            raise ApiException([Error(ErrorCode.AUTH_NO_CLIENT_ID)])
 
     def validate_redirect_uri(self, redirect_uri):
         for uri in self.redirect_uris:

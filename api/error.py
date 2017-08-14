@@ -215,6 +215,10 @@ class ErrorCode(Enum):
         code=150,
         title='Not allowed',
         detail='{0}')
+    AUTH_NO_CLIENT_ID = dict(
+        code=151,
+        title='Client ID missing',
+        detail='You must pass client_id')
 
 
 class Error:

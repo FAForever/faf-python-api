@@ -15,7 +15,7 @@ class EventsTestCase(unittest.TestCase):
     def get_token(self, access_token=None, refresh_token=None):
         return OAuthToken(
             user=User(id=1),
-            client_id=1,
+            client_id='1',
             expires=datetime.datetime.now() + datetime.timedelta(hours=1),
             scopes=['write_events read_events']
         )
