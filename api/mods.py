@@ -220,6 +220,9 @@ def process_uploaded_mod(temp_mod_path):
     if mod_exists(display_name, version):
         raise ApiException([Error(ErrorCode.MOD_VERSION_EXISTS, display_name, version)])
 
+    if uid_exists(uid):
+        raise ApiException([Error(ErrorCode.MOD_UID_CONFLICT, uid)])
+
     zip_file_name = generate_zip_file_name(display_name, version)
     target_mod_path = os.path.join(app.config['MOD_UPLOAD_PATH'], zip_file_name)
     if os.path.isfile(target_mod_path):
@@ -311,9 +314,21 @@ def mod_exists(display_name, version):
         return cursor.fetchone()[0] > 0
 
 
+def uid_exists(uid):
+    with db.connection:
+        cursor = db.connection.cursor()
+
+        cursor.execute("select id from mod_version where uid = %s", uid)
+        return cursor.rowcount > 0
+
+
 def can_upload_mod(name, user_id):
     with db.connection:
         cursor = db.connection.cursor()
         cursor.execute('SELECT count(*) FROM `mod` WHERE lower(display_name) = lower(%s) AND uploader != %s', (name, user_id))
 
-        return cursor.fetchone()[0] == 0
+        if cursor.fetchone()[0] == 0:
+            return True
+
+        cursor.execute('SELECT * from lobby_admin where user_id = %s AND `group` > 0', user_id)
+        return cursor.rowcount > 0

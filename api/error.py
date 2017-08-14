@@ -223,6 +223,10 @@ class ErrorCode(Enum):
         code=152,
         title='Not Public Client',
         detail='Password grant authorization is only available to public clients')
+    MOD_UID_CONFLICT = dict(
+        code=153,
+        title='UID conflict',
+        detail='Mod uid {} is already occupied.')
 
 
 class Error:
