@@ -339,7 +339,7 @@ def test_mod_upload(oauth, mods, upload_dir, thumbnail_dir):
                               data={'file': (file, os.path.basename(mod_zip))})
 
     assert response.status_code == 200
-    assert 'ok' == response.get_data(as_text=True)
+    assert 'ok' in response.get_data(as_text=True)
     assert os.path.isfile(upload_dir.join(os.path.basename('no_friendly_fire.v0003.zip')).strpath)
     assert os.path.isfile(thumbnail_dir.join('no_friendly_fire.v0003.png').strpath)
 

@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
+from hashlib import sha256
 
 import flask_oauthlib
 from flask_login import current_user
 
 from api import *
+from api.helpers import *
 from api.oauth_client import OAuthClient
 from api.oauth_token import OAuthToken
 
@@ -14,6 +16,20 @@ cache = flask_oauthlib.contrib.cache.Cache(app, 'OAUTH2')
 def get_client(client_id):
     return OAuthClient.get(client_id)
 
+@oauth.usergetter
+def get_user(username, password, client, request,
+             *args, **kwargs):
+    user = User.get_by_username(username)
+
+    # only used for password grant, so check here that client is public
+    if client.client_type != 'public':
+        raise ApiException([Error(ErrorCode.AUTH_NOT_PUBLIC_CLIENT)])
+
+    hashed_password = password if len(password) == 64 else sha256(password.encode()).hexdigest()
+    if user is None or user.password != hashed_password:
+        return None
+
+    return user
 
 @oauth.tokengetter
 def get_token(access_token=None, refresh_token=None):
