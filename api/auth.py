@@ -120,6 +120,10 @@ def login(*args, **kwargs):
 
     return redirect(redirect_url)
 
+@app.route('/logout', methods=['GET', 'POST'])
+def logout(*args, **kwargs):
+    session.pop('user_id', None)
+    return redirect(request.referrer or url_for('login'))
 
 VALIDATE_DOMAIN_REGEX = re.compile("^(localhost|(.*\.)?faforever.com):?(?:[0-9]*)?$")
 
