@@ -84,6 +84,10 @@ def access_token():
     """
     return None
 
+@app.route('/oauth/revoke')
+@oauth.revoke_handler
+def oauth_revoke():
+    pass
 
 @app.route('/login', methods=['GET', 'POST'])
 def login(*args, **kwargs):
