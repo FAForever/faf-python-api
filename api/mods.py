@@ -65,7 +65,7 @@ def mods_upload():
         Vary: Accept
         Content-Type: text/javascript
 
-        "ok"
+        {"response":"ok"}
 
     :query file file: The file submitted (Must be ZIP)
     :type: zip
@@ -84,7 +84,7 @@ def mods_upload():
         file.save(temp_mod_path)
         process_uploaded_mod(temp_mod_path)
 
-    return "ok"
+    return {'response': 'ok'}
 
 
 @app.route('/mods/<mod_uid>')

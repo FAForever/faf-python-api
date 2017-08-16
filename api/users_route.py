@@ -33,7 +33,7 @@ def create_account():
         Vary: Accept
         Content-Type: text/javascript
 
-        "ok"
+        {"response":"ok"}
 
     :query name: The requested username
     :query email: user's email address
@@ -73,7 +73,7 @@ def create_account():
     else:
         send_email(logger, text, name, email, 'Forged Alliance Forever - Account validation')
 
-    return "ok"
+    return {"response":"ok"}
 
 
 @app.route('/users/validate_registration/<token>', methods=['GET'])
@@ -95,7 +95,7 @@ def validate_account(token=None):
         Vary: Accept
         Content-Type: text/javascript
 
-        "ok"
+        {"response":"ok"}
 
     :token contains the required data (username, email, password hash)
 
@@ -158,7 +158,7 @@ def reset_password():
         Vary: Accept
         Content-Type: text/javascript
 
-        "ok"
+        {"response":"ok"}
 
     :query name: The requested username
     :email = request.form.get('email')
@@ -206,7 +206,7 @@ def reset_password():
     else:
         send_email(logger, text, name, email, 'Forged Alliance Forever - Password reset')
 
-    return "ok"
+    return {"response":"ok"}
 
 
 @app.route('/users/validate_password/<token>', methods=['GET'])
@@ -228,7 +228,7 @@ def validate_password(token=None):
         Vary: Accept
         Content-Type: text/javascript
 
-        "ok"
+        {"response":"ok"}
 
     :token contains the required data (username, email, password hash)
 
@@ -273,7 +273,7 @@ def change_password():
         Vary: Accept
         Content-Type: text/javascript
 
-        "ok"
+        {"response":"ok"}
 
     :name affected username
     :pw_hash_old password hash of the current password
@@ -298,7 +298,7 @@ def change_password():
         if cursor.rowcount == 0:
             raise ApiException([Error(ErrorCode.PASSWORD_CHANGE_FAILED)])
 
-    return "ok"
+    return {"response":"ok"}
 
 
 @app.route('/users/change_name', methods=['POST'])
@@ -322,7 +322,7 @@ def change_name():
         Vary: Accept
         Content-Type: text/javascript
 
-        "ok"
+        {"response":"ok"}
 
     :desired_name the new username
 
@@ -360,7 +360,7 @@ def change_name():
             }
         )
 
-    return "ok"
+    return {"response":"ok"}
 
 
 @app.route('/users/link_to_steam', methods=['POST'])
@@ -491,7 +491,7 @@ def change_email():
         Vary: Accept
         Content-Type: text/javascript
 
-        "ok"
+        {"response":"ok"}
 
     :desired_name the new username
 
@@ -533,7 +533,7 @@ def change_email():
         else:
             send_email(logger, text, name, user['email'], 'Forged Alliance Forever - Change of email address')
 
-    return "ok"
+    return {"response":"ok"}
 
 
 @app.route('/users/validate_email/<token>', methods=['GET'])
@@ -555,7 +555,7 @@ def validate_email_request(token=None):
         Vary: Accept
         Content-Type: text/javascript
 
-        "ok"
+        {"response":"ok"}
 
     :token contains the required data (userid, new email)
 
@@ -575,4 +575,4 @@ def validate_email_request(token=None):
         if cursor.rowcount == 0:
             raise ApiException([Error(ErrorCode.EMAIL_CHANGE_FAILED)])
 
-    return "ok"
+    return {"response":"ok"}
