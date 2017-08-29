@@ -108,10 +108,6 @@ def make_response_json(rv):
         response = jsonify(rv)
         response.headers['content-type'] = 'application/vnd.api+json'
         return response
-    elif isinstance(rv, str):
-        response = jsonify({'response': rv})
-        response.headers['content-type'] = 'application/vnd.api+json'
-        return response
     elif isinstance(rv, tuple):
         values = dict(zip(['response', 'status', 'headers'], rv))
         response, status, headers = values.get('response', ''), values.get('status', 200), values.get('headers', [])

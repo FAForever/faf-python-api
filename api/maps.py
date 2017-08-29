@@ -74,7 +74,7 @@ def maps_upload():
         Vary: Accept
         Content-Type: text/javascript
 
-        "ok"
+        {"response":"ok"}
 
     :query file file: The file submitted (Must be ZIP)
     :type: zip
@@ -96,7 +96,7 @@ def maps_upload():
         file.save(temp_map_path)
         process_uploaded_map(temp_map_path, metadata.get('is_ranked', False))
 
-    return "ok"
+    return {"response":"ok"}
 
 
 @app.route('/maps')
