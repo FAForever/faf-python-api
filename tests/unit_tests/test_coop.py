@@ -23,10 +23,13 @@ def test_data(request):
         cursor = db.connection.cursor()
         cursor.execute("DELETE FROM avatars")
         cursor.execute("DELETE FROM game_player_stats")
+        cursor.execute("DELETE FROM game_review")
         cursor.execute("DELETE FROM game_stats")
         cursor.execute("DELETE FROM coop_leaderboard")
         cursor.execute("DELETE FROM coop_map")
         cursor.execute("DELETE FROM game_featuredMods")
+        cursor.execute("DELETE FROM unique_id_users")
+        cursor.execute("DELETE FROM unique_id")
         cursor.execute("DELETE FROM login")
         # TODO use common fixtures
         cursor.execute("""INSERT INTO login
@@ -57,7 +60,7 @@ def test_data(request):
         (3, '2016-10-12T13:40', 1, 25, 1, 1, '', 11),
         (4, '2016-10-12T14:40', 1, 25, 1, 1, '', 11)
         """)
-    cursor.execute("""INSERT INTO game_player_stats
+        cursor.execute("""INSERT INTO game_player_stats
 (id, gameId, playerId, AI, faction, color, team, place, mean, deviation, after_mean, after_deviation, score,          scoreTime) VALUES
 (1,       1,        1,  0,       1,     1,    1,     1, 1500,       123,        NULL,             NULL,   0, '2016-10-12T11:51'),
 (2,       1,        2,  0,       1,     1,    1,     2, 1395,       111,        NULL,             NULL,   0, '2016-10-12T12:51'),
