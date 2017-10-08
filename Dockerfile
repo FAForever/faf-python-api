@@ -15,7 +15,6 @@ COPY config.example.py /code/config.py
 
 WORKDIR /code/
 
-RUN pip install -e db
 RUN pip install -e .
 
 RUN cat config.py
