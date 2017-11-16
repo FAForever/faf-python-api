@@ -40,6 +40,10 @@ def create_account():
     :query pw_hash: user's desired client-hashed password
 
     """
+    # Currently disabled because of account spamming
+    if not app.config.get('ACCOUNT_CREATION_ENABLED', False):
+        return
+
 
     name = request.form.get('name')
     email = request.form.get('email')
