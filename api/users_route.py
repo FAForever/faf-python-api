@@ -440,7 +440,7 @@ def validate_steam_request(token=None):
 
     FA_APPID = 9420
 
-    steam_req = requests.get('https?://api.steampowered.com/IPlayerService/GetOwnedGames/v0001', params = {
+    steam_req = requests.get('http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001', params = {
         'key': config.STEAM_API_KEY,
         'steamid': steamID,
         'format': 'json',
