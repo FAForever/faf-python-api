@@ -429,7 +429,7 @@ def validate_steam_request(token=None):
         return redirect(redirect_to)
 
     # extract steam account id
-    match = re.search('^http://steamcommunity.com/openid/id/([0-9]{17,25})', request.args.get('openid.identity'))
+    match = re.search('^https?://steamcommunity.com/openid/id/([0-9]{17,25})', request.args.get('openid.identity'))
 
     if match is None:
         return validate_steam_redir(redirect_to, False, 'Could not find SteamID.')
