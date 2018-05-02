@@ -429,7 +429,7 @@ def validate_steam_request(token=None):
         return redirect(redirect_to)
 
     # extract steam account id
-    match = re.search('^http://steamcommunity.com/openid/id/([0-9]{17,25})', request.args.get('openid.identity'))
+    match = re.search('^https?://steamcommunity.com/openid/id/([0-9]{17,25})', request.args.get('openid.identity'))
 
     if match is None:
         return validate_steam_redir(redirect_to, False, 'Could not find SteamID.')
@@ -440,7 +440,7 @@ def validate_steam_request(token=None):
 
     FA_APPID = 9420
 
-    steam_req = requests.get('http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001', params = {
+    steam_req = requests.get('https?://api.steampowered.com/IPlayerService/GetOwnedGames/v0001', params = {
         'key': config.STEAM_API_KEY,
         'steamid': steamID,
         'format': 'json',
